@@ -1,0 +1,335 @@
+# Architecture
+
+Status: **draft, awaiting approval.** No implementation code is written until this is accepted.
+Rationale for every choice below is in [DECISIONS.md](DECISIONS.md); measured evidence is in
+[RESEARCH.md](RESEARCH.md).
+
+---
+
+## 1. Shape of the system
+
+```
+                        macOS menu bar
+      [ moon ]   [ Surya ]   [ Mangala ]        <- independent tray items
+          |          |            |
+          +----------+------------+
+                     |  click
+              +-------------------+
+              |  panel window     |   one reusable shell,
+              |  320 x auto       |   different content per subject
+              +-------------------+
+                     |  IPC (typed commands)
+      ---------------------------------------------
+                     |
+      +--------------+---------------+
+      |        src-tauri (shell)     |   tray, windows, commands, settings, autostart
+      +--------------+---------------+
+                     |
+      +--------------+---------------+
+      |     crates/almanac (domain)  |   no Tauri, no UI, no async
+      +--------------+---------------+
+                     |
+      +--------------+---------------+
+      |     crates/ephemeris (core)  |   Swiss Ephemeris FFI, isolated
+      +------------------------------+
+```
+
+Rule enforced by the crate graph: **the domain does not know Tauri exists, and the UI does not
+know Swiss Ephemeris exists.** `crates/almanac` and `crates/ephemeris` build and test on Linux
+with no macOS dependency, which is what makes CI cheap (D-012) and the test suite fast.
+
+---
+
+## 2. Workspace layout
+
+```
+moon-phases/
+├── Cargo.toml                     workspace root
+├── Makefile                       dev / build / install / test / lint
+├── docs/
+│   ├── ARCHITECTURE.md            this file
+│   ├── DECISIONS.md               decision log
+│   ├── RESEARCH.md                verified facts
+│   ├── ROADMAP.md                 milestones
+│   └── ISSUES.md                  issue tracker
+├── crates/
+│   ├── ephemeris/                 Swiss Ephemeris boundary. The only unsafe code.
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── engine.rs          Mutex singleton, ephe path, sid_mode, flag checking
+│   │       ├── body.rs            Graha enum <-> SE body ids (normalises the u32/i32 mess)
+│   │       ├── julian.rs          JD <-> civil, delta-T boundary
+│   │       ├── position.rs        longitude, latitude, speed, provenance
+│   │       ├── phenomena.rs       illumination, phase angle
+│   │       ├── risetrans.rs       rise / set / transit
+│   │       └── error.rs
+│   ├── almanac/                   pure domain. No FFI, no unsafe.
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── zodiac.rs          Rashi, Nakshatra, Pada, boundary arithmetic
+│   │       ├── phase.rs           phase naming from illumination + elongation
+│   │       ├── roots.rs           bracketing + Brent (D-016)
+│   │       ├── events.rs          ingress, station, syzygy detection
+│   │       ├── day.rs             DayDetail assembly
+│   │       ├── month.rs           MonthView assembly
+│   │       └── cache.rs           keyed LRU
+│   ├── geo/                       location chain, tzdb centroids, city search
+│   └── glyph/                     tray icon rendering (tiny-skia -> RGBA)
+├── src-tauri/                     thin shell
+│   ├── src/
+│   │   ├── main.rs
+│   │   ├── tray.rs                tray items, live icon updates
+│   │   ├── panel.rs               panel window lifecycle, positioning, auto-hide
+│   │   ├── commands.rs            IPC surface (the only pub API to the front end)
+│   │   ├── settings.rs            typed, versioned, migrated
+│   │   └── state.rs               AppState, engine handle, cache
+│   ├── resources/
+│   │   ├── ephe/                  sepl_18.se1, semo_18.se1   (1.7 MB)
+│   │   ├── zone1970.tab           timezone -> representative lat/lon
+│   │   └── cities15000.bin        city search index
+│   └── tauri.conf.json
+└── src/                           front end (framework pending D-014)
+    ├── components/
+    ├── styles/tokens.css
+    └── ipc/                       generated TS types, one binding per command
+```
+
+---
+
+## 3. Layer contracts
+
+### 3.1 `crates/ephemeris`
+
+The only place `unsafe` appears. Everything above it is safe Rust.
+
+```rust
+pub struct Engine { /* holds the process-wide SE lock */ }
+
+pub struct Position {
+    pub longitude: f64,      // sidereal degrees, [0, 360)
+    pub latitude:  f64,
+    pub speed:     f64,      // degrees/day; negative = retrograde
+    pub source:    Source,   // Swieph | Moshier   <- D-006, never dropped
+}
+
+pub enum Source { Swieph, Moshier }
+
+impl Engine {
+    pub fn position(&self, jd_ut: f64, body: Graha) -> Result<Position, Error>;
+    pub fn illumination(&self, jd_ut: f64) -> Result<Illumination, Error>;
+    pub fn rise_set(&self, jd_ut: f64, body: Graha, obs: Observer)
+        -> Result<RiseSet, Error>;
+    pub fn ayanamsa(&self, jd_ut: f64) -> f64;
+    pub fn reconfigure(&self, cfg: SiderealConfig) -> Result<(), Error>;
+}
+```
+
+Invariants:
+
+- Global SE state (`ephe_path`, `sid_mode`, `topo`) is set inside the lock, never outside.
+- Requested flags are compared against returned flags on every call; the difference becomes
+  `Source`. A silent Moshier fallback is impossible to miss (R-02).
+- Body ids are normalised to `i32` at this boundary, so the crate's inconsistent constant
+  types (R-01) never leak upward.
+- `RiseSet` distinguishes *no event today* (circumpolar / no rise) from *error*. These are
+  different states and are rendered differently.
+
+### 3.2 `crates/almanac`
+
+Pure functions over `Engine`. Deterministic, no I/O, no clock reads, fully testable.
+
+```rust
+pub struct DayDetail {          // v1 scope, D-010
+    pub date:         Date,
+    pub phase:        Phase,        // name + illuminated fraction
+    pub moonrise:     Option<Instant>,
+    pub moonset:      Option<Instant>,
+    pub nakshatra:    Span<Nakshatra>,   // value + entry + exit
+    pub rashi:        Span<Rashi>,
+    pub provenance:   Source,
+}
+
+pub struct Span<T> {
+    pub value: T,
+    pub entry: Instant,      // may precede the day
+    pub exit:  Instant,      // may follow the day
+}
+
+pub struct MonthView {
+    pub month: YearMonth,
+    pub days:  Vec<DayCell>,     // phase glyph data + illumination only
+    pub events: Vec<Event>,      // for graha panels: ingress, station
+}
+```
+
+`Span` is the reason entry/exit times work correctly at month edges: a nakshatra that began
+three days before the month starts still reports its true entry instant, not a clamped one.
+
+### 3.3 `src-tauri` IPC surface
+
+Every command is `async`, returns `Result<T, AppError>`, and runs the engine call on
+`spawn_blocking` (D-005). The front end has no other way to reach the domain.
+
+| Command | Returns |
+|---|---|
+| `month_view(subject, year, month)` | `MonthView` |
+| `day_detail(subject, date)` | `DayDetail` |
+| `current_state()` | tray subjects + today's summary |
+| `settings_get()` / `settings_set(patch)` | `Settings` |
+| `location_resolve()` | `ResolvedLocation` + which chain step answered |
+| `city_search(query)` | `Vec<City>` |
+
+TypeScript types are generated from the Rust types (`ts-rs`) so the IPC boundary cannot drift.
+
+---
+
+## 4. Data flow, one panel open
+
+```
+tray click
+   -> panel.rs: position via TrayCenter, show window, AppHandle::show()
+   -> front end mounts, calls month_view(subject, y, m)
+        -> cache hit?  return immediately
+        -> miss: spawn_blocking
+              -> lock engine
+              -> per day: illumination at local noon, rise/set
+              -> events: bracket scan + Brent refine (D-016)
+              -> unlock, insert into cache
+   -> render grid
+   -> idle: prefetch month-1 and month+1 in background
+day click
+   -> day_detail(subject, date)   (usually already warm from the month pass)
+   -> panel animates height, detail renders below the grid
+blur
+   -> window.hide() + AppHandle::hide()   (R-05 macOS trap)
+```
+
+---
+
+## 5. Performance plan
+
+Measured baseline (R-04): `swe_calc_ut` = 7.9 us; a 31-day 15-minute Moon grid = 23.5 ms.
+
+| Concern | Approach | Target |
+|---|---|---|
+| Panel open, warm | serve from LRU cache | < 5 ms |
+| Panel open, cold month | adaptive bracketing, not brute grid | < 30 ms |
+| Month switch | prev/next prefetched while idle | perceived instant |
+| Tray icon refresh | only on day rollover; timer aligned to next local midnight | ~0% idle CPU |
+| Memory | LRU bounded to 24 month-views per subject | bounded |
+| Startup | engine init is lazy; tray icon drawn from cached illumination first | < 200 ms to visible |
+
+Cache key is `(subject, year, month, ayanamsa, node_type, lat, lon, tz)`. Any settings change
+invalidates wholesale inside the same critical section that reconfigures the engine.
+
+---
+
+## 6. Error handling
+
+- `crates/ephemeris`: `thiserror` enum. Never panics, never `unwrap`s on FFI output.
+  The SE error buffer is captured into the error value.
+- `crates/almanac`: propagates. Root-finding that fails to converge returns
+  `Err(NoConvergence)` — it does not return a guessed time.
+- `src-tauri`: maps to `AppError` with a stable machine-readable `code` plus a display message.
+- Front end: renders a specific inline state per code. There is no generic "something went
+  wrong" catch-all, because every failure here has a meaningful cause the user can act on
+  (no location, date out of range, degraded ephemeris).
+- Degraded-but-valid states are **not** errors: `Source::Moshier`, no moonrise today,
+  circumpolar. These render as annotations.
+
+---
+
+## 7. Settings
+
+- Stored via `tauri-plugin-store` at
+  `~/Library/Application Support/<bundle-id>/settings.json`.
+- Typed in Rust, carries `schema_version`, migrated by explicit numbered functions.
+  No serde defaults papering over missing fields.
+
+```
+schema_version, launch_at_login, time_format,
+location { mode: auto|manual, manual?: {lat, lon, tz, label} },
+sidereal { ayanamsa, node_type },
+tray { subjects: [Graha], colour_mode: bool },
+appearance { theme }
+```
+
+---
+
+## 8. UI structure
+
+Progressive disclosure. Each surface does one thing.
+
+| Level | Surface | Contains |
+|---|---|---|
+| 0 | menu bar | live moon disc; enabled graha glyphs |
+| 1 | panel, month grid | date + phase glyph per cell; today ringed; month switcher |
+| 2 | panel, expanded | the six v1 fields for the selected day |
+| 3 | settings window | general, location, astrology, grahas, about |
+
+- Month switcher: chevrons plus the month label; clicking the label opens a year/month picker.
+- Keyboard: arrows move by day, up/down by week, PgUp/PgDn by month, `T` jumps to today,
+  `Esc` closes. Focus ring is visible and follows selection.
+- Graha panels reuse the identical shell; only the cell content and the detail fields differ.
+- Accessibility: all colour pairs meet WCAG AA on the `#0A0A0B` ground; phase is never
+  communicated by shape alone — the day detail always names it.
+
+Design tokens (D-011): ground `#0A0A0B`, text `#EDEDEF`, muted `#8A8A90`,
+hairline `rgba(255,255,255,0.08)`, accent reserved for "today" only.
+Type: system UI stack, tabular numerals for all times and figures.
+
+---
+
+## 9. Testing
+
+Zero-regression is a hard requirement, so the domain is tested before the UI exists.
+
+| Layer | Method |
+|---|---|
+| `ephemeris` | golden vectors cross-checked against `swetest` CLI output, committed as JSON |
+| `almanac` zodiac | exact boundary cases: 13.3333 deg, 30 deg, 359.9999 deg, wraparound |
+| `almanac` roots | property tests — ingress instants monotone; longitude at ingress equals the boundary within 1e-6 deg; rise < transit < set |
+| `almanac` events | full-year runs for every graha; assert no missed or duplicated stations |
+| accuracy | assertions carry explicit documented tolerances, not eyeballed constants |
+| `src-tauri` | command-level tests with a fixed clock and fixed location |
+| front end | component tests; no snapshot tests of times (they would encode a timezone) |
+
+All domain tests run on Linux in CI. macOS runners only build the DMG on a release tag.
+
+---
+
+## 10. Build and distribution
+
+```
+make dev        cargo tauri dev
+make build      cargo tauri build --bundles app,dmg
+make install    build, ad-hoc codesign, copy to /Applications, clear quarantine
+make test       cargo test --workspace  +  front-end tests
+make lint       cargo fmt --check, cargo clippy -D warnings, eslint, tsc --noEmit
+```
+
+- Ad-hoc signature (`codesign -s -`) so first launch is right-click-Open, not a hard block.
+- Launch at login via `tauri-plugin-autostart`.
+- Tray items are built in Rust only; `tauri.conf.json` declares none, to avoid the duplicate
+  tray icon bug (R-05).
+- CI on push: fmt, clippy, workspace tests — Ubuntu.
+  CI on tag: macOS build, DMG uploaded to a GitHub release.
+
+---
+
+## 11. Known risks
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| CoreLocation unreliable when ad-hoc signed (R-06) | no auto location | fallback chain D-007; app fully usable without it |
+| `swiss-eph` is young (0.2.1) | upstream churn | pinned `=0.2.1`, lockfile committed, isolated behind `engine.rs` |
+| Tray icon may render at 44 pt instead of 22 pt | blurry or oversized glyph | verified in milestone M1 before any glyph design work; fallback is 22x22 |
+| Tauri duplicate tray icon on macOS | two icons | build tray in Rust only (R-05) |
+| Panel height animation jank | feels cheap | measure before shipping; fall back to a fixed-height detail pane |
+
+---
+
+## 12. Open items blocking implementation
+
+- **D-013** product name — fixes the bundle identifier and the settings path.
+- **D-014** front-end framework — SolidJS proposed.
