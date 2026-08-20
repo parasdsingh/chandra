@@ -422,7 +422,7 @@ fn report_timings() {
     let almanac = almanac();
     reset(&almanac);
 
-    let mut line = |label: &str, elapsed: std::time::Duration| {
+    let line = |label: &str, elapsed: std::time::Duration| {
         println!("{label:<34} {:>8.2} ms", elapsed.as_secs_f64() * 1000.0);
     };
 

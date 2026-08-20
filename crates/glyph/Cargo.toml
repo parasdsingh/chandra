@@ -1,0 +1,13 @@
+[package]
+name = "chandra-glyph"
+description = "Menu bar icon rendering: the live moon disc and the nine graha template glyphs."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+chandra-ephemeris = { workspace = true }
+tiny-skia = { workspace = true }
+thiserror = { workspace = true }
