@@ -1,6 +1,7 @@
 # Architecture
 
-Status: **draft, awaiting approval.** No implementation code is written until this is accepted.
+Status: **awaiting approval.** No implementation code is written until this is accepted.
+Product name **Chandra**, bundle id `com.parasdsingh.chandra`, front end **SolidJS + Vite + TS**.
 Rationale for every choice below is in [DECISIONS.md](DECISIONS.md); measured evidence is in
 [RESEARCH.md](RESEARCH.md).
 
@@ -88,7 +89,7 @@ moon-phases/
 │   │   ├── zone1970.tab           timezone -> representative lat/lon
 │   │   └── cities15000.bin        city search index
 │   └── tauri.conf.json
-└── src/                           front end (framework pending D-014)
+└── src/                           front end — SolidJS + Vite + TypeScript
     ├── components/
     ├── styles/tokens.css
     └── ipc/                       generated TS types, one binding per command
@@ -329,7 +330,6 @@ make lint       cargo fmt --check, cargo clippy -D warnings, eslint, tsc --noEmi
 
 ---
 
-## 12. Open items blocking implementation
+## 12. Open items
 
-- **D-013** product name — fixes the bundle identifier and the settings path.
-- **D-014** front-end framework — SolidJS proposed.
+None blocking. D-013 and D-014 are resolved; the GitHub remote is deferred by choice (D-018).

@@ -17,11 +17,12 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted |
 | [D-011](#d-011) | Opaque dark surface, no vibrancy | accepted |
 | [D-012](#d-012) | Private repo, unsigned local build, ad-hoc codesign | accepted |
-| [D-013](#d-013) | Product name | **open** |
-| [D-014](#d-014) | Front-end framework | **open** |
+| [D-013](#d-013) | Product name is Chandra; bundle id `com.parasdsingh.chandra` | accepted |
+| [D-014](#d-014) | SolidJS + Vite + TypeScript, hand-written CSS | accepted |
 | [D-015](#d-015) | Time scale handling: UT vs TT | accepted |
 | [D-016](#d-016) | Event times found by bracket + Brent refinement | accepted |
 | [D-017](#d-017) | No background work, no notifications in v1 | accepted |
+| [D-018](#d-018) | GitHub remote deferred; local VC for now | accepted |
 
 ---
 
@@ -146,21 +147,24 @@ entry/exit, rashi with entry/exit.**
 - CI: lint, format and the pure-Rust ephemeris test suite run on Linux (cheap). macOS runners
   are used only to build a DMG on a release tag, because they bill at 10x.
 
-### D-013 — OPEN
-**Product name.**
+### D-013
+**Display name is Chandra. Bundle identifier `com.parasdsingh.chandra`. Repo stays `moon-phases`.**
 
-- Repo directory is `moon-phases`, but the app covers all nine grahas.
-- Proposal: **Chandra** as the display name, repo stays `moon-phases`.
-- Needs a decision before the bundle identifier is fixed; changing it later moves the
-  settings file path.
+- Chandra is himself one of the navagrahas, so the name does not become wrong as the app grows
+  past the moon calendar.
+- The identifier fixes the settings path at
+  `~/Library/Application Support/com.parasdsingh.chandra/`. It is now frozen; changing it later
+  would strand existing settings.
 
-### D-014 — OPEN
-**Front-end framework.**
+### D-014
+**SolidJS + Vite + TypeScript. Hand-written CSS with design tokens.**
 
-- Proposal: **SolidJS + Vite + TypeScript**. ~7 KB runtime, no virtual DOM, fine-grained
-  reactivity. Best fit for a small popover that must feel instant.
-- Alternatives: Svelte 5 (comparable, larger runtime), React (heaviest, unjustified here).
-- Styling is hand-written CSS with design tokens. No CSS framework.
+- ~7 KB runtime, no virtual DOM. Month switching updates only the changed cells rather than
+  diffing a tree, which is what keeps the popover feeling instant on open.
+- Rejected: Svelte 5 (comparable, larger runtime), React (~45 KB plus reconciliation, not
+  justifiable for a 320 px popover with a performance priority).
+- No CSS framework. Tokens live in `src/styles/tokens.css` and are the single source of truth
+  for the palette in D-011.
 
 ### D-015
 **All internal time is Julian Day in UT. Civil time is derived only at the display boundary.**
@@ -186,3 +190,10 @@ entry/exit, rashi with entry/exit.**
 
 - Compute happens only when a panel opens or the displayed day rolls over.
 - Idle CPU target: 0%.
+
+### D-018
+**GitHub remote is deferred. Version control is local until asked.**
+
+- The repo is initialised and committed locally on `main`.
+- `gh repo create moon-phases --private` and the first push happen on request, not
+  automatically. CI workflows are authored in M0 but only take effect once a remote exists.

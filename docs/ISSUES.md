@@ -7,8 +7,8 @@ New issues append to the table and get a detail section only when they need one.
 
 | ID | Type | Title | Milestone | Status |
 |---|---|---|---|---|
-| I-001 | question | Product name and bundle identifier | M0 | **blocked** |
-| I-002 | question | Front-end framework selection | M0 | **blocked** |
+| I-001 | question | Product name and bundle identifier | M0 | done |
+| I-002 | question | Front-end framework selection | M0 | done |
 | I-003 | chore | Workspace skeleton, Makefile, Ubuntu CI | M0 | open |
 | I-004 | feat | `Engine` wrapper over `swiss-eph` with provenance | M0 | open |
 | I-005 | chore | Generate and commit `swetest` golden vectors | M0 | open |
@@ -32,17 +32,17 @@ New issues append to the table and get a detail section only when they need one.
 | I-023 | chore | Accessibility and contrast audit | M4 | open |
 | I-024 | chore | `make install`, ad-hoc signing, autostart | M4 | open |
 | I-025 | chore | Release workflow, DMG on tag | M4 | open |
+| I-026 | chore | Create private GitHub remote and push | M4 | blocked |
 
 ---
 
-### I-001 — Product name and bundle identifier
-Blocks M0. The bundle identifier fixes the settings file path; changing it later strands
-existing settings. Repo directory is `moon-phases` but the app spans all nine grahas.
-Proposal: display name **Chandra**, identifier `com.parasdsingh.chandra`.
-See [D-013](DECISIONS.md#d-013).
+### I-001 — Product name and bundle identifier — done
+Resolved: display name **Chandra**, identifier `com.parasdsingh.chandra`, repo stays
+`moon-phases`. Identifier is frozen. See [D-013](DECISIONS.md#d-013).
 
-### I-002 — Front-end framework selection
-Blocks M0. Proposal SolidJS + Vite + TypeScript. See [D-014](DECISIONS.md#d-014).
+### I-002 — Front-end framework selection — done
+Resolved: SolidJS + Vite + TypeScript, hand-written CSS with tokens.
+See [D-014](DECISIONS.md#d-014).
 
 ### I-006 — Tray icon scale
 Tauri `Image` takes raw RGBA with pixel dimensions. Unverified whether macOS treats a 44x44
@@ -62,3 +62,7 @@ multi-tray usage.
 ad-hoc-signed, non-notarised bundle is untested and cannot be tested without a real build.
 Not a blocker: [D-007](DECISIONS.md#d-007) makes the app fully correct without it.
 Outcome to record here once M2 builds a real bundle.
+
+### I-026 — GitHub remote
+Deferred by choice ([D-018](DECISIONS.md#d-018)). CI workflows are written in M0 but stay
+inert until a remote exists. Unblock with `gh repo create moon-phases --private`.

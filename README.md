@@ -3,7 +3,7 @@
 macOS menu bar app. Moon phase in the menu bar; a dropdown calendar with per-day detail;
 expanding to navagraha transits.
 
-Status: **architecture draft, pre-implementation.**
+**Chandra** — status: architecture approved pending sign-off, pre-implementation.
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Decisions](docs/DECISIONS.md)
