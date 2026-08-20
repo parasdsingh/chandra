@@ -12,7 +12,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use chandra_almanac::{Almanac, Location};
+use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::{Almanac, Location, MonthCursor};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig};
 use serde_json::{json, Map, Value};
 
@@ -95,6 +96,16 @@ fn merged_day_shape(almanac: &Almanac, graha: Graha) -> Value {
         .expect("a month yields at least one day")
 }
 
+fn cursor(year: i32, month: u32) -> MonthCursor {
+    MonthCursor {
+        anchor_unix_ms: (chandra_ephemeris::jd_to_unix_seconds(chandra_ephemeris::julian_day(
+            year, month, 15, 0.25,
+        )) * 1000.0) as i64,
+        offset: 0,
+        system: MonthSystem::Solar,
+    }
+}
+
 fn almanac() -> Almanac {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/ephe");
     Almanac::new(
@@ -118,14 +129,17 @@ fn ipc_payload_shapes_match_the_committed_contract() {
 
     shapes.insert(
         "MoonMonth",
-        shape(&serde_json::to_value(almanac.moon_month(2026, 8).expect("moon month")).unwrap()),
+        shape(
+            &serde_json::to_value(almanac.moon_month(cursor(2026, 8)).expect("moon month"))
+                .unwrap(),
+        ),
     );
     shapes.insert(
         "GrahaMonth",
         shape(
             &serde_json::to_value(
                 almanac
-                    .graha_month(Graha::Mangala, 2025, 2)
+                    .graha_month(Graha::Mangala, cursor(2025, 2))
                     .expect("graha month"),
             )
             .unwrap(),

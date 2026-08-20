@@ -21,11 +21,15 @@ import type {
 
 export const bootstrap = () => invoke<Bootstrap>("bootstrap");
 
-export const moonMonth = (year: number, month: number) =>
-  invoke<MoonMonth>("moon_month", { year, month });
+/** The month containing `anchorUnixMs`, stepped by `offset` months. */
+export const moonMonth = (anchorUnixMs: number, offset: number) =>
+  invoke<MoonMonth>("moon_month", { anchorUnixMs, offset });
 
-export const grahaMonth = (graha: GrahaKey, year: number, month: number) =>
-  invoke<GrahaMonth>("graha_month", { graha, year, month });
+export const grahaMonth = (
+  graha: GrahaKey,
+  anchorUnixMs: number,
+  offset: number,
+) => invoke<GrahaMonth>("graha_month", { graha, anchorUnixMs, offset });
 
 export const dayDetail = (
   graha: GrahaKey,
@@ -48,7 +52,5 @@ export const searchCities = (query: string, limit: number) =>
 
 export const requestDeviceLocation = () =>
   invoke<Resolved>("request_device_location");
-
-export const openSettings = () => invoke<void>("open_settings");
 
 export const closePanel = () => invoke<void>("close_panel");

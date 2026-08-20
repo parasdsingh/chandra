@@ -11,6 +11,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use chandra_almanac::lunar::MonthSystem;
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, SiderealConfig};
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +27,15 @@ pub struct Settings {
     pub time_format: TimeFormat,
     pub location: LocationSetting,
     pub sidereal: SiderealSetting,
+    pub calendar: CalendarSetting,
     pub tray: TraySetting,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CalendarSetting {
+    /// Whether months run Gregorian, new moon to new moon, or full moon to full
+    /// moon.
+    pub month_system: MonthSystem,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,6 +112,9 @@ impl Default for Settings {
                 ayanamsa: Ayanamsa::Lahiri,
                 node_type: NodeType::True,
             },
+            calendar: CalendarSetting {
+                month_system: MonthSystem::Solar,
+            },
             tray: TraySetting {
                 // Only the moon, which is permanent and not listed here.
                 subjects: Vec::new(),
@@ -132,6 +144,9 @@ impl Settings {
                     elevation: 920.0,
                 }),
             },
+            calendar: CalendarSetting {
+                month_system: MonthSystem::Amanta,
+            },
             tray: TraySetting {
                 subjects: vec![Graha::Mangala],
                 colour_mode: false,
@@ -157,8 +172,9 @@ impl Settings {
 
         let raw = fs::read_to_string(&path)
             .map_err(|e| AppError::Settings(format!("cannot read {}: {e}", path.display())))?;
-        let value: serde_json::Value = serde_json::from_str(&raw)
-            .map_err(|e| AppError::Settings(format!("{} is not valid JSON: {e}", path.display())))?;
+        let value: serde_json::Value = serde_json::from_str(&raw).map_err(|e| {
+            AppError::Settings(format!("{} is not valid JSON: {e}", path.display()))
+        })?;
 
         let version = value
             .get("schema_version")
@@ -182,8 +198,9 @@ impl Settings {
         // Write to a sibling then rename, so an interrupted write cannot leave a
         // truncated settings file behind.
         let temporary = path.with_extension("json.tmp");
-        fs::write(&temporary, body)
-            .map_err(|e| AppError::Settings(format!("cannot write {}: {e}", temporary.display())))?;
+        fs::write(&temporary, body).map_err(|e| {
+            AppError::Settings(format!("cannot write {}: {e}", temporary.display()))
+        })?;
         fs::rename(&temporary, &path)
             .map_err(|e| AppError::Settings(format!("cannot replace {}: {e}", path.display())))?;
 

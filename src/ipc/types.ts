@@ -57,30 +57,39 @@ export interface Moment {
   day_offset: number;
 }
 
+/** Gregorian, new moon to new moon, or full moon to full moon. */
+export type MonthSystem = "solar" | "amanta" | "purnimanta";
+
 export interface MoonCell {
-  day: number;
+  /** Full civil date: a lunar month crosses Gregorian month boundaries. */
+  date: DateKey;
   illumination: number;
   is_waxing: boolean;
   phase: PhaseKey;
   principal: boolean;
+  /** Within the Sun's rays; for the Moon that is the days around new moon. */
+  combust: boolean;
 }
 
 export interface MoonMonth {
-  year: number;
-  month: number;
+  /** `August 2026`, `Shravana 2026`, `Adhika Shravana 2026`. */
+  label: string;
+  system: MonthSystem;
+  /** An instant inside this month; navigation steps from it. */
+  anchor_unix_ms: number;
   time_zone: string;
-  leading_blanks: number;
   days: MoonCell[];
   source: Source;
 }
 
 export interface GrahaCell {
-  day: number;
+  date: DateKey;
   longitude: number;
   rashi: string;
   nakshatra: string;
   retrograde: boolean;
   speed: number;
+  combust: boolean;
 }
 
 export interface TransitEvent {
@@ -94,14 +103,16 @@ export interface TransitEvent {
 
 export interface GrahaMonth {
   graha: GrahaKey;
-  year: number;
-  month: number;
+  label: string;
+  system: MonthSystem;
+  anchor_unix_ms: number;
   time_zone: string;
-  leading_blanks: number;
   days: GrahaCell[];
   events: TransitEvent[];
   source: Source;
 }
+
+export type CalendarMonth = MoonMonth | GrahaMonth;
 
 export interface NakshatraSpan {
   nakshatra: string;
@@ -196,6 +207,9 @@ export interface Settings {
     ayanamsa: string;
     node_type: string;
   };
+  calendar: {
+    month_system: MonthSystem;
+  };
   tray: {
     subjects: GrahaKey[];
     colour_mode: boolean;
@@ -229,10 +243,13 @@ export interface GrahaInfo {
 export interface Bootstrap {
   settings: Settings;
   location: Resolved;
+  /** Which subject the panel is showing; the tray sets it before opening. */
+  subject: GrahaKey;
   subjects: GrahaKey[];
   library_version: string;
   ayanamsas: Choice[];
   node_types: Choice[];
+  month_systems: Choice[];
   grahas: GrahaInfo[];
 }
 

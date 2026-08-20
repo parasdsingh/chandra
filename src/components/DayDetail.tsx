@@ -21,11 +21,11 @@ import type { FormatContext } from "../lib/format";
 import {
   formatBoundary,
   formatDegrees,
-  formatFullDate,
   formatIllumination,
   formatSpan,
   formatSpeed,
   formatTime,
+  formatWeekday,
   phaseLabel,
   spokenDegrees,
 } from "../lib/format";
@@ -55,11 +55,14 @@ function Body(props: Props): JSX.Element {
     <Show when={props.detail}>
       {(detail) => (
         <>
+          {/* Weekday only: the header already carries the date, and printing it
+              twice in a 320px panel is the clutter the layout exists to avoid. */}
           <div class="detail__date">
             <Show when={props.isToday}>
-              <span>TODAY · </span>
+              <span class="detail__today">TODAY</span>
+              <span> · </span>
             </Show>
-            {formatFullDate(detail().date)}
+            {formatWeekday(detail().date)}
           </div>
 
           <Show
@@ -99,35 +102,28 @@ function MoonBody(props: { detail: MoonDay; context: FormatContext }): JSX.Eleme
         </span>
       </div>
 
+      {/* A missing rise or set is stated on its own row, in the value column.
+          Rendering a dash plus a caption underneath added a line and changed the
+          shape of the block depending on the day. */}
       <div class="detail__block">
-        <RiseRow
-          label="Moonrise"
-          moment={props.detail.moonrise}
-          context={props.context}
-          note={
-            circumpolar()
-              ? undefined
-              : props.detail.moonrise
-                ? undefined
-                : "no rise on this date"
+        <Show
+          when={!circumpolar()}
+          fallback={
+            <Row label="Moon" value="does not rise or set today" muted />
           }
-        />
-        <RiseRow
-          label="Moonset"
-          moment={props.detail.moonset}
-          context={props.context}
-          note={
-            circumpolar()
-              ? undefined
-              : props.detail.moonset
-                ? undefined
-                : "no set on this date"
-          }
-        />
-        {/* One caption for the pair, worded differently from a skipped rise so
-            the two are never conflated. */}
-        <Show when={circumpolar()}>
-          <p class="detail__note">always above or below the horizon</p>
+        >
+          <RiseRow
+            label="Moonrise"
+            moment={props.detail.moonrise}
+            absent="no rise today"
+            context={props.context}
+          />
+          <RiseRow
+            label="Moonset"
+            moment={props.detail.moonset}
+            absent="no set today"
+            context={props.context}
+          />
         </Show>
       </div>
 
@@ -184,9 +180,39 @@ function GrahaBody(props: {
       </div>
 
       <div class="detail__block">
-        <RiseRow label="Rise" moment={props.detail.rise} context={props.context} />
-        <RiseRow label="Set" moment={props.detail.set} context={props.context} />
+        <RiseRow
+          label="Rise"
+          moment={props.detail.rise}
+          absent="no rise today"
+          context={props.context}
+        />
+        <RiseRow
+          label="Set"
+          moment={props.detail.set}
+          absent="no set today"
+          context={props.context}
+        />
       </div>
+
+      {/* Every graha stands in a nakshatra and a rashi, so the day view is the
+          same shape for all nine and for the Moon. */}
+      <SpanBlock
+        label="Nakshatra"
+        spans={props.detail.nakshatras.map((span) => ({
+          value: `${span.name} · Pada ${span.pada}`,
+          caption: formatSpan(span.entry, span.exit, props.context),
+          prevailing: span.prevailing,
+        }))}
+      />
+
+      <SpanBlock
+        label="Rashi"
+        spans={props.detail.rashis.map((span) => ({
+          value: span.name,
+          caption: formatSpan(span.entry, span.exit, props.context),
+          prevailing: span.prevailing,
+        }))}
+      />
 
       <Show when={props.events.length > 0}>
         <div class="detail__block">
@@ -239,43 +265,49 @@ function SpanBlock(props: { label: string; spans: SpanRow[] }): JSX.Element {
   );
 }
 
-function Row(props: { label: string; value: string; spoken?: string }): JSX.Element {
+function Row(props: {
+  label: string;
+  value: string;
+  spoken?: string;
+  muted?: boolean;
+}): JSX.Element {
   return (
-    <p class="detail__row" role="group" aria-label={`${props.label}, ${props.spoken ?? props.value}`}>
+    <p
+      class="detail__row"
+      role="group"
+      aria-label={`${props.label}, ${props.spoken ?? props.value}`}
+    >
       <span class="detail__label">{props.label}</span>
-      <span class="detail__value">{props.value}</span>
+      <span class="detail__value" classList={{ "is-absent": props.muted }}>
+        {props.value}
+      </span>
     </p>
   );
 }
 
+/**
+ * A rise or set row.
+ *
+ * When the event does not occur, the value column carries the reason instead of
+ * a time. There is no dash and no extra caption line: the block keeps the same
+ * shape whether or not the Moon rose.
+ */
 function RiseRow(props: {
   label: string;
   moment: Moment | null;
+  absent: string;
   context: FormatContext;
-  note?: string;
 }): JSX.Element {
+  const text = () =>
+    props.moment ? formatBoundary(props.moment, props.context) : props.absent;
+
   return (
-    <>
-      <p
-        class="detail__row"
-        role="group"
-        aria-label={
-          props.moment
-            ? `${props.label}, ${formatBoundary(props.moment, props.context)}`
-            : `${props.label}, none${props.note ? `, ${props.note}` : ""}`
-        }
-      >
-        <span class="detail__label">{props.label}</span>
-        <span class="detail__value" classList={{ "is-absent": !props.moment }}>
-          <Show when={props.moment} fallback="—">
-            {(moment) => formatBoundary(moment(), props.context)}
-          </Show>
-        </span>
-      </p>
-      <Show when={props.note}>
-        <p class="detail__note">{props.note}</p>
-      </Show>
-    </>
+    <p class="detail__row" role="group" aria-label={`${props.label}, ${text()}`}>
+      <span class="detail__label">{props.label}</span>
+      <span class="detail__value" classList={{ "is-absent": !props.moment }}>
+        {text()}
+      </span>
+    </p>
   );
 }
 

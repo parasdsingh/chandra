@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cache::Lru;
 use crate::error::{Error, Result};
+use crate::lunar::{self, LunarMonth, MonthSystem};
 use crate::month::{self, DayDetail, GrahaMonth, MoonMonth};
 use crate::phase::{self, PhaseName};
 use crate::time::{CivilDay, DateKey};
@@ -33,10 +34,32 @@ pub struct Location {
     pub zone_name: String,
 }
 
+/// Where the calendar is pointing.
+///
+/// A lunar month has no year-and-number to index, so navigation is expressed as
+/// "the month containing this instant, shifted by this many months". The same
+/// cursor drives both systems, which is what lets the grid stay ignorant of
+/// which one is in force.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MonthCursor {
+    pub anchor_unix_ms: i64,
+    pub offset: i32,
+    pub system: MonthSystem,
+}
+
+/// A month resolved to concrete days.
+struct Resolved {
+    days: Vec<CivilDay>,
+    label: String,
+    system: MonthSystem,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum CacheKey {
-    Moon(i16, i8),
-    Graha(Graha, i16, i8),
+    // Keyed on the month's first civil day, which identifies a month uniquely in
+    // either system without needing a numbering scheme for lunar months.
+    Moon(MonthSystem, DateKey),
+    Graha(Graha, MonthSystem, DateKey),
 }
 
 #[derive(Debug, Clone)]
@@ -108,21 +131,69 @@ impl Almanac {
         self.invalidate()
     }
 
-    pub fn moon_month(&self, year: i16, month: i8) -> Result<MoonMonth> {
-        if let Some(Cached::Moon(cached)) = self.cached(CacheKey::Moon(year, month))? {
+    /// Resolves a cursor to the month's civil days and its display label.
+    fn resolve(&self, cursor: MonthCursor) -> Result<Resolved> {
+        let settings = self.read_settings()?;
+        let jd = chandra_ephemeris::unix_seconds_to_jd(cursor.anchor_unix_ms as f64 / 1000.0);
+
+        if cursor.system == MonthSystem::Solar {
+            let anchor_day = CivilDay::new(DateKey::new(1, 1, 1)?, &settings.zone)?.date_of(jd)?;
+            let shifted = shift_gregorian(anchor_day.year, anchor_day.month, cursor.offset);
+            return Ok(Resolved {
+                days: month::month_days(shifted.0, shifted.1, &settings.zone)?,
+                label: gregorian_label(shifted.0, shifted.1)?,
+                system: cursor.system,
+            });
+        }
+
+        let containing = lunar::month_containing(
+            &self.engine,
+            jd,
+            cursor.system,
+            settings.location.observer,
+            &settings.zone,
+        )?;
+        let month = if cursor.offset == 0 {
+            containing
+        } else {
+            lunar::shift(
+                &self.engine,
+                &containing,
+                cursor.offset,
+                cursor.system,
+                settings.location.observer,
+                &settings.zone,
+            )?
+        };
+
+        Ok(Resolved {
+            label: format!("{} {}", month.display_name(), month.first_day.year),
+            days: month::days_between(month.first_day, month.last_day, &settings.zone)?,
+            system: cursor.system,
+        })
+    }
+
+    pub fn moon_month(&self, cursor: MonthCursor) -> Result<MoonMonth> {
+        let resolved = self.resolve(cursor)?;
+        let key = CacheKey::Moon(resolved.system, resolved.days[0].date);
+        if let Some(Cached::Moon(cached)) = self.cached(key)? {
             return Ok(cached);
         }
 
-        let settings = self.read_settings()?;
-        let days = month::month_days(year, month, &settings.zone)?;
-        let built = month::moon_month(&self.engine, &days, &settings.location.zone_name)?;
-        drop(settings);
+        let zone_name = self.read_settings()?.location.zone_name.clone();
+        let built = month::moon_month(
+            &self.engine,
+            &resolved.days,
+            &zone_name,
+            resolved.label,
+            resolved.system,
+        )?;
 
-        self.store(CacheKey::Moon(year, month), Cached::Moon(built.clone()))?;
+        self.store(key, Cached::Moon(built.clone()))?;
         Ok(built)
     }
 
-    pub fn graha_month(&self, graha: Graha, year: i16, month: i8) -> Result<GrahaMonth> {
+    pub fn graha_month(&self, graha: Graha, cursor: MonthCursor) -> Result<GrahaMonth> {
         if graha == Graha::Chandra {
             // The Moon has its own view; routing it here would compute transit
             // events nothing displays.
@@ -130,20 +201,72 @@ impl Almanac {
                 "the Moon is served by moon_month, not graha_month".into(),
             ));
         }
-        if let Some(Cached::Graha(cached)) = self.cached(CacheKey::Graha(graha, year, month))? {
+
+        let resolved = self.resolve(cursor)?;
+        let key = CacheKey::Graha(graha, resolved.system, resolved.days[0].date);
+        if let Some(Cached::Graha(cached)) = self.cached(key)? {
             return Ok(*cached);
         }
 
-        let settings = self.read_settings()?;
-        let days = month::month_days(year, month, &settings.zone)?;
-        let built = month::graha_month(&self.engine, graha, &days, &settings.location.zone_name)?;
-        drop(settings);
-
-        self.store(
-            CacheKey::Graha(graha, year, month),
-            Cached::Graha(Box::new(built.clone())),
+        let zone_name = self.read_settings()?.location.zone_name.clone();
+        let built = month::graha_month(
+            &self.engine,
+            graha,
+            &resolved.days,
+            &zone_name,
+            resolved.label,
+            resolved.system,
         )?;
+
+        self.store(key, Cached::Graha(Box::new(built.clone())))?;
         Ok(built)
+    }
+
+    /// The lunar month containing an instant.
+    pub fn lunar_month_at(&self, jd: f64, system: MonthSystem) -> Result<LunarMonth> {
+        let settings = self.read_settings()?;
+        lunar::month_containing(
+            &self.engine,
+            jd,
+            system,
+            settings.location.observer,
+            &settings.zone,
+        )
+    }
+
+    /// The lunar month `offset` months from `month`.
+    pub fn lunar_month_shift(
+        &self,
+        month: &LunarMonth,
+        offset: i32,
+        system: MonthSystem,
+    ) -> Result<LunarMonth> {
+        let settings = self.read_settings()?;
+        lunar::shift(
+            &self.engine,
+            month,
+            offset,
+            system,
+            settings.location.observer,
+            &settings.zone,
+        )
+    }
+
+    /// Sankrantis between two instants, for callers checking the intercalary
+    /// rule directly.
+    pub fn sankrantis_between(
+        &self,
+        from: f64,
+        to: f64,
+    ) -> Result<Vec<(f64, crate::zodiac::Rashi)>> {
+        lunar::sankrantis(&self.engine, from, to)
+    }
+
+    /// The civil day after `date`, in the observer's zone.
+    pub fn day_after(&self, date: DateKey) -> Result<DateKey> {
+        let settings = self.read_settings()?;
+        let day = CivilDay::new(date, &settings.zone)?;
+        day.date_of(day.end_jd + 0.5)
     }
 
     pub fn day_detail(&self, graha: Graha, date: DateKey) -> Result<DayDetail> {
@@ -231,6 +354,39 @@ pub struct SnapshotGraha {
     pub nakshatra: Nakshatra,
     pub retrograde: bool,
     pub source: Source,
+}
+
+/// Gregorian month arithmetic that carries across year boundaries.
+fn shift_gregorian(year: i16, month: i8, offset: i32) -> (i16, i8) {
+    let zero_based = year as i32 * 12 + (month as i32 - 1) + offset;
+    (
+        zero_based.div_euclid(12) as i16,
+        (zero_based.rem_euclid(12) + 1) as i8,
+    )
+}
+
+/// `August 2026`, from the calendar rather than a hardcoded name table.
+fn gregorian_label(year: i16, month: i8) -> Result<String> {
+    const MONTHS: [&str; 12] = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ];
+    let name = MONTHS.get(month as usize - 1).ok_or(Error::InvalidDate {
+        year,
+        month,
+        day: 1,
+    })?;
+    Ok(format!("{name} {year}"))
 }
 
 fn resolve_zone(name: &str) -> Result<TimeZone> {

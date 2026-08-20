@@ -51,11 +51,14 @@ pub struct Event {
 
 /// Combustion orbs in degrees of elongation from the Sun.
 ///
+/// Public because the calendar marks which days a graha is combust, not only
+/// the instants it enters and leaves that state.
+///
 /// Values follow Brihat Parashara Hora Shastra. Some traditions narrow the orb
 /// for a retrograde Budha or Shukra; that variant is applied by splitting the
 /// scan at stations so the orb is constant across each interval and no spurious
 /// crossing is manufactured at the discontinuity.
-fn combustion_orb(graha: Graha, retrograde: bool) -> Option<f64> {
+pub fn combustion_orb(graha: Graha, retrograde: bool) -> Option<f64> {
     Some(match graha {
         Graha::Chandra => 12.0,
         Graha::Mangala => 17.0,

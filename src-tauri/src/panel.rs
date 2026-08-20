@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use chandra_ephemeris::Graha;
 use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Rect, WebviewUrl, WebviewWindow,
+    AppHandle, Emitter, LogicalPosition, Manager, Rect, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
 
@@ -14,22 +14,20 @@ use crate::location::Outcome;
 use crate::state::AppState;
 
 pub const PANEL_LABEL: &str = "panel";
-pub const SETTINGS_LABEL: &str = "settings";
 
 /// Panel width, fixed forever (`docs/DESIGN.md` 2.2).
 const PANEL_WIDTH: f64 = 320.0;
 
-/// The window is created at the maximum height the panel can ever reach and
-/// never resized. The visible panel is a div inside it that animates its own
-/// height, with the surrounding area transparent and click-through.
+/// Panel height, and therefore window height.
 ///
-/// Resizing the window per frame to follow the detail expanding would mean an
-/// IPC call every frame for 220ms, and the frame and its contents would visibly
-/// disagree whenever one lagged the other. A fixed window has neither problem.
-const PANEL_HEIGHT: f64 = 620.0;
+/// Constant: 12 padding + 40 header + 4 + 264 region + 12 padding. Every view -
+/// calendar, day, settings - swaps inside that 264px region rather than growing
+/// the panel, so the window never resizes and the material behind it never has
+/// to be resized either.
+const PANEL_HEIGHT: f64 = 332.0;
 
-const SETTINGS_WIDTH: f64 = 520.0;
-const SETTINGS_HEIGHT: f64 = 420.0;
+/// Corner radius of the panel, matched by the window material behind it.
+const PANEL_RADIUS: f64 = 12.0;
 
 /// How long to wait for CoreLocation before giving up and keeping the offline
 /// resolution. Long enough for the authorisation prompt to be answered, short
@@ -54,8 +52,41 @@ pub fn create(app: &AppHandle) -> Result<WebviewWindow> {
         .build()
         .map_err(|e| AppError::Engine(format!("cannot create the panel window: {e}")))?;
 
+    // Dark regardless of the system appearance: the palette is a single dark
+    // one (D-011), and the light variant of the material would put near-white
+    // text on a near-white backdrop.
+    let _ = window.set_theme(Some(tauri::Theme::Dark));
+    apply_material(&window);
     Ok(window)
 }
+
+/// Gives the panel the system's popover material.
+///
+/// macOS draws its own menu bar popovers on a translucent, blurred backdrop.
+/// A flat fill sits oddly among them, so the panel uses the same public
+/// AppKit material. The window is already transparent and the panel paints only
+/// a thin scrim over this, so the blur is what shows through.
+#[cfg(target_os = "macos")]
+fn apply_material(window: &WebviewWindow) {
+    use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+
+    // Popover is the material the system uses for exactly this kind of window.
+    // The radius matches the panel's own corner radius, so the material does not
+    // show as square corners behind rounded content.
+    if let Err(error) = apply_vibrancy(
+        window,
+        NSVisualEffectMaterial::Popover,
+        Some(NSVisualEffectState::Active),
+        Some(PANEL_RADIUS),
+    ) {
+        // Not fatal: without the material the panel falls back to its own scrim,
+        // which is legible, just less at home next to the system's popovers.
+        eprintln!("chandra: could not apply the panel material: {error}");
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_material(_window: &WebviewWindow) {}
 
 /// Shows the panel for a subject, or hides it if it is already showing that one.
 ///
@@ -66,14 +97,34 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
         return;
     };
 
-    let showing_same_subject = window.is_visible().unwrap_or(false) && current_subject(app) == Some(subject);
+    let showing_same_subject =
+        window.is_visible().unwrap_or(false) && current_subject(app) == Some(subject);
     if showing_same_subject {
         hide(app);
         return;
     }
 
     set_current_subject(app, subject);
-    let _ = window.emit("chandra://subject", subject);
+
+    // Told to the panel directly rather than only through an event. An event is
+    // a one-shot that the webview can miss - if it has not finished registering
+    // its listener, or if delivery fails, the panel keeps showing whatever it
+    // showed last, which meant a graha's tray item opening the Moon's calendar.
+    // Evaluating in the page is synchronous with the show and cannot be missed.
+    // The subject is carried in the page's own URL, and the panel navigates to
+    // it as it opens.
+    //
+    // Pushing the value into the running page was tried first, both as a Tauri
+    // event and as a direct call evaluated in the page. The call demonstrably
+    // arrives - it can write to the DOM - but a signal set from that context
+    // never reached the render, so a graha's tray item kept opening the Moon's
+    // calendar. A navigation needs no reactivity to be believed: the page reads
+    // its own URL on load. It also gives every open a clean slate, which is what
+    // makes reopening return to today.
+    let _ = window.eval(format!(
+        "location.replace(location.pathname + '?subject={}&t=' + Date.now())",
+        subject.key()
+    ));
 
     place(&window, tray_rect);
 
@@ -89,15 +140,7 @@ pub fn hide(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(PANEL_LABEL) {
         let _ = window.hide();
     }
-    // Settings is a normal window; hiding the whole app while it is open would
-    // take it off screen too.
-    let settings_open = app
-        .get_webview_window(SETTINGS_LABEL)
-        .and_then(|w| w.is_visible().ok())
-        .unwrap_or(false);
-    if !settings_open {
-        let _ = app.hide();
-    }
+    let _ = app.hide();
 }
 
 /// Centres the panel under the tray item, 6px below the menu bar, fully on
@@ -130,35 +173,6 @@ fn place(window: &WebviewWindow, tray_rect: Rect) {
     let _ = window.set_position(LogicalPosition::new(x, y));
 }
 
-pub fn open_settings(app: &AppHandle) -> Result<()> {
-    if let Some(window) = app.get_webview_window(SETTINGS_LABEL) {
-        let _ = app.show();
-        let _ = window.show();
-        let _ = window.set_focus();
-        return Ok(());
-    }
-
-    let window = WebviewWindowBuilder::new(
-        app,
-        SETTINGS_LABEL,
-        WebviewUrl::App("index.html?window=settings".into()),
-    )
-    .title("Chandra Settings")
-    .inner_size(SETTINGS_WIDTH, SETTINGS_HEIGHT)
-    .resizable(false)
-    .maximizable(false)
-    .minimizable(false)
-    .visible(false)
-    .build()
-    .map_err(|e| AppError::Engine(format!("cannot create the settings window: {e}")))?;
-
-    let _ = window.set_size(LogicalSize::new(SETTINGS_WIDTH, SETTINGS_HEIGHT));
-    let _ = app.show();
-    let _ = window.show();
-    let _ = window.set_focus();
-    Ok(())
-}
-
 /// Asks macOS for the device's coordinates, waits for an answer, and records it.
 ///
 /// CoreLocation delivers on the main thread's run loop, so the request is
@@ -176,10 +190,11 @@ pub async fn request_device_location(app: &AppHandle) {
     }
 
     let handle = app.clone();
-    let outcome = tauri::async_runtime::spawn_blocking(move || receiver.recv_timeout(LOCATION_TIMEOUT))
-        .await
-        .ok()
-        .and_then(|result| result.ok());
+    let outcome =
+        tauri::async_runtime::spawn_blocking(move || receiver.recv_timeout(LOCATION_TIMEOUT))
+            .await
+            .ok()
+            .and_then(|result| result.ok());
 
     if let Some(Outcome::Located {
         latitude,
@@ -192,8 +207,11 @@ pub async fn request_device_location(app: &AppHandle) {
             .accept_device_location(latitude, longitude, elevation)
             .is_ok()
         {
-            let _ = crate::tray::refresh_icons(&handle);
             let _ = handle.emit("chandra://location", state.location());
+            let for_tray = handle.clone();
+            let _ = handle.run_on_main_thread(move || {
+                let _ = crate::tray::refresh_icons(&for_tray);
+            });
         }
     }
 }
@@ -206,9 +224,25 @@ pub async fn request_device_location(app: &AppHandle) {
 pub struct CurrentSubject(std::sync::Mutex<Option<Graha>>);
 
 fn current_subject(app: &AppHandle) -> Option<Graha> {
-    *app.state::<CurrentSubject>().0.lock().expect("subject lock")
+    *app.state::<CurrentSubject>()
+        .0
+        .lock()
+        .expect("subject lock")
+}
+
+/// The subject the panel is showing, for the front end to read on mount.
+///
+/// The tray also emits an event when the subject changes, but an event is a
+/// one-shot: a webview that has not finished registering its listener misses it
+/// and shows the Moon under whichever tray item was clicked. Reading the
+/// authoritative value on mount closes that window.
+pub fn subject_or_default(app: &AppHandle) -> Graha {
+    current_subject(app).unwrap_or(Graha::Chandra)
 }
 
 fn set_current_subject(app: &AppHandle, subject: Graha) {
-    *app.state::<CurrentSubject>().0.lock().expect("subject lock") = Some(subject);
+    *app.state::<CurrentSubject>()
+        .0
+        .lock()
+        .expect("subject lock") = Some(subject);
 }

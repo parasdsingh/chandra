@@ -1,17 +1,12 @@
-/** Chooses which window this document is, and loads it. */
+/** Loads the panel. There is only one window. */
 
 import type { JSX } from "solid-js";
-import { createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createResource, onCleanup, onMount, Show } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 
 import * as ipc from "./ipc";
 import type { GrahaKey } from "./ipc/types";
 import { Panel } from "./components/Panel";
-import { SettingsWindow, useSettingsChrome } from "./components/Settings";
-
-function isSettingsWindow(): boolean {
-  return new URLSearchParams(window.location.search).get("window") === "settings";
-}
 
 /**
  * The visual harness, reachable at `?preview` in a dev build only.
@@ -24,14 +19,8 @@ function isPreview(): boolean {
 }
 
 export function App(): JSX.Element {
-  if (isPreview()) {
-    return <DevPreview />;
-  }
-  return (
-    <Show when={!isSettingsWindow()} fallback={<Settings />}>
-      <PanelWindow />
-    </Show>
-  );
+  if (isPreview()) return <DevPreview />;
+  return <PanelWindow />;
 }
 
 function DevPreview(): JSX.Element {
@@ -42,44 +31,41 @@ function DevPreview(): JSX.Element {
   return <Show when={module()}>{(Preview) => Preview()()}</Show>;
 }
 
-function Settings(): JSX.Element {
-  useSettingsChrome();
-  return <SettingsWindow />;
+/**
+ * Which subject this page was opened for.
+ *
+ * Read from the URL the backend navigated to as it opened the panel, so it is
+ * fixed for the life of the page and needs nothing to propagate.
+ */
+function subjectFromUrl(): GrahaKey {
+  const value = new URLSearchParams(window.location.search).get("subject");
+  return (value as GrahaKey | null) ?? "chandra";
 }
 
 function PanelWindow(): JSX.Element {
-  const [subject, setSubject] = createSignal<GrahaKey>("chandra");
-  const [boot, { refetch }] = createResource(ipc.bootstrap);
+  const subject = subjectFromUrl();
+  const [boot, { refetch, mutate }] = createResource(ipc.bootstrap);
 
   onMount(() => {
-    // The tray tells the panel which subject it was opened for; the window is
-    // created once and reused for all of them.
-    const subjectListener = listen<GrahaKey>("chandra://subject", (event) => {
-      setSubject(event.payload);
-    });
-    // A location arriving from CoreLocation changes every rise and set time, so
-    // the panel reloads rather than showing stale figures.
-    const locationListener = listen("chandra://location", () => {
-      void refetch();
-    });
+    const reload = () => void refetch();
 
-    onCleanup(() => {
-      void subjectListener.then((unlisten) => unlisten());
-      void locationListener.then((unlisten) => unlisten());
-    });
+    // A location arriving from CoreLocation changes every rise and set time, so
+    // the panel refreshes rather than showing stale figures.
+    const locationListener = listen("chandra://location", reload);
+    onCleanup(() => void locationListener.then((unlisten) => unlisten()));
   });
 
   return (
     <Show
       when={boot()}
       fallback={
-        // A failed bootstrap must say so. Rendering the empty fallback instead
-        // gives a panel that opens onto nothing, with no way to tell whether it
-        // is still loading or permanently broken.
+        // A failed bootstrap must say so. Rendering an empty fallback gives a
+        // panel that opens onto nothing, with no way to tell whether it is
+        // still loading or permanently broken.
         <Show when={boot.error} fallback={<div class="panel-frame" />}>
           <div class="panel-frame">
             <div class="panel">
-              <div class="detail">
+              <div class="region">
                 <div class="error-block">
                   <p class="error-block__headline">Chandra could not start.</p>
                   <p class="error-block__cause">{describe(boot.error)}</p>
@@ -90,7 +76,11 @@ function PanelWindow(): JSX.Element {
         </Show>
       }
     >
-      {(loaded) => <Panel boot={loaded()} subject={subject()} />}
+      <Panel
+        boot={boot()!}
+        subject={subject}
+        onSettingsApplied={(next) => mutate(next)}
+      />
     </Show>
   );
 }

@@ -1,4 +1,11 @@
-/** The popover panel: header, grid or month picker, and the expanded detail. */
+/**
+ * The panel.
+ *
+ * One surface, fixed size, with three views swapping inside a region of
+ * constant height: the calendar, a day, and settings. Nothing opens a second
+ * window and nothing changes the panel's height, so the popover never resizes
+ * under the pointer.
+ */
 
 import type { JSX } from "solid-js";
 import {
@@ -20,56 +27,93 @@ import type {
   GrahaKey,
   GrahaMonth,
   MoonMonth,
+  Settings,
   Snapshot,
 } from "../ipc/types";
 import { isAppError } from "../ipc/types";
-import {
-  addDays,
-  addMonths,
-  buildGrid,
-  daysInMonth,
-  sameDate,
-  todayIn,
-} from "../lib/calendar";
+import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
 import { localeFirstWeekday } from "../lib/format";
+import { CalendarScroller } from "./CalendarScroller";
 import { DayDetail } from "./DayDetail";
 import { Header } from "./Header";
-import { MonthGrid } from "./MonthGrid";
-import { MonthPicker } from "./MonthPicker";
+import { SECTION_TITLES, SettingsView, type SettingsSection } from "./SettingsView";
+
+type View = "calendar" | "day" | "settings";
 
 interface Props {
   boot: Bootstrap;
+  /** Fixed for the life of the page: the panel navigates on every open. */
   subject: GrahaKey;
+  onSettingsApplied: (next: Bootstrap) => void;
 }
 
 export function Panel(props: Props): JSX.Element {
   const timeZone = () => props.boot.location.zone;
   const today = () => todayIn(timeZone());
 
-  const [year, setYear] = createSignal(today().year);
-  const [month, setMonth] = createSignal(today().month);
+  // Navigation is by anchor instant plus offset, because a lunar month has no
+  // year-and-number to step through.
+  const [anchor, setAnchor] = createSignal(noonAnchor(todayIn(props.boot.location.zone)));
+  const [offset, setOffset] = createSignal(0);
+  const [view, setView] = createSignal<View>("calendar");
+  const [section, setSection] = createSignal<SettingsSection>("root");
   const [selected, setSelected] = createSignal<DateKey | null>(null);
-  const [pickerOpen, setPickerOpen] = createSignal(false);
-  const [direction, setDirection] = createSignal(0);
   const [error, setError] = createSignal<{ code: string; message: string }>();
 
   const firstWeekday = localeFirstWeekday();
 
-  const monthKey = createMemo(() => ({
-    subject: props.subject,
-    year: year(),
-    month: month(),
-  }));
+  /**
+   * One resource per visible month.
+   *
+   * The scroller shows three at once, so all three are loaded. Neighbours are
+   * cache hits after the first visit, which is what lets a drag reveal the
+   * next month already drawn rather than empty.
+   */
+  function monthResource(delta: number) {
+    const key = createMemo(() => ({
+      subject: props.subject,
+      anchor: anchor(),
+      offset: offset() + delta,
+      system: props.boot.settings.calendar.month_system,
+    }));
 
-  const [monthData] = createResource(monthKey, async (key) => {
-    setError(undefined);
-    try {
-      return key.subject === "chandra"
-        ? ((await ipc.moonMonth(key.year, key.month)) as MoonMonth)
-        : ((await ipc.grahaMonth(key.subject, key.year, key.month)) as GrahaMonth);
-    } catch (thrown) {
-      setError(toError(thrown));
-      return undefined;
+    const [data] = createResource(key, async (current) => {
+      try {
+        return current.subject === "chandra"
+          ? ((await ipc.moonMonth(current.anchor, current.offset)) as MoonMonth)
+          : ((await ipc.grahaMonth(
+              current.subject,
+              current.anchor,
+              current.offset,
+            )) as GrahaMonth);
+      } catch (thrown) {
+        if (delta === 0) setError(toError(thrown));
+        return undefined;
+      }
+    });
+    return data;
+  }
+
+  const previousMonth = monthResource(-1);
+  const monthData = monthResource(0);
+  const nextMonth = monthResource(1);
+
+  /**
+   * Keeps the offset small.
+   *
+   * Every fetch resolves the month by stepping `offset` months from the anchor,
+   * and for a lunar month each step is a syzygy search. Left to grow, scrolling
+   * a few years would make every fetch walk dozens of syzygies. Re-anchoring on
+   * the month in view resets the walk to nothing and resolves to the same
+   * months, so the cache still hits and nothing on screen changes.
+   */
+  createEffect(() => {
+    const month = monthData();
+    if (month && Math.abs(offset()) >= 6) {
+      batch(() => {
+        setAnchor(month.anchor_unix_ms);
+        setOffset(0);
+      });
     }
   });
 
@@ -77,15 +121,15 @@ export function Panel(props: Props): JSX.Element {
     try {
       return (await ipc.snapshot(Date.now())) as Snapshot;
     } catch {
-      // The header glyph is decoration; failing to draw it must not block the
-      // grid, which is what the user opened the panel for.
+      // The header glyph is decoration; failing to draw it must not cost the
+      // grid, which is what the panel was opened for.
       return undefined;
     }
   });
 
   const detailKey = createMemo(() => {
     const date = selected();
-    return date ? { subject: props.subject, date } : null;
+    return date && view() === "day" ? { subject: props.subject, date } : null;
   });
 
   const [detail] = createResource(detailKey, async (key) => {
@@ -104,10 +148,6 @@ export function Panel(props: Props): JSX.Element {
     }
   });
 
-  const grid = createMemo(() =>
-    buildGrid(year(), month(), monthData()?.leading_blanks ?? 0, firstWeekday),
-  );
-
   const grahaInfo = createMemo(() =>
     props.boot.grahas.find((graha) => graha.key === props.subject),
   );
@@ -124,92 +164,111 @@ export function Panel(props: Props): JSX.Element {
     );
   });
 
-  function goToMonth(nextYear: number, nextMonth: number, travel: number) {
-    batch(() => {
-      setDirection(travel);
-      setYear(nextYear);
-      setMonth(nextMonth);
-    });
+  function step(delta: number) {
+    if (delta === 0) return;
+    setOffset((current) => current + delta);
   }
 
-  function stepMonth(delta: number) {
-    const next = addMonths(year(), month(), delta);
-    goToMonth(next.year, next.month, delta);
-  }
-
-  /** Moves the selection, following it across a month boundary. */
+  /** Moves the selection, following it into the neighbouring month. */
   function moveSelection(deltaDays: number) {
     const from = selected() ?? today();
     const next = addDays(from, deltaDays);
+    setSelected(next);
+
+    const days = monthData()?.days;
+    const inside =
+      days?.some(
+        (day) =>
+          day.date.year === next.year &&
+          day.date.month === next.month &&
+          day.date.day === next.day,
+      ) ?? false;
+
+    if (!inside) {
+      batch(() => {
+        setAnchor(noonAnchor(next));
+        setOffset(0);
+      });
+    }
+  }
+
+  function openDay(date: DateKey) {
     batch(() => {
-      setSelected(next);
-      if (next.year !== year() || next.month !== month()) {
-        setDirection(deltaDays > 0 ? 1 : -1);
-        setYear(next.year);
-        setMonth(next.month);
-      }
+      setSelected(date);
+      setView("day");
     });
   }
 
-  function selectDay(date: DateKey) {
-    if (date.year !== year() || date.month !== month()) {
-      const travel =
-        date.year * 12 + date.month > year() * 12 + month() ? 1 : -1;
-      goToMonth(date.year, date.month, travel);
-    }
-    // Clicking the selected day again collapses the detail, so the same gesture
-    // opens and closes it.
-    setSelected((current) => (sameDate(current, date) ? null : date));
+  function back() {
+    batch(() => {
+      if (view() === "settings" && section() !== "root") {
+        setSection("root");
+        return;
+      }
+      setView("calendar");
+      setSection("root");
+    });
   }
 
   function jumpToToday() {
     const now = today();
     batch(() => {
-      setDirection(0);
-      setYear(now.year);
-      setMonth(now.month);
+      setAnchor(noonAnchor(now));
+      setOffset(0);
       setSelected(now);
+      setView("calendar");
     });
   }
 
-  function onKeyDown(event: KeyboardEvent) {
-    if (event.metaKey && event.key === ",") {
-      event.preventDefault();
-      void ipc.openSettings();
-      return;
+  async function applySettings(next: Settings) {
+    try {
+      props.onSettingsApplied(await ipc.updateSettings(next));
+    } catch (thrown) {
+      setError(toError(thrown));
     }
+  }
+
+  // ------------------------------------------------------------------ keyboard
+
+  function onKeyDown(event: KeyboardEvent) {
     if (event.metaKey && event.key.toLowerCase() === "w") {
       event.preventDefault();
       void ipc.closePanel();
       return;
     }
+    if (event.metaKey && event.key === ",") {
+      event.preventDefault();
+      batch(() => {
+        setView("settings");
+        setSection("root");
+      });
+      return;
+    }
     if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (view() !== "calendar") back();
+      else if (selected()) setSelected(null);
+      else void ipc.closePanel();
+      return;
+    }
+
+    if (view() !== "calendar") return;
 
     const handlers: Record<string, () => void> = {
       ArrowLeft: () => moveSelection(-1),
       ArrowRight: () => moveSelection(1),
       ArrowUp: () => moveSelection(-7),
       ArrowDown: () => moveSelection(7),
-      PageUp: () => stepYearOrMonth(event.shiftKey ? -12 : -1),
-      PageDown: () => stepYearOrMonth(event.shiftKey ? 12 : 1),
-      Home: () => setSelected({ year: year(), month: month(), day: 1 }),
-      End: () =>
-        setSelected({
-          year: year(),
-          month: month(),
-          day: daysInMonth(year(), month()),
-        }),
-      Enter: () => toggleDetail(),
-      " ": () => toggleDetail(),
-      Escape: () => {
-        if (pickerOpen()) setPickerOpen(false);
-        else if (selected()) setSelected(null);
-        else void ipc.closePanel();
-      },
+      PageUp: () => step(-1),
+      PageDown: () => step(1),
+      Home: () => selectEdge(0),
+      End: () => selectEdge(-1),
+      Enter: () => openDay(selected() ?? today()),
+      " ": () => openDay(selected() ?? today()),
       t: jumpToToday,
       T: jumpToToday,
-      m: () => setPickerOpen((open) => !open),
-      M: () => setPickerOpen((open) => !open),
     };
 
     const handler = handlers[event.key];
@@ -219,26 +278,10 @@ export function Panel(props: Props): JSX.Element {
     handler();
   }
 
-  /**
-   * Page keys keep the day of month, clamped to the target month's length, so
-   * stepping from the 31st into a 30 day month lands on the 30th rather than
-   * silently rolling into the next month.
-   */
-  function stepYearOrMonth(delta: number) {
-    const next = addMonths(year(), month(), delta);
-    const current = selected();
-    goToMonth(next.year, next.month, delta > 0 ? 1 : -1);
-    if (current) {
-      setSelected({
-        year: next.year,
-        month: next.month,
-        day: Math.min(current.day, daysInMonth(next.year, next.month)),
-      });
-    }
-  }
-
-  function toggleDetail() {
-    setSelected((current) => (current ? null : today()));
+  function selectEdge(index: number) {
+    const days = monthData()?.days;
+    if (!days || days.length === 0) return;
+    setSelected(days.at(index)?.date ?? null);
   }
 
   let root: HTMLDivElement | undefined;
@@ -249,79 +292,77 @@ export function Panel(props: Props): JSX.Element {
     onCleanup(() => window.removeEventListener("keydown", listener));
   });
 
-  // Re-focus the panel whenever the subject changes, so the keyboard works
-  // immediately after a tray click without a further click into the window.
-  createEffect(() => {
-    void props.subject;
-    root?.focus();
-  });
+  // Nothing to reset: the backend navigates the page on every open, so each
+  // open starts from a fresh component tree on the calendar, at today.
+
+  const headerTitle = () => {
+    if (view() === "settings") return SECTION_TITLES[section()];
+    if (view() === "day") return "";
+    return monthData()?.label ?? "";
+  };
 
   return (
     <div class="panel-frame">
-      <div
-        class="panel"
-        classList={{ "is-expanded": Boolean(selected()) }}
-        ref={root}
-        tabindex="-1"
-        role="dialog"
-        aria-label={`Chandra, ${props.subject}`}
-      >
+      <div class="panel" ref={root} tabindex="-1" role="dialog" aria-label="Chandra">
         <Header
           subject={props.subject}
           subjectName={grahaInfo()?.name ?? "Chandra"}
           info={grahaInfo()}
           snapshot={snapshot()}
           southern={props.boot.location.latitude < 0}
-          year={year()}
-          month={month()}
-          pickerOpen={pickerOpen()}
-          onTogglePicker={() => setPickerOpen((open) => !open)}
-          onStep={stepMonth}
-          onSettings={() => void ipc.openSettings()}
+          title={headerTitle()}
+          selected={selected()}
+          view={view()}
+          onBack={back}
+          onSettings={() =>
+            batch(() => {
+              setView("settings");
+              setSection("root");
+            })
+          }
         />
 
-        <Show
-          when={!pickerOpen()}
-          fallback={
-            <MonthPicker
-              year={year()}
-              month={month()}
+        <div class="region">
+          <Show when={view() === "calendar"}>
+            <CalendarScroller
+              firstWeekday={firstWeekday}
+              previous={previousMonth()}
+              current={monthData()}
+              next={nextMonth()}
+              kind={props.subject === "chandra" ? "moon" : "graha"}
+              info={grahaInfo()}
+              selected={selected()}
               today={today()}
-              onPick={(pickedYear, pickedMonth) => {
-                goToMonth(pickedYear, pickedMonth, 0);
-                setPickerOpen(false);
-              }}
-              onStepYear={(delta) => setYear((value) => value + delta)}
+              southern={props.boot.location.latitude < 0}
+              onSelect={openDay}
+              onCommit={(delta) => setOffset((current) => current + delta)}
             />
-          }
-        >
-          <MonthGrid
-            grid={grid()}
-            firstWeekday={firstWeekday}
-            month={monthData()}
-            kind={props.subject === "chandra" ? "moon" : "graha"}
-            selected={selected()}
-            today={today()}
-            southern={props.boot.location.latitude < 0}
-            direction={direction()}
-            onSelect={selectDay}
-          />
-        </Show>
+          </Show>
 
-        <Show when={selected()}>
-          <div class="panel__divider" />
-          <DayDetail
-            detail={detail()}
-            events={selectedEvents()}
-            grahaName={grahaInfo()?.name ?? ""}
-            context={{
-              timeZone: timeZone(),
-              timeFormat: props.boot.settings.time_format,
-            }}
-            isToday={sameDate(selected(), today())}
-            error={error()}
-          />
-        </Show>
+          <Show when={view() === "day"}>
+            <DayDetail
+              detail={detail()}
+              events={selectedEvents()}
+              grahaName={grahaInfo()?.name ?? ""}
+              context={{
+                timeZone: timeZone(),
+                timeFormat: props.boot.settings.time_format,
+              }}
+              isToday={sameDate(selected(), today())}
+              error={error()}
+            />
+          </Show>
+
+          <Show when={view() === "settings"}>
+            <SettingsView
+              boot={props.boot}
+              section={section()}
+              onOpen={setSection}
+              apply={(next) => void applySettings(next)}
+            />
+          </Show>
+        </div>
+
       </div>
     </div>
   );

@@ -59,9 +59,15 @@
     "speed": -0.0005101790010891006
   },
   "grahaMonth": {
+    "anchor_unix_ms": 1739601000000,
     "days": [
       {
-        "day": 1,
+        "combust": false,
+        "date": {
+          "day": 1,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 86.175393762904,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -69,7 +75,12 @@
         "speed": -0.29274048492891463
       },
       {
-        "day": 2,
+        "combust": false,
+        "date": {
+          "day": 2,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 85.88838851449538,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -77,7 +88,12 @@
         "speed": -0.2812074363336563
       },
       {
-        "day": 3,
+        "combust": false,
+        "date": {
+          "day": 3,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 85.61309593381917,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -85,7 +101,12 @@
         "speed": -0.26932295704263526
       },
       {
-        "day": 4,
+        "combust": false,
+        "date": {
+          "day": 4,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 85.3498441264925,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -93,7 +114,12 @@
         "speed": -0.2571335651213209
       },
       {
-        "day": 5,
+        "combust": false,
+        "date": {
+          "day": 5,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 85.09891529447796,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -101,7 +127,12 @@
         "speed": -0.2446843528335353
       },
       {
-        "day": 6,
+        "combust": false,
+        "date": {
+          "day": 6,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 84.86054769686048,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -109,7 +140,12 @@
         "speed": -0.2320179685046009
       },
       {
-        "day": 7,
+        "combust": false,
+        "date": {
+          "day": 7,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 84.63493845591807,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -117,7 +153,12 @@
         "speed": -0.21917396112130424
       },
       {
-        "day": 8,
+        "combust": false,
+        "date": {
+          "day": 8,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 84.42224685215267,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -125,7 +166,12 @@
         "speed": -0.20618842560053233
       },
       {
-        "day": 9,
+        "combust": false,
+        "date": {
+          "day": 9,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 84.22259784717679,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -133,7 +179,12 @@
         "speed": -0.19309390160546275
       },
       {
-        "day": 10,
+        "combust": false,
+        "date": {
+          "day": 10,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 84.03608563576582,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -141,7 +192,12 @@
         "speed": -0.179919398001707
       },
       {
-        "day": 11,
+        "combust": false,
+        "date": {
+          "day": 11,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.86277707278461,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -149,7 +205,12 @@
         "speed": -0.1666906279163419
       },
       {
-        "day": 12,
+        "combust": false,
+        "date": {
+          "day": 12,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.70271483367297,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -157,7 +218,12 @@
         "speed": -0.15343031324968334
       },
       {
-        "day": 13,
+        "combust": false,
+        "date": {
+          "day": 13,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.55592017535211,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -165,7 +231,12 @@
         "speed": -0.1401586551941425
       },
       {
-        "day": 14,
+        "combust": false,
+        "date": {
+          "day": 14,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.42239523100406,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -173,7 +244,12 @@
         "speed": -0.1268937678867142
       },
       {
-        "day": 15,
+        "combust": false,
+        "date": {
+          "day": 15,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.30212482195964,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -181,7 +257,12 @@
         "speed": -0.11365223594604364
       },
       {
-        "day": 16,
+        "combust": false,
+        "date": {
+          "day": 16,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.1950778560583,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -189,7 +270,12 @@
         "speed": -0.10044935103862487
       },
       {
-        "day": 17,
+        "combust": false,
+        "date": {
+          "day": 17,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.10120843216814,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -197,7 +283,12 @@
         "speed": -0.0872994538109091
       },
       {
-        "day": 18,
+        "combust": false,
+        "date": {
+          "day": 18,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 83.02045678215043,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -205,7 +296,12 @@
         "speed": -0.07421596178613471
       },
       {
-        "day": 19,
+        "combust": false,
+        "date": {
+          "day": 19,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.95275017957357,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -213,7 +309,12 @@
         "speed": -0.061211369007861144
       },
       {
-        "day": 20,
+        "combust": false,
+        "date": {
+          "day": 20,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.89800388962463,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -221,7 +322,12 @@
         "speed": -0.04829716897995505
       },
       {
-        "day": 21,
+        "combust": false,
+        "date": {
+          "day": 21,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.85612220573255,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -229,7 +335,12 @@
         "speed": -0.03548380363785533
       },
       {
-        "day": 22,
+        "combust": false,
+        "date": {
+          "day": 22,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.82699955115324,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -237,7 +348,12 @@
         "speed": -0.02278057771785623
       },
       {
-        "day": 23,
+        "combust": false,
+        "date": {
+          "day": 23,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.81052158036218,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -245,7 +361,12 @@
         "speed": -0.010195732868233985
       },
       {
-        "day": 24,
+        "combust": false,
+        "date": {
+          "day": 24,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.80656614302563,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -253,7 +374,12 @@
         "speed": 0.002263314339290469
       },
       {
-        "day": 25,
+        "combust": false,
+        "date": {
+          "day": 25,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.81500393746101,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -261,7 +387,12 @@
         "speed": 0.014589574713504416
       },
       {
-        "day": 26,
+        "combust": false,
+        "date": {
+          "day": 26,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.83569863358208,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -269,7 +400,12 @@
         "speed": 0.026775861708323998
       },
       {
-        "day": 27,
+        "combust": false,
+        "date": {
+          "day": 27,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.86850631558255,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -277,7 +413,12 @@
         "speed": 0.03881408386469751
       },
       {
-        "day": 28,
+        "combust": false,
+        "date": {
+          "day": 28,
+          "month": 2,
+          "year": 2025
+        },
         "longitude": 82.91327425223616,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
@@ -303,11 +444,10 @@
       }
     ],
     "graha": "mangala",
-    "leading_blanks": 5,
-    "month": 2,
+    "label": "February 2025",
     "source": "swieph",
-    "time_zone": "Asia/Kolkata",
-    "year": 2025
+    "system": "solar",
+    "time_zone": "Asia/Kolkata"
   },
   "grahas": [
     {
@@ -383,6 +523,375 @@
       "stroke_width": 1.7999999523162842
     }
   ],
+  "lunarMonth": {
+    "anchor_unix_ms": 1787898600000,
+    "days": [
+      {
+        "combust": true,
+        "date": {
+          "day": 13,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.00395678390040749,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 14,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.03142584922093544,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 15,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.08199591558120584,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 16,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.15094541864291589,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 17,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.23325877600918626,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 18,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.32422457320576187,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 19,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.41972369438519164,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 20,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.5162629687117175,
+        "is_waxing": true,
+        "phase": "first_quarter",
+        "principal": true
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 21,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.6108528773037096,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 22,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.7008204241976393,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 23,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.7836236863362221,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 24,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.8567126011212225,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 25,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.9174663171695503,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 26,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.9632273400147273,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 27,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.9914406125607594,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 28,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.9998868389874883,
+        "is_waxing": true,
+        "phase": "full_moon",
+        "principal": true
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 29,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.986974819302486,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 30,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.9520354716335284,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 31,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.895553234704672,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 1,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.8192867583982917,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 2,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.7262651379552835,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 3,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.6206796239262624,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 4,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.5077029429521038,
+        "is_waxing": false,
+        "phase": "last_quarter",
+        "principal": true
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 5,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.3932516995146817,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 6,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.2836748427017409,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 7,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.1853318963720441,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 8,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.10404656141506907,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 9,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.044490740176462984,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false
+      },
+      {
+        "combust": true,
+        "date": {
+          "day": 10,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.009637552991828446,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false
+      },
+      {
+        "combust": true,
+        "date": {
+          "day": 11,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.0004567962823784355,
+        "is_waxing": false,
+        "phase": "new_moon",
+        "principal": true
+      }
+    ],
+    "label": "Shravana 2026",
+    "source": "swieph",
+    "system": "amanta",
+    "time_zone": "Asia/Kolkata"
+  },
   "moonDay": {
     "date": {
       "day": 20,
@@ -536,230 +1045,385 @@
     "source": "swieph"
   },
   "moonMonth": {
+    "anchor_unix_ms": 1786861800000,
     "days": [
       {
-        "day": 1,
+        "combust": false,
+        "date": {
+          "day": 1,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.9309062054316386,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 2,
+        "combust": false,
+        "date": {
+          "day": 2,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.8697532530990038,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 3,
+        "combust": false,
+        "date": {
+          "day": 3,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.7912592115202408,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 4,
+        "combust": false,
+        "date": {
+          "day": 4,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.6979432113034766,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 5,
+        "combust": false,
+        "date": {
+          "day": 5,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.5932747959148585,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 6,
+        "combust": false,
+        "date": {
+          "day": 6,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.4817083921629036,
         "is_waxing": false,
         "phase": "last_quarter",
         "principal": true
       },
       {
-        "day": 7,
+        "combust": false,
+        "date": {
+          "day": 7,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.36867634038331576,
         "is_waxing": false,
         "phase": "waning_crescent",
         "principal": false
       },
       {
-        "day": 8,
+        "combust": false,
+        "date": {
+          "day": 8,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.260459114940215,
         "is_waxing": false,
         "phase": "waning_crescent",
         "principal": false
       },
       {
-        "day": 9,
+        "combust": false,
+        "date": {
+          "day": 9,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.1638259708180353,
         "is_waxing": false,
         "phase": "waning_crescent",
         "principal": false
       },
       {
-        "day": 10,
+        "combust": false,
+        "date": {
+          "day": 10,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.08537658714706547,
         "is_waxing": false,
         "phase": "waning_crescent",
         "principal": false
       },
       {
-        "day": 11,
+        "combust": false,
+        "date": {
+          "day": 11,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.03064089497469491,
         "is_waxing": false,
         "phase": "waning_crescent",
         "principal": false
       },
       {
-        "day": 12,
+        "combust": true,
+        "date": {
+          "day": 12,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.003170361307868852,
         "is_waxing": false,
         "phase": "new_moon",
         "principal": true
       },
       {
-        "day": 13,
+        "combust": true,
+        "date": {
+          "day": 13,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.00395678390040749,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 14,
+        "combust": false,
+        "date": {
+          "day": 14,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.03142584922093544,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 15,
+        "combust": false,
+        "date": {
+          "day": 15,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.08199591558120584,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 16,
+        "combust": false,
+        "date": {
+          "day": 16,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.15094541864291589,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 17,
+        "combust": false,
+        "date": {
+          "day": 17,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.23325877600918626,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 18,
+        "combust": false,
+        "date": {
+          "day": 18,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.32422457320576187,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 19,
+        "combust": false,
+        "date": {
+          "day": 19,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.41972369438519164,
         "is_waxing": true,
         "phase": "waxing_crescent",
         "principal": false
       },
       {
-        "day": 20,
+        "combust": false,
+        "date": {
+          "day": 20,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.5162629687117175,
         "is_waxing": true,
         "phase": "first_quarter",
         "principal": true
       },
       {
-        "day": 21,
+        "combust": false,
+        "date": {
+          "day": 21,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.6108528773037096,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 22,
+        "combust": false,
+        "date": {
+          "day": 22,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.7008204241976393,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 23,
+        "combust": false,
+        "date": {
+          "day": 23,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.7836236863362221,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 24,
+        "combust": false,
+        "date": {
+          "day": 24,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.8567126011212225,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 25,
+        "combust": false,
+        "date": {
+          "day": 25,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.9174663171695503,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 26,
+        "combust": false,
+        "date": {
+          "day": 26,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.9632273400147273,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 27,
+        "combust": false,
+        "date": {
+          "day": 27,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.9914406125607594,
         "is_waxing": true,
         "phase": "waxing_gibbous",
         "principal": false
       },
       {
-        "day": 28,
+        "combust": false,
+        "date": {
+          "day": 28,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.9998868389874883,
         "is_waxing": true,
         "phase": "full_moon",
         "principal": true
       },
       {
-        "day": 29,
+        "combust": false,
+        "date": {
+          "day": 29,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.986974819302486,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 30,
+        "combust": false,
+        "date": {
+          "day": 30,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.9520354716335284,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       },
       {
-        "day": 31,
+        "combust": false,
+        "date": {
+          "day": 31,
+          "month": 8,
+          "year": 2026
+        },
         "illumination": 0.895553234704672,
         "is_waxing": false,
         "phase": "waning_gibbous",
         "principal": false
       }
     ],
-    "leading_blanks": 5,
-    "month": 8,
+    "label": "August 2026",
     "source": "swieph",
-    "time_zone": "Asia/Kolkata",
-    "year": 2026
+    "system": "solar",
+    "time_zone": "Asia/Kolkata"
   },
   "moshierDay": {
     "date": {

@@ -8,7 +8,8 @@
 
 use std::path::PathBuf;
 
-use chandra_almanac::{Almanac, Location};
+use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::{Almanac, Location, MonthCursor};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig};
 use serde_json::json;
 
@@ -29,6 +30,14 @@ fn main() {
 
     let date = |day| chandra_almanac::time::DateKey::new(2026, 8, day).expect("date");
 
+    let cursor = |year: i32, month: u32, system: MonthSystem| MonthCursor {
+        anchor_unix_ms: (chandra_ephemeris::jd_to_unix_seconds(chandra_ephemeris::julian_day(
+            year, month, 15, 0.25,
+        )) * 1000.0) as i64,
+        offset: 0,
+        system,
+    };
+
     let grahas: Vec<_> = Graha::ALL
         .into_iter()
         .map(|graha| {
@@ -47,7 +56,14 @@ fn main() {
     let document = json!({
         "timeZone": "Asia/Kolkata",
         "grahas": grahas,
-        "moonMonth": almanac.moon_month(2026, 8).expect("moon month"),
+        "moonMonth": almanac
+            .moon_month(cursor(2026, 8, MonthSystem::Solar))
+            .expect("moon month"),
+        // The same stretch of sky as a lunar month, to check the label and the
+        // way the grid handles a month that starts mid-week and mid-Gregorian-month.
+        "lunarMonth": almanac
+            .moon_month(cursor(2026, 8, MonthSystem::Amanta))
+            .expect("lunar month"),
         "moonDay": almanac.day_detail(Graha::Chandra, date(20)).expect("moon day"),
         // The Moon rises about 50 minutes later each day, so roughly one civil
         // day a month contains no moonrise at all. Found rather than hardcoded,
@@ -62,7 +78,7 @@ fn main() {
         // February 2025: Mangala is retrograde and turns direct mid-month, so the
         // grid shows a span rule, station markers and ingresses together.
         "grahaMonth": almanac
-            .graha_month(Graha::Mangala, 2025, 2)
+            .graha_month(Graha::Mangala, cursor(2025, 2, MonthSystem::Solar))
             .expect("graha month"),
         "grahaDay": almanac
             .day_detail(

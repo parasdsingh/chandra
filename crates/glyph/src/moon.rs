@@ -17,10 +17,15 @@ pub const NEW_MOON_THRESHOLD: f64 = 0.02;
 pub const FULL_MOON_THRESHOLD: f64 = 0.98;
 
 /// Ring alpha away from new moon.
-pub const RING_ALPHA: f32 = 0.55;
+///
+/// Near-opaque rather than the 0.55 first drawn. macOS renders a template image
+/// by masking with its own foreground colour, so a half-transparent ring comes
+/// out as grey next to fully opaque system icons and the moon reads as a
+/// different, dimmer class of thing.
+pub const RING_ALPHA: f32 = 0.9;
 /// Ring alpha at new moon, where the ring is the only thing drawn and carries
 /// the whole click target.
-pub const NEW_MOON_RING_ALPHA: f32 = 0.78;
+pub const NEW_MOON_RING_ALPHA: f32 = 1.0;
 
 /// What to draw for a given illumination.
 #[derive(Debug, Clone, Copy, PartialEq)]

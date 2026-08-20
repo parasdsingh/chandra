@@ -4,6 +4,7 @@
 //! ephemeris engine is a mutex-guarded C library (`docs/DECISIONS.md` D-005) and
 //! blocking Tauri's async runtime on it would stall every other command.
 
+use chandra_almanac::lunar::MonthSystem;
 use chandra_almanac::month::{DayDetail, GrahaMonth, MoonMonth};
 use chandra_almanac::time::DateKey;
 use chandra_almanac::Snapshot;
@@ -26,12 +27,15 @@ use crate::{panel, tray};
 pub struct Bootstrap {
     pub settings: Settings,
     pub location: Resolved,
+    /// Which subject the panel is currently showing.
+    pub subject: Graha,
     pub subjects: Vec<Graha>,
     pub library_version: String,
     /// Names for the settings pickers, so the front end holds no duplicate list
     /// that could fall out of step with the ephemeris.
     pub ayanamsas: Vec<Choice>,
     pub node_types: Vec<Choice>,
+    pub month_systems: Vec<Choice>,
     pub grahas: Vec<GrahaInfo>,
 }
 
@@ -55,10 +59,11 @@ pub struct GrahaInfo {
 }
 
 #[tauri::command]
-pub async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap> {
+pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Bootstrap> {
     Ok(Bootstrap {
         settings: state.settings(),
         location: state.location(),
+        subject: panel::subject_or_default(&app),
         subjects: state.tray_subjects(),
         library_version: state.almanac.library_version().map_err(AppError::from)?,
         ayanamsas: Ayanamsa::ALL
@@ -73,6 +78,13 @@ pub async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap> {
             .map(|n| Choice {
                 key: n.key(),
                 label: n.label(),
+            })
+            .collect(),
+        month_systems: MonthSystem::ALL
+            .into_iter()
+            .map(|s| Choice {
+                key: s.key(),
+                label: s.label(),
             })
             .collect(),
         grahas: Graha::ALL
@@ -93,9 +105,10 @@ pub async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap> {
 }
 
 #[tauri::command]
-pub async fn moon_month(app: AppHandle, year: i16, month: i8) -> Result<MoonMonth> {
+pub async fn moon_month(app: AppHandle, anchor_unix_ms: i64, offset: i32) -> Result<MoonMonth> {
     blocking(app, move |state| {
-        state.almanac.moon_month(year, month).map_err(AppError::from)
+        let cursor = state.cursor(anchor_unix_ms, offset);
+        state.almanac.moon_month(cursor).map_err(AppError::from)
     })
     .await
 }
@@ -104,13 +117,14 @@ pub async fn moon_month(app: AppHandle, year: i16, month: i8) -> Result<MoonMont
 pub async fn graha_month(
     app: AppHandle,
     graha: Graha,
-    year: i16,
-    month: i8,
+    anchor_unix_ms: i64,
+    offset: i32,
 ) -> Result<GrahaMonth> {
     blocking(app, move |state| {
+        let cursor = state.cursor(anchor_unix_ms, offset);
         state
             .almanac
-            .graha_month(graha, year, month)
+            .graha_month(graha, cursor)
             .map_err(AppError::from)
     })
     .await
@@ -126,7 +140,10 @@ pub async fn day_detail(
 ) -> Result<DayDetail> {
     blocking(app, move |state| {
         let date = DateKey::new(year, month, day).map_err(AppError::from)?;
-        state.almanac.day_detail(graha, date).map_err(AppError::from)
+        state
+            .almanac
+            .day_detail(graha, date)
+            .map_err(AppError::from)
     })
     .await
 }
@@ -159,14 +176,29 @@ pub async fn update_settings(app: AppHandle, settings: Settings) -> Result<Boots
         state.apply(settings)?
     };
 
-    if applied.tray_changed {
-        tray::rebuild(&app)?;
-    } else if applied.icons_changed {
-        tray::refresh_icons(&app)?;
+    // Status items are AppKit objects: creating, removing or redrawing one off
+    // the main thread crashes the process. Commands run on the async runtime,
+    // so the work is dispatched rather than called directly.
+    if applied.tray_changed || applied.icons_changed {
+        let handle = app.clone();
+        let rebuild = applied.tray_changed;
+        app.run_on_main_thread(move || {
+            let outcome = if rebuild {
+                tray::rebuild(&handle)
+            } else {
+                tray::refresh_icons(&handle)
+            };
+            if let Err(error) = outcome {
+                // The settings themselves are already saved; a menu bar that
+                // did not update is worth reporting but not worth failing over.
+                eprintln!("chandra: could not update the menu bar: {error}");
+            }
+        })
+        .map_err(|error| AppError::Engine(format!("cannot reach the main thread: {error}")))?;
     }
 
     let state = app.state::<AppState>();
-    bootstrap(state).await
+    bootstrap(app.clone(), state).await
 }
 
 #[tauri::command]
@@ -186,11 +218,6 @@ pub async fn search_cities(query: String, limit: usize) -> Result<Vec<chandra_ge
 pub async fn request_device_location(app: AppHandle) -> Result<Resolved> {
     panel::request_device_location(&app).await;
     Ok(app.state::<AppState>().location())
-}
-
-#[tauri::command]
-pub async fn open_settings(app: AppHandle) -> Result<()> {
-    panel::open_settings(&app)
 }
 
 #[tauri::command]

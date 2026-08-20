@@ -10,6 +10,7 @@ mod cache;
 pub mod day;
 pub mod error;
 pub mod events;
+pub mod lunar;
 pub mod month;
 pub mod phase;
 pub mod roots;
@@ -17,5 +18,5 @@ pub mod spans;
 pub mod time;
 pub mod zodiac;
 
-pub use almanac::{Almanac, Location, Snapshot, SnapshotGraha};
+pub use almanac::{Almanac, Location, MonthCursor, Snapshot, SnapshotGraha};
 pub use error::{Error, Result};

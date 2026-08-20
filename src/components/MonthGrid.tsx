@@ -6,13 +6,21 @@ import { For, Show } from "solid-js";
 import type { GridDay } from "../lib/calendar";
 import { sameDate } from "../lib/calendar";
 import { weekdayLabels } from "../lib/format";
-import type { DateKey, GrahaMonth, MoonMonth, TransitEvent } from "../ipc/types";
+import type {
+  DateKey,
+  GrahaInfo,
+  GrahaMonth,
+  MoonMonth,
+  TransitEvent,
+} from "../ipc/types";
 import { DayCell } from "./DayCell";
 import { phaseLabel } from "../lib/format";
 
 interface Props {
   grid: GridDay[];
   firstWeekday: number;
+  /** Glyph for a graha calendar; unused for the Moon. */
+  info?: GrahaInfo;
   month: MoonMonth | GrahaMonth | undefined;
   kind: "moon" | "graha";
   selected: DateKey | null;
@@ -21,6 +29,9 @@ interface Props {
   direction: number;
   onSelect: (date: DateKey) => void;
 }
+
+const sameDay = (a: DateKey, b: DateKey) =>
+  a.year === b.year && a.month === b.month && a.day === b.day;
 
 function eventsFor(month: GrahaMonth | undefined, date: DateKey): TransitEvent[] {
   if (!month) return [];
@@ -32,55 +43,27 @@ function eventsFor(month: GrahaMonth | undefined, date: DateKey): TransitEvent[]
   );
 }
 
-/**
- * Whether a day falls inside a combustion span.
- *
- * Combustion has a start and an end event, which may lie in different months, so
- * the state is carried forward from the last boundary seen rather than looked up
- * per day.
- */
-function combustDays(month: GrahaMonth | undefined): Set<number> {
-  const days = new Set<number>();
-  if (!month) return days;
-
-  const boundaries = month.events
-    .filter(
-      (event) =>
-        event.kind === "combustion_start" || event.kind === "combustion_end",
-    )
-    .sort((a, b) => a.at.unix_ms - b.at.unix_ms);
-
-  // A month that opens with an end event was already combust when it began.
-  let combust = boundaries[0]?.kind === "combustion_end";
-  let cursor = 1;
-
-  for (const cell of month.days) {
-    while (
-      cursor <= boundaries.length &&
-      boundaries[cursor - 1] &&
-      boundaries[cursor - 1]!.date.day <= cell.day
-    ) {
-      combust = boundaries[cursor - 1]!.kind === "combustion_start";
-      cursor += 1;
-    }
-    if (combust) days.add(cell.day);
-  }
-  return days;
+export function WeekdayRow(props: { firstWeekday: number }): JSX.Element {
+  return (
+    <div class="weekdays" aria-hidden="true">
+      <For each={weekdayLabels(props.firstWeekday)}>
+        {(label) => <span>{label}</span>}
+      </For>
+    </div>
+  );
 }
 
-export function MonthGrid(props: Props): JSX.Element {
-  const labels = () => weekdayLabels(props.firstWeekday);
-  const combust = () =>
-    props.kind === "graha" ? combustDays(props.month as GrahaMonth) : new Set<number>();
-
+/**
+ * One month's 42 cells, 240px tall.
+ *
+ * Separated from the weekday row so several months can be stacked and moved
+ * together while the headings stay put.
+ */
+export function MonthCells(props: Props): JSX.Element {
   const focusedDate = () => props.selected ?? props.today;
 
   return (
-    <div class="grid-region">
-      <div class="weekdays" aria-hidden="true">
-        <For each={labels()}>{(label) => <span>{label}</span>}</For>
-      </div>
-
+    <>
       {/* Weeks are real elements with role="row".
           A grid whose gridcells are not wrapped in rows is invalid ARIA, and
           WebKit prunes the whole subtree from the accessibility tree - the
@@ -92,9 +75,7 @@ export function MonthGrid(props: Props): JSX.Element {
         role="grid"
         aria-rowcount={6}
         aria-colcount={7}
-        aria-label={`${monthName(props.month?.month ?? 1)} ${props.month?.year ?? ""}`}
-        style={{ "--enter-from": `${props.direction * 8}px` }}
-        data-direction={props.direction}
+        aria-label={props.month?.label ?? ""}
       >
         <For each={weeks(props.grid)}>
           {(week) => (
@@ -103,7 +84,7 @@ export function MonthGrid(props: Props): JSX.Element {
           {(cell) => {
             const dayData = () =>
               cell.inMonth
-                ? props.month?.days.find((d) => d.day === cell.date.day)
+                ? props.month?.days.find((d) => sameDay(d.date, cell.date))
                 : undefined;
 
             const common = {
@@ -123,7 +104,7 @@ export function MonthGrid(props: Props): JSX.Element {
                     kind="graha"
                     data={dayData() as never}
                     events={eventsFor(props.month as GrahaMonth, cell.date)}
-                    combust={cell.inMonth && combust().has(cell.date.day)}
+                    info={props.info}
                     label={grahaCellLabel(cell, eventsFor(props.month as GrahaMonth, cell.date), (dayData() as never as { retrograde?: boolean })?.retrograde ?? false)}
                   />
                 }
@@ -143,7 +124,7 @@ export function MonthGrid(props: Props): JSX.Element {
           )}
         </For>
       </div>
-    </div>
+    </>
   );
 }
 

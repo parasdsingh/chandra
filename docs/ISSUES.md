@@ -41,7 +41,12 @@ New issues append to the table and get a detail section only when they need one.
 | I-033 | feat | Month change by scroll and drag, not arrow buttons | M2 | open |
 | I-034 | bug | Moonset absence reshapes the detail with a dash and a new line | M2 | open |
 | I-035 | bug | Selected day is hard to see; today needs a second attribute | M2 | open |
-| I-036 | bug | Tray glyph weight does not match system menu bar icons | M2 | open |
+| I-036 | bug | Tray glyph weight does not match system menu bar icons | M2 | done |
+| I-037 | bug | Enabling a graha crashed the app | M2 | done |
+| I-038 | bug | A graha's tray item opened the Moon's calendar | M2 | done |
+| I-039 | feat | Panel uses the system popover material | M2 | done |
+| I-040 | feat | Continuous month scrolling, settling on release | M2 | done |
+| I-041 | bug | Clicking below the panel did not close it | M2 | done |
 | I-026 | chore | Create private GitHub remote and push | M4 | blocked |
 
 ---
@@ -108,3 +113,43 @@ is not a relabelled Gregorian month, it runs new moon to new moon (amanta) or
 full moon to full moon (purnimanta), is named from the rashi the Sun occupies at
 that syzygy, and needs adhika masa detection for a lunar month containing no
 sankranti.
+
+### I-037 — Enabling a graha crashed the app — done
+`update_settings` called `tray::rebuild` directly. Commands run on the async
+runtime, and a status item is an AppKit object: creating, removing or redrawing
+one off the main thread takes the process down. All three call sites - the
+settings write, the midnight redraw and the location update - now dispatch
+through `run_on_main_thread`.
+
+### I-038 — A graha's tray item opened the Moon's calendar — done
+The panel window is created once and reused for every tray item, so it has to be
+told which subject it was opened for. Three ways were tried and all failed:
+
+1. A Tauri event. One-shot; never observed arriving.
+2. A direct call evaluated in the page. Demonstrably arrives - the same eval can
+   write to the DOM - but a Solid signal set from that context never reached the
+   render.
+3. Re-reading the subject from `bootstrap` on window focus. The backend returned
+   the right subject every time, but the webview raises no focus or
+   visibilitychange event when the window is shown, so nothing triggered it.
+
+A fourth attempt exposed a separate bug worth recording on its own: a non-keyed
+`<Show>` memoises its condition with `equals: (a, b) => !a === !b`, so the
+accessor it hands a callback child only re-emits when truthiness changes.
+Replacing one bootstrap object with another never notified, and the child kept
+the value from mount.
+
+Resolved by carrying the subject in the page's own URL: the backend navigates
+the panel to `?subject=<key>` as it opens. The page reads its own URL on load, so
+nothing has to propagate. It also gives every open a clean slate, which is what
+makes reopening return to today - the reason the Today button could be dropped.
+Measured at roughly 450 ms from click to a fully drawn panel, with no blank
+frame: the webview keeps the previous page until the new one commits.
+
+### I-041 — Clicking below the panel did not close it — done
+The window was 320 x 620 while the panel drew only 332px of it, so clicks in the
+transparent remainder landed on the window and did nothing. Now that every view
+swaps inside a fixed-height region, the panel's height is constant and the window
+is exactly its size. That also made the popover material possible: the material
+fills the whole window, so an oversized window would have shown a large
+translucent rectangle below the panel.

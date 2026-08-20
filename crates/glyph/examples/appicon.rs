@@ -88,7 +88,14 @@ fn rounded_rect(left: f32, top: f32, right: f32, bottom: f32, radius: f32) -> ti
     let mut builder = PathBuilder::new();
     builder.move_to(left + radius, top);
     builder.line_to(right - radius, top);
-    builder.cubic_to(right - handle, top, right, top + handle, right, top + radius);
+    builder.cubic_to(
+        right - handle,
+        top,
+        right,
+        top + handle,
+        right,
+        top + radius,
+    );
     builder.line_to(right, bottom - radius);
     builder.cubic_to(
         right,

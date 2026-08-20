@@ -16,7 +16,7 @@ use crate::error::{Error, Result};
 const MILLIS_PER_SECOND: f64 = 1000.0;
 
 /// A calendar date, independent of any time of day.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct DateKey {
     pub year: i16,
     pub month: i8,

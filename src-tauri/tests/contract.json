@@ -65,9 +65,15 @@
     "speed": "number"
   },
   "GrahaMonth": {
+    "anchor_unix_ms": "integer",
     "days": [
       {
-        "day": "integer",
+        "combust": "boolean",
+        "date": {
+          "day": "integer",
+          "month": "integer",
+          "year": "integer"
+        },
         "longitude": "number",
         "nakshatra": "string",
         "rashi": "string",
@@ -93,11 +99,10 @@
       }
     ],
     "graha": "string",
-    "leading_blanks": "integer",
-    "month": "integer",
+    "label": "string",
     "source": "string",
-    "time_zone": "string",
-    "year": "integer"
+    "system": "string",
+    "time_zone": "string"
   },
   "MoonDay": {
     "date": {
@@ -157,22 +162,30 @@
     "source": "string"
   },
   "MoonMonth": {
+    "anchor_unix_ms": "integer",
     "days": [
       {
-        "day": "integer",
+        "combust": "boolean",
+        "date": {
+          "day": "integer",
+          "month": "integer",
+          "year": "integer"
+        },
         "illumination": "number",
         "is_waxing": "boolean",
         "phase": "string",
         "principal": "boolean"
       }
     ],
-    "leading_blanks": "integer",
-    "month": "integer",
+    "label": "string",
     "source": "string",
-    "time_zone": "string",
-    "year": "integer"
+    "system": "string",
+    "time_zone": "string"
   },
   "Settings": {
+    "calendar": {
+      "month_system": "string"
+    },
     "launch_at_login": "boolean",
     "location": {
       "mode": "string",

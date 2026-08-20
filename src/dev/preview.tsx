@@ -1,26 +1,26 @@
 /**
  * Visual harness. Development only.
  *
- * Renders the panel's presentational components against real almanac output
- * (`fixture.json`, produced by `cargo run -p chandra --example preview_data`),
- * so layout, spacing, glyphs and degraded states can be inspected in a browser
- * without a menu bar.
- *
- * It touches no IPC and is reachable only at `?preview` in a dev build, so it
- * cannot appear in the shipped app.
+ * Renders the panel's views against real almanac output (`fixture.json`, from
+ * `make preview`), so layout, spacing, glyphs and degraded states can be
+ * inspected without a menu bar. It touches no IPC and is reachable only at
+ * `?preview` in a dev build.
  */
 
 import type { JSX } from "solid-js";
-import { For } from "solid-js";
+import { createSignal, For } from "solid-js";
 
 import fixture from "./fixture.json";
 import { DayDetail } from "../components/DayDetail";
 import { Header } from "../components/Header";
-import { MonthGrid } from "../components/MonthGrid";
-import { MonthPicker } from "../components/MonthPicker";
+import { MonthCells, WeekdayRow } from "../components/MonthGrid";
 import { PhaseGlyph } from "../components/PhaseGlyph";
 import { GrahaGlyph } from "../components/GrahaGlyph";
-import { SettingsView } from "../components/Settings";
+import {
+  SECTION_TITLES,
+  SettingsView,
+  type SettingsSection,
+} from "../components/SettingsView";
 import type {
   Bootstrap,
   DayDetail as Detail,
@@ -36,6 +36,7 @@ const data = fixture as unknown as {
   timeZone: string;
   grahas: GrahaInfo[];
   moonMonth: MoonMonth;
+  lunarMonth: MoonMonth;
   moonDay: Detail;
   moonDayNoRise: Detail;
   grahaMonth: GrahaMonth;
@@ -44,8 +45,12 @@ const data = fixture as unknown as {
   snapshot: Snapshot;
 };
 
-/** A bootstrap payload built from the same fixture, for the settings preview. */
-const settingsBoot: Bootstrap = {
+const context: FormatContext = {
+  timeZone: data.timeZone,
+  timeFormat: "hour24",
+};
+
+const boot: Bootstrap = {
   settings: {
     schema_version: 1,
     launch_at_login: false,
@@ -61,6 +66,7 @@ const settingsBoot: Bootstrap = {
       },
     },
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
+    calendar: { month_system: "amanta" },
     tray: { subjects: ["mangala", "shani"], colour_mode: false },
   },
   location: {
@@ -71,93 +77,129 @@ const settingsBoot: Bootstrap = {
     elevation: 920,
     provenance: "manual",
   },
+  subject: "chandra",
   subjects: ["mangala", "shani"],
   library_version: "2.10.03",
   ayanamsas: [
     { key: "lahiri", label: "Lahiri (Chitrapaksha)" },
     { key: "raman", label: "Raman" },
     { key: "krishnamurti", label: "Krishnamurti (KP)" },
+    { key: "true_chitra", label: "True Chitra" },
   ],
   node_types: [
     { key: "true", label: "True node" },
     { key: "mean", label: "Mean node" },
   ],
+  month_systems: [
+    { key: "solar", label: "Solar (Gregorian)" },
+    { key: "amanta", label: "Lunar, amanta (new moon)" },
+    { key: "purnimanta", label: "Lunar, purnimanta (full moon)" },
+  ],
   grahas: data.grahas,
-};
-
-const context: FormatContext = {
-  timeZone: data.timeZone,
-  timeFormat: "hour24",
 };
 
 function Case(props: { title: string; children: JSX.Element }): JSX.Element {
   return (
     <section class="preview__case">
       <h2 class="preview__title">{props.title}</h2>
-      <div class="panel-frame">{props.children}</div>
+      <div class="panel-frame">
+        <div class="panel">{props.children}</div>
+      </div>
     </section>
   );
 }
 
-export function Preview(): JSX.Element {
-  const moonGrid = buildGrid(2026, 8, data.moonMonth.leading_blanks, 0);
-  const grahaGrid = buildGrid(2025, 2, data.grahaMonth.leading_blanks, 0);
-  const chandra = data.grahas.find((graha) => graha.key === "chandra");
-  const mangala = data.grahas.find((graha) => graha.key === "mangala");
-
-  // A function, not a shared const: a JSX expression assigned to a variable is
-  // created once, so reusing it across cases moves one DOM node between them
-  // instead of rendering three.
-  const moonHeader = () => (
+function moonHeader(title: string) {
+  return (
     <Header
       subject="chandra"
       subjectName="Chandra"
-      info={chandra}
+      info={data.grahas.find((graha) => graha.key === "chandra")}
       snapshot={data.snapshot}
       southern={false}
-      year={2026}
-      month={8}
-      pickerOpen={false}
-      onTogglePicker={() => {}}
-      onStep={() => {}}
+      title={title}
+      selected={null}
+      view="calendar"
+      onBack={() => {}}
       onSettings={() => {}}
     />
+  );
+}
+
+export function Preview(): JSX.Element {
+  // The harness renders every settings section at once, so navigation between
+  // them is inert here.
+  const [, setSection] = createSignal<SettingsSection>("root");
+
+  const solarGrid = buildGrid(
+    data.moonMonth.days.map((day) => day.date),
+    0,
+  );
+  const lunarGrid = buildGrid(
+    data.lunarMonth.days.map((day) => day.date),
+    0,
+  );
+  const grahaGrid = buildGrid(
+    data.grahaMonth.days.map((day) => day.date),
+    0,
   );
 
   return (
     <div class="preview">
-      <Case title="Moon · collapsed">
-        <div class="panel">
-          {moonHeader()}
-          <MonthGrid
-            grid={moonGrid}
-            firstWeekday={0}
-            month={data.moonMonth}
-            kind="moon"
-            selected={null}
-            today={{ year: 2026, month: 8, day: 20 }}
-            southern={false}
-            direction={0}
-            onSelect={() => {}}
-          />
+      <Case title="Moon · solar month">
+        {moonHeader(data.moonMonth.label)}
+        <div class="region">
+          <div class="grid-region">
+            <WeekdayRow firstWeekday={0} />
+            <MonthCells
+              grid={solarGrid}
+              firstWeekday={0}
+              month={data.moonMonth}
+              kind="moon"
+              selected={{ year: 2026, month: 8, day: 21 }}
+              today={{ year: 2026, month: 8, day: 21 }}
+              southern={false}
+              direction={0}
+              onSelect={() => {}}
+            />
+          </div>
         </div>
       </Case>
 
-      <Case title="Moon · day expanded">
-        <div class="panel">
-          {moonHeader()}
-          <MonthGrid
-            grid={moonGrid}
-            firstWeekday={0}
-            month={data.moonMonth}
-            kind="moon"
-            selected={{ year: 2026, month: 8, day: 20 }}
-            today={{ year: 2026, month: 8, day: 20 }}
-            southern={false}
-            direction={0}
-            onSelect={() => {}}
-          />
-          <div class="panel__divider" />
+      <Case title="Moon · lunar month (amanta)">
+        {moonHeader(data.lunarMonth.label)}
+        <div class="region">
+          <div class="grid-region">
+            <WeekdayRow firstWeekday={0} />
+            <MonthCells
+              grid={lunarGrid}
+              firstWeekday={0}
+              month={data.lunarMonth}
+              kind="moon"
+              selected={null}
+              today={{ year: 2026, month: 8, day: 21 }}
+              southern={false}
+              direction={0}
+              onSelect={() => {}}
+            />
+          </div>
+        </div>
+      </Case>
+
+      <Case title="Moon · day view">
+        <Header
+          subject="chandra"
+          subjectName="Chandra"
+          info={data.grahas.find((graha) => graha.key === "chandra")}
+          snapshot={data.snapshot}
+          southern={false}
+          title=""
+          selected={{ year: 2026, month: 8, day: 20 }}
+          view="day"
+          onBack={() => {}}
+          onSettings={() => {}}
+        />
+        <div class="region">
           <DayDetail
             detail={data.moonDay}
             events={[]}
@@ -170,7 +212,7 @@ export function Preview(): JSX.Element {
       </Case>
 
       <Case title="Moon · a day with no moonrise">
-        <div class="panel">
+        <div class="region">
           <DayDetail
             detail={data.moonDayNoRise}
             events={[]}
@@ -183,7 +225,7 @@ export function Preview(): JSX.Element {
       </Case>
 
       <Case title="Moon · reduced precision (1650)">
-        <div class="panel">
+        <div class="region">
           <DayDetail
             detail={data.moshierDay}
             events={[]}
@@ -195,38 +237,43 @@ export function Preview(): JSX.Element {
         </div>
       </Case>
 
-      <Case title="Mangala · retrograde month, station day selected">
-        <div class="panel">
-          <Header
-            subject="mangala"
-            subjectName="Mangala"
-            info={mangala}
-            snapshot={undefined}
-            southern={false}
-            year={2025}
-            month={2}
-            pickerOpen={false}
-            onTogglePicker={() => {}}
-            onStep={() => {}}
-            onSettings={() => {}}
-          />
-          <MonthGrid
-            grid={grahaGrid}
-            firstWeekday={0}
-            month={data.grahaMonth}
-            kind="graha"
-            selected={{ year: 2025, month: 2, day: 24 }}
-            today={{ year: 2025, month: 2, day: 10 }}
-            southern={false}
-            direction={0}
-            onSelect={() => {}}
-          />
-          <div class="panel__divider" />
+      <Case title="Mangala · retrograde month">
+        <Header
+          subject="mangala"
+          subjectName="Mangala"
+          info={data.grahas.find((graha) => graha.key === "mangala")}
+          snapshot={undefined}
+          southern={false}
+          title={data.grahaMonth.label}
+          selected={null}
+          view="calendar"
+          onBack={() => {}}
+          onSettings={() => {}}
+        />
+        <div class="region">
+          <div class="grid-region">
+            <WeekdayRow firstWeekday={0} />
+            <MonthCells
+              grid={grahaGrid}
+              firstWeekday={0}
+              month={data.grahaMonth}
+              kind="graha"
+              info={data.grahas.find((graha) => graha.key === "mangala")}
+              selected={{ year: 2025, month: 2, day: 24 }}
+              today={{ year: 2025, month: 2, day: 10 }}
+              southern={false}
+              direction={0}
+              onSelect={() => {}}
+            />
+          </div>
+        </div>
+      </Case>
+
+      <Case title="Mangala · station day">
+        <div class="region">
           <DayDetail
             detail={data.grahaDay}
-            events={data.grahaMonth.events.filter(
-              (event) => event.date.day === 24,
-            )}
+            events={data.grahaMonth.events.filter((event) => event.date.day === 24)}
             grahaName="Mangala"
             context={context}
             isToday={false}
@@ -235,21 +282,8 @@ export function Preview(): JSX.Element {
         </div>
       </Case>
 
-      <Case title="Month picker">
-        <div class="panel">
-          {moonHeader()}
-          <MonthPicker
-            year={2026}
-            month={8}
-            today={{ year: 2026, month: 8 }}
-            onPick={() => {}}
-            onStepYear={() => {}}
-          />
-        </div>
-      </Case>
-
       <Case title="Error state">
-        <div class="panel">
+        <div class="region">
           <DayDetail
             detail={undefined}
             events={[]}
@@ -264,8 +298,35 @@ export function Preview(): JSX.Element {
         </div>
       </Case>
 
+      <For each={["root", "calendar", "location", "astrology", "menubar", "about"] as const}>
+        {(id) => (
+          <Case title={`Settings · ${id}`}>
+            <Header
+              subject="chandra"
+              subjectName="Chandra"
+              info={data.grahas.find((graha) => graha.key === "chandra")}
+              snapshot={data.snapshot}
+              southern={false}
+              title={SECTION_TITLES[id]}
+              selected={null}
+              view="settings"
+              onBack={() => {}}
+              onSettings={() => {}}
+            />
+            <div class="region">
+              <SettingsView
+                boot={boot}
+                section={id}
+                onOpen={setSection}
+                apply={() => {}}
+              />
+            </div>
+          </Case>
+        )}
+      </For>
+
       <section class="preview__case preview__case--wide">
-        <h2 class="preview__title">Phase sequence · in-panel glyph at 14px</h2>
+        <h2 class="preview__title">Phase sequence · 14px</h2>
         <div class="preview__strip">
           <For each={[0, 0.12, 0.25, 0.38, 0.5, 0.62, 0.75, 0.88, 1]}>
             {(value) => (
@@ -285,23 +346,6 @@ export function Preview(): JSX.Element {
           </For>
         </div>
       </section>
-
-      <For each={["location", "astrology", "grahas", "about"] as const}>
-        {(tab) => (
-          <section class="preview__case">
-            <h2 class="preview__title">Settings · {tab}</h2>
-            <div class="preview__settings">
-              <SettingsView
-                boot={settingsBoot}
-                apply={() => {}}
-                busy={false}
-                failure={undefined}
-                initialTab={tab}
-              />
-            </div>
-          </section>
-        )}
-      </For>
 
       <section class="preview__case preview__case--wide">
         <h2 class="preview__title">Navagraha glyphs · 20px</h2>

@@ -9,10 +9,11 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
+use chandra_almanac::lunar::MonthSystem as System;
 use chandra_almanac::month::DayDetail;
 use chandra_almanac::time::DateKey;
 use chandra_almanac::zodiac::{NAKSHATRA_ARC, RASHI_ARC};
-use chandra_almanac::{Almanac, Location};
+use chandra_almanac::{Almanac, Location, MonthCursor};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig, Source};
 
 const BENGALURU: Observer = Observer::new(12.9716, 77.5946, 920.0);
@@ -41,6 +42,17 @@ fn almanac() -> MutexGuard<'static, Almanac> {
         .expect("almanac lock poisoned by an earlier failure")
 }
 
+/// A solar-month cursor pointing at local noon on the first of a month.
+fn solar(year: i32, month: u32) -> MonthCursor {
+    MonthCursor {
+        anchor_unix_ms: (chandra_ephemeris::jd_to_unix_seconds(chandra_ephemeris::julian_day(
+            year, month, 15, 0.25,
+        )) * 1000.0) as i64,
+        offset: 0,
+        system: System::Solar,
+    }
+}
+
 fn reset(almanac: &Almanac) {
     almanac
         .set_location(Location {
@@ -62,10 +74,10 @@ fn a_month_has_one_cell_per_day() {
     reset(&almanac);
 
     for (year, month, expected) in [(2026, 8, 31), (2026, 2, 28), (2024, 2, 29), (2026, 4, 30)] {
-        let view = almanac.moon_month(year, month).expect("month");
+        let view = almanac.moon_month(solar(year, month)).expect("month");
         assert_eq!(view.days.len(), expected, "{year}-{month}");
-        assert_eq!(view.days[0].day, 1);
-        assert_eq!(view.days[expected - 1].day, expected as i8);
+        assert_eq!(view.days[0].date.day, 1);
+        assert_eq!(view.days[expected - 1].date.day, expected as i8);
         assert_eq!(view.source, Source::Swieph);
     }
 }
@@ -75,12 +87,12 @@ fn illumination_is_a_fraction_and_tracks_the_phase() {
     let almanac = almanac();
     reset(&almanac);
 
-    let view = almanac.moon_month(2026, 8).expect("month");
+    let view = almanac.moon_month(solar(2026, 8)).expect("month");
     for cell in &view.days {
         assert!(
             (0.0..=1.0).contains(&cell.illumination),
             "day {} illumination {}",
-            cell.day,
+            cell.date.day,
             cell.illumination
         );
     }
@@ -113,7 +125,7 @@ fn every_principal_phase_falls_on_exactly_one_day() {
     let almanac = almanac();
     reset(&almanac);
 
-    let view = almanac.moon_month(2026, 8).expect("month");
+    let view = almanac.moon_month(solar(2026, 8)).expect("month");
     let principal: Vec<_> = view.days.iter().filter(|c| c.principal).collect();
 
     assert!(
@@ -123,10 +135,10 @@ fn every_principal_phase_falls_on_exactly_one_day() {
     );
     for pair in principal.windows(2) {
         assert!(
-            pair[1].day - pair[0].day >= 6,
+            pair[1].date.day - pair[0].date.day >= 6,
             "principal phases {} and {} are too close to be real",
-            pair[0].day,
-            pair[1].day
+            pair[0].date.day,
+            pair[1].date.day
         );
     }
 }
@@ -241,7 +253,9 @@ fn graha_months_find_stations_and_ingresses() {
     let almanac = almanac();
     reset(&almanac);
 
-    let view = almanac.graha_month(Graha::Mangala, 2025, 2).expect("month");
+    let view = almanac
+        .graha_month(Graha::Mangala, solar(2025, 2))
+        .expect("month");
     let stations: Vec<_> = view
         .events
         .iter()
@@ -254,8 +268,8 @@ fn graha_months_find_stations_and_ingresses() {
     );
     assert_eq!(stations[0].date.day, 24, "station date");
 
-    let before = view.days.iter().find(|d| d.day == 20).unwrap();
-    let after = view.days.iter().find(|d| d.day == 28).unwrap();
+    let before = view.days.iter().find(|d| d.date.day == 20).unwrap();
+    let after = view.days.iter().find(|d| d.date.day == 28).unwrap();
     assert!(before.retrograde, "Mangala retrograde before the station");
     assert!(!after.retrograde, "Mangala direct after the station");
 }
@@ -265,7 +279,9 @@ fn events_are_ordered_and_attributed_to_the_day_they_occur_on() {
     let almanac = almanac();
     reset(&almanac);
 
-    let view = almanac.graha_month(Graha::Budha, 2026, 8).expect("month");
+    let view = almanac
+        .graha_month(Graha::Budha, solar(2026, 8))
+        .expect("month");
     assert!(
         !view.events.is_empty(),
         "Budha moves fast enough to produce events"
@@ -291,7 +307,7 @@ fn events_are_ordered_and_attributed_to_the_day_they_occur_on() {
 fn the_moon_is_not_served_by_the_transit_view() {
     let almanac = almanac();
     reset(&almanac);
-    assert!(almanac.graha_month(Graha::Chandra, 2026, 8).is_err());
+    assert!(almanac.graha_month(Graha::Chandra, solar(2026, 8)).is_err());
 }
 
 #[test]
@@ -299,14 +315,18 @@ fn changing_the_ayanamsa_changes_positions_and_clears_the_cache() {
     let almanac = almanac();
     reset(&almanac);
 
-    let lahiri = almanac.graha_month(Graha::Shani, 2026, 8).expect("month");
+    let lahiri = almanac
+        .graha_month(Graha::Shani, solar(2026, 8))
+        .expect("month");
     almanac
         .set_sidereal(SiderealConfig {
             ayanamsa: Ayanamsa::Raman,
             node_type: NodeType::True,
         })
         .expect("set ayanamsa");
-    let raman = almanac.graha_month(Graha::Shani, 2026, 8).expect("month");
+    let raman = almanac
+        .graha_month(Graha::Shani, solar(2026, 8))
+        .expect("month");
 
     let difference = (lahiri.days[0].longitude - raman.days[0].longitude).abs();
     assert!(
@@ -315,7 +335,9 @@ fn changing_the_ayanamsa_changes_positions_and_clears_the_cache() {
     );
 
     reset(&almanac);
-    let back = almanac.graha_month(Graha::Shani, 2026, 8).expect("month");
+    let back = almanac
+        .graha_month(Graha::Shani, solar(2026, 8))
+        .expect("month");
     assert!(
         (back.days[0].longitude - lahiri.days[0].longitude).abs() < 1e-9,
         "returning to Lahiri must reproduce the original figures"
@@ -356,11 +378,11 @@ fn a_cold_month_is_assembled_well_inside_the_budget() {
     reset(&almanac);
 
     let started = Instant::now();
-    let _ = almanac.moon_month(2031, 3).expect("month");
+    let _ = almanac.moon_month(solar(2031, 3)).expect("month");
     let cold = started.elapsed();
 
     let started = Instant::now();
-    let _ = almanac.moon_month(2031, 3).expect("month");
+    let _ = almanac.moon_month(solar(2031, 3)).expect("month");
     let warm = started.elapsed();
 
     // Budget from docs/ARCHITECTURE.md section 5, with headroom so this fails on
@@ -382,11 +404,15 @@ fn a_cold_graha_month_is_assembled_well_inside_the_budget() {
     reset(&almanac);
 
     let started = Instant::now();
-    let _ = almanac.graha_month(Graha::Shani, 2032, 5).expect("month");
+    let _ = almanac
+        .graha_month(Graha::Shani, solar(2032, 5))
+        .expect("month");
     let slow_body = started.elapsed();
 
     let started = Instant::now();
-    let _ = almanac.graha_month(Graha::Budha, 2032, 5).expect("month");
+    let _ = almanac
+        .graha_month(Graha::Budha, solar(2032, 5))
+        .expect("month");
     let fast_body = started.elapsed();
 
     assert!(
@@ -404,10 +430,10 @@ fn dates_outside_the_bundled_data_are_marked_as_degraded() {
     let almanac = almanac();
     reset(&almanac);
 
-    let inside = almanac.moon_month(2026, 8).expect("month");
+    let inside = almanac.moon_month(solar(2026, 8)).expect("month");
     assert_eq!(inside.source, Source::Swieph);
 
-    let outside = almanac.moon_month(1650, 8).expect("month");
+    let outside = almanac.moon_month(solar(1650, 8)).expect("month");
     assert_eq!(
         outside.source,
         Source::Moshier,
@@ -427,16 +453,16 @@ fn report_timings() {
     };
 
     let t = Instant::now();
-    let _ = almanac.moon_month(2033, 7).expect("month");
+    let _ = almanac.moon_month(solar(2033, 7)).expect("month");
     line("moon month, cold", t.elapsed());
 
     let t = Instant::now();
-    let _ = almanac.moon_month(2033, 7).expect("month");
+    let _ = almanac.moon_month(solar(2033, 7)).expect("month");
     line("moon month, cached", t.elapsed());
 
     for graha in [Graha::Budha, Graha::Mangala, Graha::Guru, Graha::Shani] {
         let t = Instant::now();
-        let _ = almanac.graha_month(graha, 2033, 7).expect("month");
+        let _ = almanac.graha_month(graha, solar(2033, 7)).expect("month");
         line(&format!("{} month, cold", graha.name()), t.elapsed());
     }
 
@@ -457,4 +483,183 @@ fn report_timings() {
         .now(1_755_000_000_000, &Graha::ALL)
         .expect("snapshot");
     line("tray snapshot, all nine grahas", t.elapsed());
+}
+
+// ---------------------------------------------------------------- lunar months
+
+use chandra_almanac::lunar::MonthSystem;
+
+/// Julian Day of local noon on a date in the almanac's zone.
+fn noon_jd(date: (i16, i8, i8)) -> f64 {
+    chandra_ephemeris::julian_day(date.0 as i32, date.1 as u32, date.2 as u32, 0.25)
+}
+
+#[test]
+fn the_amanta_month_of_august_2026_is_shravana() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    // The new moon of 12 August 2026 falls with the Sun in Karka, and the month
+    // it opens is Shravana.
+    let month = almanac
+        .lunar_month_at(noon_jd((2026, 8, 20)), MonthSystem::Amanta)
+        .expect("month");
+
+    assert_eq!(month.name, "Shravana");
+    assert!(!month.adhika);
+    assert_eq!(month.first_day.month, 8, "Shravana 2026 opens in August");
+}
+
+#[test]
+fn the_purnimanta_month_carries_the_same_name() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    // A purnimanta month begins a fortnight earlier than the amanta month of the
+    // same name and contains its opening new moon.
+    let month = almanac
+        .lunar_month_at(noon_jd((2026, 8, 20)), MonthSystem::Purnimanta)
+        .expect("month");
+
+    assert_eq!(month.name, "Shravana");
+    assert!(
+        month.first_day.month == 7 || month.first_day.day < 12,
+        "purnimanta Shravana starts before the new moon, got {:?}",
+        month.first_day
+    );
+}
+
+#[test]
+fn adhika_shravana_2023_is_detected() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    // 2023 had an intercalary Shravana running 18 July to 16 August, followed by
+    // the regular Shravana. This is the case the sankranti rule exists for.
+    let intercalary = almanac
+        .lunar_month_at(noon_jd((2023, 8, 1)), MonthSystem::Amanta)
+        .expect("month");
+    assert_eq!(intercalary.name, "Shravana");
+    assert!(
+        intercalary.adhika,
+        "the lunar month spanning 1 August 2023 is Adhika Shravana"
+    );
+    assert_eq!(intercalary.display_name(), "Adhika Shravana");
+
+    // The month that follows repeats the name without the prefix.
+    let regular = almanac
+        .lunar_month_at(noon_jd((2023, 9, 1)), MonthSystem::Amanta)
+        .expect("month");
+    assert_eq!(regular.name, "Shravana");
+    assert!(!regular.adhika, "the second Shravana is the regular one");
+}
+
+#[test]
+fn an_intercalary_month_contains_no_sankranti() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    // The rule stated directly: an adhika month is one the Sun crosses no rashi
+    // boundary inside. Checked against the independent sankranti search rather
+    // than against the same comparison the detection uses.
+    let intercalary = almanac
+        .lunar_month_at(noon_jd((2023, 8, 1)), MonthSystem::Amanta)
+        .expect("month");
+    assert_eq!(
+        almanac
+            .sankrantis_between(intercalary.start_jd, intercalary.end_jd)
+            .expect("sankrantis")
+            .len(),
+        0
+    );
+
+    let ordinary = almanac
+        .lunar_month_at(noon_jd((2026, 8, 20)), MonthSystem::Amanta)
+        .expect("month");
+    assert_eq!(
+        almanac
+            .sankrantis_between(ordinary.start_jd, ordinary.end_jd)
+            .expect("sankrantis")
+            .len(),
+        1,
+        "an ordinary lunar month contains exactly one sankranti"
+    );
+}
+
+#[test]
+fn lunar_months_are_contiguous_and_of_plausible_length() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    for system in [MonthSystem::Amanta, MonthSystem::Purnimanta] {
+        let mut month = almanac
+            .lunar_month_at(noon_jd((2026, 1, 15)), system)
+            .expect("month");
+
+        for step in 0..14 {
+            let next = almanac.lunar_month_shift(&month, 1, system).expect("next");
+
+            let length = next.start_jd - month.start_jd;
+            assert!(
+                (29.2..=29.9).contains(&length),
+                "{system:?} month {step} is {length} days, outside the synodic range"
+            );
+
+            // Civil day coverage must not gap or overlap.
+            let after_last = chandra_almanac::time::DateKey::new(
+                month.last_day.year,
+                month.last_day.month,
+                month.last_day.day,
+            )
+            .expect("date");
+            assert_eq!(
+                almanac.day_after(after_last).expect("day after"),
+                next.first_day,
+                "{system:?} month {step} does not run up to the next"
+            );
+
+            month = next;
+        }
+    }
+}
+
+#[test]
+fn shifting_forward_and_back_returns_the_same_month() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    let month = almanac
+        .lunar_month_at(noon_jd((2026, 8, 20)), MonthSystem::Amanta)
+        .expect("month");
+    let round_trip = almanac
+        .lunar_month_shift(&month, 3, MonthSystem::Amanta)
+        .and_then(|m| almanac.lunar_month_shift(&m, -3, MonthSystem::Amanta))
+        .expect("round trip");
+
+    assert_eq!(round_trip.name, month.name);
+    assert!((round_trip.start_jd - month.start_jd).abs() < 1e-6);
+}
+
+#[test]
+fn every_lunar_month_name_occurs_across_a_year() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    let mut month = almanac
+        .lunar_month_at(noon_jd((2026, 4, 1)), MonthSystem::Amanta)
+        .expect("month");
+    let mut seen = std::collections::BTreeSet::new();
+
+    for _ in 0..13 {
+        seen.insert(month.name);
+        month = almanac
+            .lunar_month_shift(&month, 1, MonthSystem::Amanta)
+            .expect("next");
+    }
+
+    assert_eq!(
+        seen.len(),
+        12,
+        "a year of lunar months should use all twelve names, saw {seen:?}"
+    );
 }

@@ -8,13 +8,11 @@
    panel itself grows inside it, so the frame and its contents can never visibly
    disagree during the height transition. The surrounding area is transparent and
    click-through. */
+/* The window is exactly the panel's size, because the panel's height is
+   constant: every view swaps inside a fixed region rather than growing it. */
 .panel-frame {
   width: 320px;
   height: 100%;
-  pointer-events: none;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
 }
 
 /* The panel is a focus host, not a control: it takes key focus on open so the
@@ -24,15 +22,19 @@
   outline: none;
 }
 
+/* Background is a scrim, not a fill. The window carries the system's popover
+   material behind it - the same translucent blur the menu bar's own popovers
+   use - and this only darkens it enough to hold text contrast. A solid fill
+   here hides the material completely, which is what it did at first. */
 .panel {
-  pointer-events: auto;
   width: 320px;
-  background: var(--ground);
+  height: 100%;
+  background: rgba(10, 10, 11, 0.28);
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
-  box-shadow: var(--shadow-panel);
   padding: var(--s-4) 0;
   overflow: hidden;
+  position: relative;
   animation: panel-in var(--d-panel-open) var(--ease-panel);
 }
 
@@ -49,75 +51,119 @@
 
 /* ---------- header (40px) ---------- */
 
-/* Exact geometry from docs/DESIGN.md 5.2, measured from the panel edge:
-   glyph 20-36, label 44-210 (166px), prev 214-238, next 242-266, gear 276-300.
-   The gaps are 8, 4, 4 and 10, so a single uniform gap cannot express them - and
-   using one silently shrinks the label box to 160px, which is what first made
-   the month label clip mid-character. */
+/* Three slots: subject glyph or back chevron, label, settings gear. The month
+   arrows are gone - months change by scrolling or dragging the grid, which is
+   the only gesture that works the same for a lunar month, where stepping goes
+   from one syzygy to the next rather than through a numbered sequence. */
 .header {
   height: var(--s-9);
   display: grid;
-  grid-template-columns: 16px 166px 24px 24px 24px;
+  grid-template-columns: 24px 1fr 24px;
   align-items: center;
-  gap: 0;
-  padding: 0 var(--s-6);
+  gap: var(--s-3);
+  padding: 0 var(--s-5);
 }
 
 .header__glyph {
   display: flex;
-  width: 16px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
   height: 16px;
 }
 
 .header__label {
-  margin-left: var(--s-3);
   font: var(--type-title);
   letter-spacing: var(--track-title);
   color: var(--text-primary);
   text-align: left;
-  height: 28px;
+  line-height: 28px;
   white-space: nowrap;
   overflow: hidden;
-  border-radius: var(--r-button);
 }
 
-.header__step {
-  margin-left: var(--s-2);
+.header__icon {
   width: 24px;
   height: 24px;
   display: grid;
   place-items: center;
   color: var(--text-secondary);
   border-radius: var(--r-button);
-  transition: opacity var(--d-hover-out) var(--ease-standard);
+  transition: color var(--d-hover-out) var(--ease-standard);
 }
 
-.header__step:hover {
+.header__icon:hover {
   color: var(--text-primary);
 }
 
-.header__step:active {
+.header__icon:active {
   opacity: 0.6;
   transition: none;
 }
 
-.header__label:focus-visible,
-.header__step:focus-visible,
-.picker__cell:focus-visible {
+.header__icon:focus-visible {
   outline: var(--focus-width) solid var(--focus);
-  outline-offset: 0;
   border-radius: var(--r-button);
 }
 
-/* The gear stands apart from the chevron pair, which reads as one control. */
-.header__step:last-of-type {
-  margin-left: 10px;
+/* ---------- the region: one fixed-height stage for every view ---------- */
+
+/* Constant height, so swapping the calendar for a day or for settings never
+   resizes the window. 20 weekday row + 4 + 240 grid. */
+.region {
+  height: 264px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* A short fade at the foot of the region, so a view taller than 264px reads as
+   continuing rather than as ending mid-row. Non-interactive, and invisible
+   against a view that already ends in space. */
+.region::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 20px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(10, 10, 11, 0), rgba(10, 10, 11, 0.55));
 }
 
 /* ---------- weekday row (20px) + grid (6 x 40) ---------- */
 
 .grid-region {
   padding-top: var(--s-2);
+}
+
+/* ---------- the month strip ---------- */
+
+/* One month tall, with the months either side sitting just outside it. */
+.scroller {
+  height: 240px;
+  margin-top: var(--s-2);
+  overflow: hidden;
+  position: relative;
+  /* The wheel and drag drive the strip; the browser must not also scroll it. */
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.scroller__strip {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+/* Settling is the only time the strip animates. While a gesture is in progress
+   it tracks the pointer exactly, with no transition to lag behind it. */
+.scroller__strip.is-settling {
+  transition: transform var(--d-month) var(--ease-panel);
+}
+
+.scroller__month {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 240px;
 }
 
 .weekdays {
@@ -144,25 +190,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: var(--s-2);
-  animation: grid-in var(--d-month) var(--ease-panel);
 }
 
 .week {
   display: grid;
   grid-template-columns: repeat(7, 40px);
   height: 40px;
-}
-
-@keyframes grid-in {
-  from {
-    opacity: 0;
-    transform: translateX(var(--enter-from, 0));
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 /* ---------- day cell (40 x 40) ---------- */
@@ -198,6 +231,13 @@
   transition-duration: var(--d-select);
 }
 
+.day-cell.is-selected .day-cell__numeral {
+  font-weight: 600;
+}
+
+/* Today carries three marks, so it survives a grayscale rendering and stays
+   distinct from the selection fill: a ring, an accent numeral, and a dot under
+   the phase glyph. */
 .day-cell.is-today::after {
   content: "";
   position: absolute;
@@ -205,6 +245,13 @@
   border: 1px solid var(--accent);
   border-radius: 7px;
   pointer-events: none;
+}
+
+/* The third mark is the phase glyph's own outline, not an extra element: a dot
+   under the numeral collided with the glyph, and a 40px cell has no spare room
+   for a fourth thing. */
+.day-cell.is-today .phase-glyph circle {
+  stroke: var(--accent);
 }
 
 /* Drawn on the ::before layer rather than as an outline, so it sits outside the
@@ -259,133 +306,82 @@
 
 /* ---------- graha cell marks ---------- */
 
-.day-cell__markers {
-  position: relative;
+/* The graha's own symbol, in the same place the Moon's phase glyph sits, so both
+   calendars read the same way. State is carried by its colour and weight rather
+   than by extra marks, because a 40px cell has room for one glyph and no more. */
+.day-cell__graha {
   display: flex;
-  gap: 5px;
-  align-items: center;
-  height: 10px;
-  margin-top: var(--s-1);
+  color: var(--disc-lit);
 }
 
-.marker {
-  width: 5px;
-  height: 5px;
-  display: block;
+.day-cell__graha.is-retro {
+  color: var(--retro);
 }
 
-.marker--rashi_ingress {
-  background: var(--marker);
-  border-radius: 50%;
+.day-cell__graha.is-combust {
+  opacity: 0.4;
 }
 
-.marker--nakshatra_ingress {
-  border: 1px solid var(--marker);
-  border-radius: 50%;
+.day-cell__graha.is-outside {
+  opacity: 0.45;
 }
 
-.marker--retrograde_station,
-.marker--direct_station {
-  background: var(--retro);
-  transform: rotate(45deg);
+.day-cell__graha.is-combust.is-outside {
+  opacity: 0.25;
 }
 
-.marker--more {
-  position: relative;
-}
-
-.marker--more::before,
-.marker--more::after {
-  content: "";
+/* An ingress or a station: one mark in the corner. A row of markers would have
+   to displace the glyph, and most days carry no event at all. */
+.day-cell__event {
   position: absolute;
-  inset: 2px 0;
-  border-top: 1px solid var(--marker);
+  top: 5px;
+  right: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--marker);
 }
 
-.marker--more::after {
-  transform: rotate(90deg);
+.day-cell__event.is-station {
+  background: var(--retro);
+  border-radius: 0;
+  transform: rotate(45deg);
 }
 
 /* Combustion is a span, so it is a rule under the numeral rather than another
    marker competing for the marker row. */
+/* Combustion lasts all day, so it is a rule rather than a mark. Sitting under
+   the glyph at most of the cell's width it reads at a glance; the 12px hairline
+   it replaced sat against the numeral and was effectively invisible. Inset, so
+   it never runs into the retrograde rule at the cell's edge. */
 .day-cell__combust {
   position: absolute;
-  top: 21px;
-  left: 14px;
-  width: 12px;
-  height: 1px;
+  bottom: 4px;
+  left: 9px;
+  right: 9px;
+  height: 1.5px;
+  border-radius: 1px;
   background: var(--marker);
+  opacity: 0.9;
 }
 
 /* A retrograde period reads as one continuous line running across whole weeks. */
 .day-cell__retro {
   position: absolute;
-  top: 37px;
+  bottom: 0;
   left: 0;
-  width: 40px;
+  right: 0;
   height: 1px;
   background: var(--retro);
 }
 
-/* ---------- month picker ---------- */
-
-.picker {
-  padding-top: var(--s-2);
-  height: 264px;
-}
-
-.picker__year {
-  height: var(--s-9);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--s-6);
-}
-
-.picker__year-value {
-  font: var(--type-title);
-  letter-spacing: var(--track-title);
-}
-
-.picker__grid {
-  display: grid;
-  grid-template-columns: repeat(4, 70px);
-  grid-auto-rows: 60px;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-.picker__cell {
-  font: var(--type-body);
-  color: var(--text-primary);
-  display: grid;
-  place-items: center;
-  border-radius: var(--r-cell);
-  margin: var(--s-2);
-}
-
-.picker__cell:hover {
-  background: var(--surface-hover);
-}
-
-.picker__cell.is-current {
-  background: var(--surface-selected);
-}
-
-.picker__cell.is-now {
-  color: var(--accent);
-}
-
 /* ---------- detail ---------- */
 
-.panel__divider {
-  height: 1px;
-  background: var(--hairline);
-  margin-top: var(--s-4);
-}
-
 .detail {
-  padding: var(--s-5) var(--s-6);
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: var(--s-4) var(--s-5) var(--s-5);
   animation: detail-in var(--d-detail-in) var(--ease-standard)
     calc(var(--d-detail-in) * 0.55) backwards;
 }
@@ -397,6 +393,14 @@
   to {
     opacity: 1;
   }
+}
+
+.detail::-webkit-scrollbar {
+  display: none;
+}
+
+.detail__today {
+  color: var(--accent);
 }
 
 .detail__date {
@@ -530,3 +534,4 @@
   letter-spacing: var(--track-caption);
   color: var(--text-secondary);
 }
+

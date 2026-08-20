@@ -554,9 +554,15 @@ Drawn per day in `crates/glyph` with `tiny-skia`, applied via
 |---|---|
 | Canvas | 22 × 22 pt = **44 × 44 px** at 2x |
 | Disc centre | (11.0, 11.0) pt |
-| Disc radius `R` | **8.0 pt** (Ø16pt in a 22pt slot = 73% fill) |
-| Ring stroke | **1.0 pt** (2.0 px at 2x), centred on `R`, spans 7.5 → 8.5 pt |
-| Ring alpha | **0.55** normally; **0.78** at new moon |
+| Disc radius `R` | **7.2 pt** (Ø14.4pt in a 22pt slot = 65% fill) |
+| Ring stroke | **1.3 pt**, centred on `R` |
+| Ring alpha | **0.90** normally; **1.00** at new moon |
+
+Revised after comparing the rendered icon against the system status icons beside it. At
+R = 8.0 with a 0.55 ring the moon read both larger and dimmer than the wifi and battery
+glyphs: macOS masks a template image with its own foreground colour, so a half-transparent
+ring comes out grey next to fully opaque system icons. 7.2 pt at near-full opacity matches
+their optical size and weight.
 | Lit fill alpha | **1.00** |
 | Anti-aliasing | on; no hinting; no gamma correction |
 | Vertical placement | geometric centre of the 22pt slot; no optical offset (the form is radially symmetric) |

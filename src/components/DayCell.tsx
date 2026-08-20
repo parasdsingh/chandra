@@ -6,10 +6,17 @@
  */
 
 import type { JSX } from "solid-js";
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
 
 import type { GridDay } from "../lib/calendar";
-import type { EventKind, MoonCell, GrahaCell, TransitEvent } from "../ipc/types";
+import type {
+  EventKind,
+  GrahaCell,
+  GrahaInfo,
+  MoonCell,
+  TransitEvent,
+} from "../ipc/types";
+import { GrahaGlyph } from "./GrahaGlyph";
 import { PhaseGlyph } from "./PhaseGlyph";
 
 interface CommonProps {
@@ -31,23 +38,26 @@ interface GrahaProps extends CommonProps {
   kind: "graha";
   data: GrahaCell | undefined;
   events: TransitEvent[];
-  combust: boolean;
+  info: GrahaInfo | undefined;
   label: string;
 }
 
 type Props = MoonProps | GrahaProps;
 
-/** Instants get a marker; spans get a rule. Ordered so the row reads stably. */
-const MARKER_ORDER: EventKind[] = [
+/** Events drawn as a mark on the cell. Spans are drawn as rules instead. */
+const MARKED_EVENTS: EventKind[] = [
   "rashi_ingress",
   "nakshatra_ingress",
   "retrograde_station",
   "direct_station",
 ];
 
-const MAX_MARKERS = 3;
-
 export function DayCell(props: Props): JSX.Element {
+  const combustToday = () =>
+    props.kind === "moon"
+      ? ((props as MoonProps).data?.combust ?? false)
+      : ((props as GrahaProps).data?.combust ?? false);
+
   const classes = () => ({
     "day-cell": true,
     "is-outside": !props.cell.inMonth,
@@ -55,17 +65,17 @@ export function DayCell(props: Props): JSX.Element {
     "is-today": props.today,
   });
 
-  const markers = () =>
+  const marked = () =>
     props.kind === "graha"
-      ? props.events
-          .filter((event) => MARKER_ORDER.includes(event.kind))
-          .sort(
-            (a, b) => MARKER_ORDER.indexOf(a.kind) - MARKER_ORDER.indexOf(b.kind),
-          )
+      ? props.events.filter((event) => MARKED_EVENTS.includes(event.kind))
       : [];
 
-  const overflow = () => markers().length > MAX_MARKERS;
-  const shown = () => (overflow() ? markers().slice(0, MAX_MARKERS - 1) : markers());
+  /** A station outranks an ingress: it is the rarer and larger event. */
+  const isStation = () =>
+    marked().some(
+      (event) =>
+        event.kind === "retrograde_station" || event.kind === "direct_station",
+    );
 
   return (
     <div
@@ -80,8 +90,11 @@ export function DayCell(props: Props): JSX.Element {
     >
       <span class="day-cell__numeral">{props.cell.date.day}</span>
 
-      <Show when={props.kind === "moon"}>
-        <span class="day-cell__content">
+      {/* Both kinds put their subject's glyph in the same place, so the two
+          calendars read the same way: the numeral labels the day, the glyph is
+          what the day is about. */}
+      <span class="day-cell__content">
+        <Show when={props.kind === "moon"}>
           <Show when={(props as MoonProps).data}>
             {(data) => (
               <PhaseGlyph
@@ -93,30 +106,45 @@ export function DayCell(props: Props): JSX.Element {
               />
             )}
           </Show>
-        </span>
+        </Show>
+
+        <Show when={props.kind === "graha"}>
+          <Show when={(props as GrahaProps).info}>
+            {(info) => (
+              <span
+                class="day-cell__graha"
+                classList={{
+                  "is-retro": (props as GrahaProps).data?.retrograde,
+                  "is-combust": (props as GrahaProps).data?.combust,
+                  "is-outside": !props.cell.inMonth,
+                }}
+              >
+                <GrahaGlyph info={info()} size={14} colour="currentColor" />
+              </span>
+            )}
+          </Show>
+        </Show>
+      </span>
+
+      {/* Combustion is a span. A rule under the numeral says "all day", where a
+          marker would read as an instant. */}
+      <Show when={combustToday()}>
+        <span class="day-cell__combust" />
       </Show>
 
-      <Show when={props.kind === "graha"}>
-        {/* Combustion is a span, drawn as a short rule under the numeral rather
-            than as another marker competing for the marker row. */}
-        <Show when={(props as GrahaProps).combust}>
-          <span class="day-cell__combust" />
-        </Show>
+      {/* A retrograde period becomes one continuous line running across whole
+          weeks: visible at a glance, invisible when not looked for. */}
+      <Show when={props.kind === "graha" && (props as GrahaProps).data?.retrograde}>
+        <span class="day-cell__retro" />
+      </Show>
 
-        <span class="day-cell__markers">
-          <For each={shown()}>
-            {(event) => <span class={`marker marker--${event.kind}`} />}
-          </For>
-          <Show when={overflow()}>
-            <span class="marker marker--more" />
-          </Show>
-        </span>
-
-        {/* A retrograde period becomes one continuous line running across whole
-            weeks: visible at a glance, invisible when not looked for. */}
-        <Show when={(props as GrahaProps).data?.retrograde}>
-          <span class="day-cell__retro" />
-        </Show>
+      {/* An event is an instant, so it gets a single mark in the corner rather
+          than a row competing with the glyph for the cell's 40 pixels. */}
+      <Show when={marked().length > 0}>
+        <span
+          class="day-cell__event"
+          classList={{ "is-station": isStation() }}
+        />
       </Show>
     </div>
   );

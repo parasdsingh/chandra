@@ -118,7 +118,11 @@ fn system_zone_name() -> String {
 /// Outcome of asking macOS for the device's coordinates.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Outcome {
-    Located { latitude: f64, longitude: f64, elevation: f64 },
+    Located {
+        latitude: f64,
+        longitude: f64,
+        elevation: f64,
+    },
     /// The user, or a policy, said no. Not retried.
     Denied,
     /// Location services are switched off, or the framework reported a failure.

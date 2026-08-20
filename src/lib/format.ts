@@ -61,8 +61,30 @@ export function formatSpan(
   return `${from} → ${formatBoundary(exit, context)}`;
 }
 
+/** `20 August 2026`, for the day view's header. */
+export function formatDateHeading(date: DateKey): string {
+  const value = new Date(Date.UTC(date.year, date.month - 1, date.day, 12));
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(value);
+}
+
+/** `THURSDAY`, the weekday alone. The header already carries the date. */
+export function formatWeekday(date: DateKey): string {
+  const value = new Date(Date.UTC(date.year, date.month - 1, date.day, 12));
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: "UTC",
+    weekday: "long",
+  })
+    .format(value)
+    .toUpperCase();
+}
+
 /**
- * `THURSDAY 20 AUGUST 2026`, the detail area's date line.
+ * `THURSDAY 20 AUGUST 2026`, the full date on one line.
  *
  * Takes no zone: the value is already a calendar date, resolved in the
  * observer's zone by the backend. Formatting it at UTC noon keeps it from

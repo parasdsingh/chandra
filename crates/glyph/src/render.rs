@@ -10,11 +10,17 @@ use crate::path;
 /// Menu bar slot height in points. macOS gives a status item a 22pt square.
 pub const SLOT_POINTS: f32 = 22.0;
 
-/// Moon disc radius in points: a 16pt disc fills 73% of the slot, which reads as
-/// a moon rather than as a dot or a plate.
-const DISC_RADIUS_POINTS: f32 = 8.0;
+/// Moon disc radius in points.
+///
+/// 7.2 rather than 8.0: a 14.4pt disc fills 65% of the 22pt slot, matching the
+/// optical size of the system status icons it sits beside. At 8.0 the moon read
+/// visibly larger and heavier than the wifi and battery glyphs next to it.
+const DISC_RADIUS_POINTS: f32 = 7.2;
 /// Ring stroke in points, centred on the radius.
-const RING_STROKE_POINTS: f32 = 1.0;
+///
+/// Matched to the ~1.3pt strokes macOS uses for its own status icons, so the
+/// outline carries the same weight as its neighbours.
+const RING_STROKE_POINTS: f32 = 1.3;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RenderError {
@@ -278,10 +284,10 @@ mod tests {
         let full = coverage(&moon_icon(1.0, true, false, 2, Tint::Template).expect("render"));
         let half = coverage(&moon_icon(0.5, true, false, 2, Tint::Template).expect("render"));
 
-        // A 16pt disc in a 22pt square covers pi*8^2/22^2 = 41.5%.
-        assert!((full - 0.415).abs() < 0.01, "full disc covered {full}");
-        // Half the lit disc plus the ring: about 21% plus the ring's own area.
-        assert!((0.24..0.32).contains(&half), "half moon covered {half}");
+        // A 14.4pt disc in a 22pt square covers pi*7.2^2/22^2 = 33.6%.
+        assert!((full - 0.336).abs() < 0.01, "full disc covered {full}");
+        // Half the lit disc plus the ring around the dark half.
+        assert!((0.22..0.30).contains(&half), "half moon covered {half}");
         assert!(half < full, "a half moon must cover less than a full one");
     }
 

@@ -1,10 +1,17 @@
-/** Panel header: subject glyph, month label, month steppers, settings. */
+/**
+ * Panel header.
+ *
+ * Carries the subject and the month in the calendar, and the way back
+ * everywhere else. There are no month arrows: months change by scrolling or
+ * dragging the grid, which works the same for a lunar month, where stepping is
+ * from one syzygy to the next rather than through a numbered sequence.
+ */
 
 import type { JSX } from "solid-js";
 import { createEffect, createSignal, on, Show } from "solid-js";
 
-import type { GrahaInfo, GrahaKey, Snapshot } from "../ipc/types";
-import { formatMonthShort, formatMonthYear } from "../lib/format";
+import type { DateKey, GrahaInfo, GrahaKey, Snapshot } from "../ipc/types";
+import { formatDateHeading } from "../lib/format";
 import { GrahaGlyph } from "./GrahaGlyph";
 import { PhaseGlyph } from "./PhaseGlyph";
 
@@ -14,119 +21,119 @@ interface Props {
   info: GrahaInfo | undefined;
   snapshot: Snapshot | undefined;
   southern: boolean;
-  year: number;
-  month: number;
-  pickerOpen: boolean;
-  onTogglePicker: () => void;
-  onStep: (delta: number) => void;
+  /** Month label in the calendar, section name in settings. */
+  title: string;
+  selected: DateKey | null;
+  view: "calendar" | "day" | "settings";
+  onBack: () => void;
   onSettings: () => void;
 }
 
 export function Header(props: Props): JSX.Element {
-  const full = () => `${props.subjectName} · ${formatMonthYear(props.year, props.month)}`;
+  const isCalendar = () => props.view === "calendar";
 
-  // Ladder from docs/DESIGN.md 5.2. No ellipsis: each step drops a whole word.
-  const candidates = () => [
-    full(),
-    `${props.subjectName} · ${formatMonthShort(props.month)} ${props.year}`,
-    `${formatMonthYear(props.year, props.month)}`,
-    `${formatMonthShort(props.month)} ${props.year}`,
-  ];
+  const label = () =>
+    props.view === "day" && props.selected
+      ? formatDateHeading(props.selected)
+      : props.title;
 
-  let labelElement: HTMLButtonElement | undefined;
+  const full = () =>
+    isCalendar() ? `${props.subjectName} · ${props.title}` : label();
+
+  let labelElement: HTMLDivElement | undefined;
   const [level, setLevel] = createSignal(0);
+
+  // Ladder. The subject name is the last thing dropped, not the first: it is
+  // what tells a Mangala calendar from a Chandra one, and losing it leaves two
+  // panels that read identically. The year goes first, then the name.
+  const withoutYear = () => props.title.replace(/\s+\d{1,4}$/, "");
+  const candidates = () =>
+    isCalendar()
+      ? [
+          full(),
+          `${props.subjectName} · ${withoutYear()}`,
+          props.title,
+          withoutYear(),
+        ]
+      : [label()];
   const fitted = () => candidates()[level()] ?? full();
 
-  // Start again from the full label whenever what it says changes.
   createEffect(
     on(
-      () => [props.subjectName, props.year, props.month],
+      () => [props.subjectName, props.title, props.view],
       () => setLevel(0),
     ),
   );
 
-  // Step down the ladder until the text stops overflowing its box.
-  //
-  // Measured from real layout rather than with a canvas: assigning the computed
-  // font shorthand to a canvas context silently fails for `-apple-system`, and
-  // the context keeps its 10px default, so every candidate appears to fit and
-  // the label clips mid-character.
+  // Measured from real layout. Assigning a computed font shorthand to a canvas
+  // context silently fails for `-apple-system`, so the canvas would report every
+  // candidate as fitting and the label would clip mid-character.
   createEffect(() => {
     const current = fitted();
     void current;
     const element = labelElement;
     if (!element) return;
-    if (
-      element.scrollWidth > element.clientWidth &&
-      level() < candidates().length - 1
-    ) {
+    if (element.scrollWidth > element.clientWidth && level() < candidates().length - 1) {
       setLevel(level() + 1);
     }
   });
 
   return (
     <header class="header">
-      <span class="header__glyph">
-        <Show
-          when={props.subject === "chandra" && props.snapshot}
-          fallback={
-            <Show when={props.info}>
-              {(info) => <GrahaGlyph info={info()} size={16} />}
-            </Show>
-          }
-        >
-          {(snapshot) => (
-            <PhaseGlyph
-              illumination={snapshot().illumination}
-              waxing={snapshot().is_waxing}
-              southern={props.southern}
-              size={16}
-            />
-          )}
-        </Show>
-      </span>
-
-      <button
-        class="header__label"
-        ref={labelElement}
-        onClick={props.onTogglePicker}
-        aria-expanded={props.pickerOpen}
-        aria-label={`${full()}. Choose a month`}
+      <Show
+        when={isCalendar()}
+        fallback={
+          <button class="header__icon" onClick={props.onBack} aria-label="Back">
+            <Chevron />
+          </button>
+        }
       >
+        <span class="header__glyph">
+          <Show
+            when={props.subject === "chandra" && props.snapshot}
+            fallback={
+              <Show when={props.info}>
+                {(info) => <GrahaGlyph info={info()} size={16} />}
+              </Show>
+            }
+          >
+            {(snapshot) => (
+              <PhaseGlyph
+                illumination={snapshot().illumination}
+                waxing={snapshot().is_waxing}
+                southern={props.southern}
+                size={16}
+              />
+            )}
+          </Show>
+        </span>
+      </Show>
+
+      <div class="header__label" ref={labelElement} aria-label={full()}>
         {fitted()}
-      </button>
+      </div>
 
-      <button
-        class="header__step"
-        onClick={() => props.onStep(-1)}
-        aria-label="Previous month"
-      >
-        <Chevron direction="left" />
-      </button>
-      <button
-        class="header__step"
-        onClick={() => props.onStep(1)}
-        aria-label="Next month"
-      >
-        <Chevron direction="right" />
-      </button>
-      <button class="header__step" onClick={props.onSettings} aria-label="Settings">
-        <Gear />
-      </button>
+      <Show when={props.view !== "settings"}>
+        <button
+          class="header__icon"
+          onClick={props.onSettings}
+          aria-label="Settings"
+        >
+          <Gear />
+        </button>
+      </Show>
     </header>
   );
 }
 
-function Chevron(props: { direction: "left" | "right" }): JSX.Element {
-  const d = () =>
-    props.direction === "left" ? "M 14.5 5 L 9.5 12 L 14.5 19" : "M 9.5 5 L 14.5 12 L 9.5 19";
+function Chevron(): JSX.Element {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d={d()}
+        d="M 14.5 5 L 8.5 12 L 14.5 19"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.5"
+        stroke-width="1.7"
         stroke-linecap="round"
         stroke-linejoin="round"
       />
@@ -136,8 +143,7 @@ function Chevron(props: { direction: "left" | "right" }): JSX.Element {
 
 function Gear(): JSX.Element {
   // Teeth start at the rim and are short and blunt. Long thin spokes standing
-  // clear of the circle read as a sun, not a gear - which is what the first
-  // version of this icon did.
+  // clear of the circle read as a sun rather than a gear.
   const RIM = 6.0;
   const TIP = 8.4;
   const teeth = Array.from({ length: 8 }, (_, index) => {
@@ -151,7 +157,7 @@ function Gear(): JSX.Element {
   });
 
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
       {teeth.map((tooth) => (
         <line
           x1={tooth.x1}
@@ -162,8 +168,8 @@ function Gear(): JSX.Element {
           stroke-width="2.6"
         />
       ))}
-      <circle cx="12" cy="12" r={RIM} fill="none" stroke="currentColor" stroke-width="1.5" />
-      <circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r={RIM} fill="none" stroke="currentColor" stroke-width="1.6" />
+      <circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6" />
     </svg>
   );
 }

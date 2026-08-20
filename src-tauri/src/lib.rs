@@ -47,7 +47,6 @@ pub fn run() {
             commands::update_settings,
             commands::search_cities,
             commands::request_device_location,
-            commands::open_settings,
             commands::close_panel,
         ])
         .setup(|app| {
@@ -115,10 +114,19 @@ fn watch_for_midnight(app: tauri::AppHandle) {
         let wait = duration_until_local_midnight().unwrap_or(Duration::from_secs(3600));
         std::thread::sleep(wait + MIDNIGHT_SLACK);
 
-        if let Err(error) = tray::refresh_icons(&app) {
-            // A failed redraw leaves yesterday's disc in the menu bar, which is
-            // wrong but not fatal, so the loop continues to the next day.
-            eprintln!("chandra: could not redraw the menu bar: {error}");
+        // Same rule as everywhere else: the status item is an AppKit object and
+        // must only be touched on the main thread.
+        let handle = app.clone();
+        let dispatched = app.run_on_main_thread(move || {
+            if let Err(error) = tray::refresh_icons(&handle) {
+                // A failed redraw leaves yesterday's disc in the menu bar, which
+                // is wrong but not fatal, so the loop continues to the next day.
+                eprintln!("chandra: could not redraw the menu bar: {error}");
+            }
+        });
+        if dispatched.is_err() {
+            // The app is shutting down; nothing left to redraw.
+            return;
         }
     });
 }

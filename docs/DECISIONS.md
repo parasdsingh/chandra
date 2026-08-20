@@ -15,7 +15,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-008](#d-008) | Tray icons rendered as macOS template images by default | accepted |
 | [D-009](#d-009) | Moon permanent in menu bar; each graha its own toggleable item | accepted |
 | [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted |
-| [D-011](#d-011) | Opaque dark surface, no vibrancy | accepted |
+| [D-011](#d-011) | Translucent panel using the system popover material | accepted, revised |
 | [D-012](#d-012) | Private repo, unsigned local build, ad-hoc codesign | accepted |
 | [D-013](#d-013) | Product name is Chandra; bundle id `com.parasdsingh.chandra` | accepted |
 | [D-014](#d-014) | SolidJS + Vite + TypeScript, hand-written CSS | accepted |

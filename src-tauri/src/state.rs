@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::RwLock;
 
-use chandra_almanac::Almanac;
+use chandra_almanac::{Almanac, MonthCursor};
 use chandra_ephemeris::Graha;
 
 use crate::error::{AppError, Result};
@@ -35,6 +35,19 @@ impl AppState {
             location: RwLock::new(resolved),
             config_dir,
         })
+    }
+
+    /// A month cursor in the configured month system.
+    ///
+    /// The system lives in settings rather than in the request, so the calendar
+    /// cannot be showing lunar months while a background prefetch asks for solar
+    /// ones.
+    pub fn cursor(&self, anchor_unix_ms: i64, offset: i32) -> MonthCursor {
+        MonthCursor {
+            anchor_unix_ms,
+            offset,
+            system: self.settings().calendar.month_system,
+        }
     }
 
     pub fn settings(&self) -> Settings {
@@ -92,7 +105,12 @@ impl AppState {
     /// The timezone is kept from the existing resolution rather than derived
     /// from the coordinates: `chandra_geo::nearest_place` can name a city across
     /// a border, and a wrong zone would shift every time in the app.
-    pub fn accept_device_location(&self, latitude: f64, longitude: f64, elevation: f64) -> Result<()> {
+    pub fn accept_device_location(
+        &self,
+        latitude: f64,
+        longitude: f64,
+        elevation: f64,
+    ) -> Result<()> {
         let mut settings = self.settings();
         if settings.location.mode == crate::settings::LocationMode::Manual {
             return Ok(());

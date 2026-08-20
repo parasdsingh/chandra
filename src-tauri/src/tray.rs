@@ -62,7 +62,12 @@ fn build_item(app: &AppHandle, id: String, subject: Graha) -> Result<()> {
             }
         })
         .build(app)
-        .map_err(|e| AppError::Engine(format!("cannot create the {} tray item: {e}", subject.name())))?;
+        .map_err(|e| {
+            AppError::Engine(format!(
+                "cannot create the {} tray item: {e}",
+                subject.name()
+            ))
+        })?;
     Ok(())
 }
 
@@ -101,10 +106,7 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
     let is_template = !settings.tray.colour_mode;
 
     let now = jiff::Timestamp::now().as_millisecond();
-    let snapshot = state
-        .almanac
-        .now(now, &subjects)
-        .map_err(AppError::from)?;
+    let snapshot = state.almanac.now(now, &subjects).map_err(AppError::from)?;
 
     if let Some(item) = app.tray_by_id(MOON_ID) {
         let icon = moon_icon(
@@ -145,8 +147,9 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
             ),
             None => graha.name().to_string(),
         };
-        item.set_tooltip(Some(tooltip))
-            .map_err(|e| AppError::Engine(format!("cannot set the {} tooltip: {e}", graha.name())))?;
+        item.set_tooltip(Some(tooltip)).map_err(|e| {
+            AppError::Engine(format!("cannot set the {} tooltip: {e}", graha.name()))
+        })?;
     }
 
     Ok(())

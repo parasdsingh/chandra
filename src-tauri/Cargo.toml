@@ -38,6 +38,11 @@ thiserror = { workspace = true }
 jiff = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+# NSVisualEffectView, so the panel uses the same translucent material as the
+# system's own menu bar popovers instead of a flat colour that sits oddly
+# beside them.
+window-vibrancy = "0.6"
+
 # CoreLocation is reached directly rather than through tauri-plugin-geolocation:
 # that plugin's desktop implementation returns Position::default(), which is
 # latitude 0, longitude 0, with no error. Silently placing every user in the
