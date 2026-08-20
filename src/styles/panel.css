@@ -1,0 +1,532 @@
+/*
+ * Panel layout. Every dimension here is from docs/DESIGN.md sections 2, 5 and 6.
+ * No literal colour, radius, duration or font size appears below; they all come
+ * from tokens.css.
+ */
+
+/* The window is created at the maximum panel height and never resized. The
+   panel itself grows inside it, so the frame and its contents can never visibly
+   disagree during the height transition. The surrounding area is transparent and
+   click-through. */
+.panel-frame {
+  width: 320px;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* The panel is a focus host, not a control: it takes key focus on open so the
+   keyboard works immediately, and must never draw a ring for it. */
+.panel:focus,
+.panel:focus-visible {
+  outline: none;
+}
+
+.panel {
+  pointer-events: auto;
+  width: 320px;
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow-panel);
+  padding: var(--s-4) 0;
+  overflow: hidden;
+  animation: panel-in var(--d-panel-open) var(--ease-panel);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- header (40px) ---------- */
+
+/* Exact geometry from docs/DESIGN.md 5.2, measured from the panel edge:
+   glyph 20-36, label 44-210 (166px), prev 214-238, next 242-266, gear 276-300.
+   The gaps are 8, 4, 4 and 10, so a single uniform gap cannot express them - and
+   using one silently shrinks the label box to 160px, which is what first made
+   the month label clip mid-character. */
+.header {
+  height: var(--s-9);
+  display: grid;
+  grid-template-columns: 16px 166px 24px 24px 24px;
+  align-items: center;
+  gap: 0;
+  padding: 0 var(--s-6);
+}
+
+.header__glyph {
+  display: flex;
+  width: 16px;
+  height: 16px;
+}
+
+.header__label {
+  margin-left: var(--s-3);
+  font: var(--type-title);
+  letter-spacing: var(--track-title);
+  color: var(--text-primary);
+  text-align: left;
+  height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  border-radius: var(--r-button);
+}
+
+.header__step {
+  margin-left: var(--s-2);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  border-radius: var(--r-button);
+  transition: opacity var(--d-hover-out) var(--ease-standard);
+}
+
+.header__step:hover {
+  color: var(--text-primary);
+}
+
+.header__step:active {
+  opacity: 0.6;
+  transition: none;
+}
+
+.header__label:focus-visible,
+.header__step:focus-visible,
+.picker__cell:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: 0;
+  border-radius: var(--r-button);
+}
+
+/* The gear stands apart from the chevron pair, which reads as one control. */
+.header__step:last-of-type {
+  margin-left: 10px;
+}
+
+/* ---------- weekday row (20px) + grid (6 x 40) ---------- */
+
+.grid-region {
+  padding-top: var(--s-2);
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 40px);
+  justify-content: center;
+  height: 20px;
+  align-items: center;
+}
+
+.weekdays span {
+  font: var(--type-micro);
+  letter-spacing: var(--track-micro);
+  color: var(--text-tertiary);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Six week rows rather than one 42-cell grid, so every gridcell has a
+   role="row" parent as ARIA requires. `display: contents` on the row would keep
+   the flat CSS grid, but it has a history of removing the element from the
+   accessibility tree - which is the exact problem this structure exists to fix. */
+.grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--s-2);
+  animation: grid-in var(--d-month) var(--ease-panel);
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 40px);
+  height: 40px;
+}
+
+@keyframes grid-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--enter-from, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ---------- day cell (40 x 40) ---------- */
+
+.day-cell {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--s-2);
+}
+
+/* Hover, selection and today are three separate mechanisms at three insets, so
+   all three can stack on one cell and stay legible. */
+.day-cell::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: var(--r-cell);
+  background: transparent;
+  transition: background-color var(--d-hover-out) var(--ease-standard);
+}
+
+.day-cell:hover::before {
+  background: var(--surface-hover);
+  transition-duration: var(--d-hover-in);
+}
+
+.day-cell.is-selected::before {
+  background: var(--surface-selected);
+  transition-duration: var(--d-select);
+}
+
+.day-cell.is-today::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+/* Drawn on the ::before layer rather than as an outline, so it sits outside the
+   selection fill with a 1px gap and the two are never confused. */
+.day-cell:focus-visible {
+  outline: none;
+}
+
+.day-cell:focus-visible::before {
+  box-shadow: 0 0 0 var(--focus-width) var(--focus);
+  border-radius: var(--r-focus);
+}
+
+.day-cell__numeral {
+  position: relative;
+  font: var(--type-numeral);
+  color: var(--text-primary);
+  height: 16px;
+}
+
+/* Today is marked twice - a ring and a colour - so it survives a grayscale or
+   colour-blind rendering. */
+.day-cell.is-today .day-cell__numeral {
+  color: var(--accent);
+}
+
+.day-cell.is-outside .day-cell__numeral {
+  color: var(--text-tertiary);
+}
+
+.day-cell__content {
+  position: relative;
+  margin-top: var(--s-1);
+  height: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.phase-glyph {
+  display: block;
+  animation: glyph-in var(--d-glyph) var(--ease-standard);
+}
+
+@keyframes glyph-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- graha cell marks ---------- */
+
+.day-cell__markers {
+  position: relative;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  height: 10px;
+  margin-top: var(--s-1);
+}
+
+.marker {
+  width: 5px;
+  height: 5px;
+  display: block;
+}
+
+.marker--rashi_ingress {
+  background: var(--marker);
+  border-radius: 50%;
+}
+
+.marker--nakshatra_ingress {
+  border: 1px solid var(--marker);
+  border-radius: 50%;
+}
+
+.marker--retrograde_station,
+.marker--direct_station {
+  background: var(--retro);
+  transform: rotate(45deg);
+}
+
+.marker--more {
+  position: relative;
+}
+
+.marker--more::before,
+.marker--more::after {
+  content: "";
+  position: absolute;
+  inset: 2px 0;
+  border-top: 1px solid var(--marker);
+}
+
+.marker--more::after {
+  transform: rotate(90deg);
+}
+
+/* Combustion is a span, so it is a rule under the numeral rather than another
+   marker competing for the marker row. */
+.day-cell__combust {
+  position: absolute;
+  top: 21px;
+  left: 14px;
+  width: 12px;
+  height: 1px;
+  background: var(--marker);
+}
+
+/* A retrograde period reads as one continuous line running across whole weeks. */
+.day-cell__retro {
+  position: absolute;
+  top: 37px;
+  left: 0;
+  width: 40px;
+  height: 1px;
+  background: var(--retro);
+}
+
+/* ---------- month picker ---------- */
+
+.picker {
+  padding-top: var(--s-2);
+  height: 264px;
+}
+
+.picker__year {
+  height: var(--s-9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s-6);
+}
+
+.picker__year-value {
+  font: var(--type-title);
+  letter-spacing: var(--track-title);
+}
+
+.picker__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 70px);
+  grid-auto-rows: 60px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.picker__cell {
+  font: var(--type-body);
+  color: var(--text-primary);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-cell);
+  margin: var(--s-2);
+}
+
+.picker__cell:hover {
+  background: var(--surface-hover);
+}
+
+.picker__cell.is-current {
+  background: var(--surface-selected);
+}
+
+.picker__cell.is-now {
+  color: var(--accent);
+}
+
+/* ---------- detail ---------- */
+
+.panel__divider {
+  height: 1px;
+  background: var(--hairline);
+  margin-top: var(--s-4);
+}
+
+.detail {
+  padding: var(--s-5) var(--s-6);
+  animation: detail-in var(--d-detail-in) var(--ease-standard)
+    calc(var(--d-detail-in) * 0.55) backwards;
+}
+
+@keyframes detail-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.detail__date {
+  font: var(--type-micro);
+  letter-spacing: var(--track-micro);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  height: 14px;
+}
+
+.detail__headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  height: var(--s-7);
+  margin-top: var(--s-2);
+}
+
+.detail__phase {
+  font: var(--type-headline);
+  letter-spacing: var(--track-headline);
+  color: var(--text-primary);
+}
+
+.detail__illum {
+  font: var(--type-body);
+  color: var(--text-secondary);
+}
+
+.detail__block {
+  margin-top: var(--s-4);
+}
+
+.detail__row {
+  margin: 0;
+  height: var(--s-7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail__label {
+  font: var(--type-label);
+  color: var(--text-secondary);
+}
+
+/* Right alignment is what makes the tabular figures pay off: every digit column
+   lines up down the block. */
+.detail__value {
+  font: var(--type-body);
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.detail__value.is-absent {
+  color: var(--text-tertiary);
+}
+
+/* A continuation span: present, but not the one the day is named after. */
+.detail__value.is-secondary {
+  color: var(--text-secondary);
+}
+
+.detail__caption,
+.detail__note {
+  margin: 0;
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--text-tertiary);
+  text-align: right;
+  height: 18px;
+}
+
+.detail__note {
+  height: 14px;
+}
+
+.detail__event {
+  margin: 0;
+  height: 18px;
+  display: flex;
+  justify-content: space-between;
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--text-secondary);
+}
+
+.detail__event-time {
+  color: var(--text-tertiary);
+}
+
+/* Stated as a fact, in words, where the number is read. No amber, no triangle,
+   no border (docs/DESIGN.md 9.4). */
+.detail__provenance {
+  margin: var(--s-3) 0 0;
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--annotate);
+}
+
+.chip {
+  min-width: 22px;
+  height: 16px;
+  padding: 0 var(--s-2);
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--retro);
+  border-radius: var(--r-chip);
+  color: var(--retro);
+  font: var(--type-body);
+}
+
+/* ---------- error ---------- */
+
+.error-block {
+  background: var(--surface);
+  border-radius: var(--r-cell);
+  padding: var(--s-5);
+}
+
+.error-block__headline {
+  margin: 0;
+  font: var(--type-body);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.error-block__cause {
+  margin: var(--s-2) 0 0;
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--text-secondary);
+}

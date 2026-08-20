@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/ephemeris", "crates/almanac", "crates/geo", "crates/glyph"]
+members = [
+    "crates/ephemeris",
+    "crates/almanac",
+    "crates/geo",
+    "crates/glyph",
+    "src-tauri",
+]
 
 [workspace.package]
 version = "0.1.0"

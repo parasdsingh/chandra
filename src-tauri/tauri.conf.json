@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Chandra",
+  "version": "0.1.0",
+  "identifier": "com.parasdsingh.chandra",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5273",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "macOSPrivateApi": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "icon": [
+      "icons/icon.icns"
+    ],
+    "resources": [
+      "resources/ephe/*"
+    ],
+    "category": "Utility",
+    "copyright": "AGPL-3.0",
+    "shortDescription": "Moon phases and navagraha transits",
+    "longDescription": "A menu bar almanac: live moon phase, a month calendar with per-day detail, and sidereal transit calendars for the nine grahas. Computed locally with the Swiss Ephemeris.",
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

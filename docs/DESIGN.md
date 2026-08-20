@@ -857,10 +857,15 @@ One row per `AppError.code`. There is no generic fallback (ARCHITECTURE §6).
 
 | Code | Headline | Cause line | Action |
 |---|---|---|---|
-| `LOCATION_UNRESOLVED` | Location not set. | Rise and set times need a location. | `Set location` → Settings → Location |
 | `DATE_OUT_OF_RANGE` | Outside 1800–2399. | Chandra has no ephemeris data for this date. | none |
 | `NO_CONVERGENCE` | Boundary time unavailable. | This nakshatra entry could not be resolved. | none |
+| `SETTINGS` | Settings could not be saved. | *(reason, one line, truncated at 60 chars)* | none |
 | `ENGINE` | Ephemeris unavailable. | *(engine error text, one line, truncated at 60 chars)* | `Quit Chandra` |
+
+`LOCATION_UNRESOLVED` was specified here and has been **removed as unreachable**.
+§9.5 already required the D-007 chain to end in the system timezone's coordinates, which
+always resolve offline, so there is no state in which the app has no location. The variant
+was deleted from `AppError` rather than left in place unconstructed.
 
 Colour: headline `--text-primary`, cause `--text-secondary`. No red, no icon, no border
 emphasis. The block's `--surface` fill and its position are what mark it as different.

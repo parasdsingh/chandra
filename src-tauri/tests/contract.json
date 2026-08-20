@@ -1,0 +1,217 @@
+{
+  "City": {
+    "city": "string",
+    "country": "string",
+    "country_code": "string",
+    "latitude": "number",
+    "longitude": "number",
+    "zone": "string"
+  },
+  "GrahaDay": {
+    "date": {
+      "day": "integer",
+      "month": "integer",
+      "year": "integer"
+    },
+    "degrees_in_rashi": [
+      "integer"
+    ],
+    "graha": "string",
+    "kind": "string",
+    "longitude": "number",
+    "nakshatras": [
+      {
+        "entry": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "exit": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "lord": "string",
+        "nakshatra": "string",
+        "name": "string",
+        "pada": "integer",
+        "prevailing": "boolean"
+      }
+    ],
+    "rashis": [
+      {
+        "entry": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "exit": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "name": "string",
+        "prevailing": "boolean",
+        "rashi": "string",
+        "western": "string"
+      }
+    ],
+    "retrograde": "boolean",
+    "rise": {
+      "day_offset": "integer",
+      "unix_ms": "integer"
+    },
+    "set": {
+      "day_offset": "integer",
+      "unix_ms": "integer"
+    },
+    "source": "string",
+    "speed": "number"
+  },
+  "GrahaMonth": {
+    "days": [
+      {
+        "day": "integer",
+        "longitude": "number",
+        "nakshatra": "string",
+        "rashi": "string",
+        "retrograde": "boolean",
+        "speed": "number"
+      }
+    ],
+    "events": [
+      {
+        "at": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "date": {
+          "day": "integer",
+          "month": "integer",
+          "year": "integer"
+        },
+        "graha": "string",
+        "kind": "string",
+        "source": "string",
+        "target": "null"
+      }
+    ],
+    "graha": "string",
+    "leading_blanks": "integer",
+    "month": "integer",
+    "source": "string",
+    "time_zone": "string",
+    "year": "integer"
+  },
+  "MoonDay": {
+    "date": {
+      "day": "integer",
+      "month": "integer",
+      "year": "integer"
+    },
+    "illumination": "number",
+    "is_waxing": "boolean",
+    "kind": "string",
+    "moonrise": {
+      "day_offset": "integer",
+      "unix_ms": "integer"
+    },
+    "moonset": {
+      "day_offset": "integer",
+      "unix_ms": "integer"
+    },
+    "nakshatras": [
+      {
+        "entry": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "exit": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "lord": "string",
+        "nakshatra": "string",
+        "name": "string",
+        "pada": "integer",
+        "prevailing": "boolean"
+      }
+    ],
+    "phase": "string",
+    "principal_at": {
+      "day_offset": "integer",
+      "unix_ms": "integer"
+    },
+    "rashis": [
+      {
+        "entry": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "exit": {
+          "day_offset": "integer",
+          "unix_ms": "integer"
+        },
+        "name": "string",
+        "prevailing": "boolean",
+        "rashi": "string",
+        "western": "string"
+      }
+    ],
+    "source": "string"
+  },
+  "MoonMonth": {
+    "days": [
+      {
+        "day": "integer",
+        "illumination": "number",
+        "is_waxing": "boolean",
+        "phase": "string",
+        "principal": "boolean"
+      }
+    ],
+    "leading_blanks": "integer",
+    "month": "integer",
+    "source": "string",
+    "time_zone": "string",
+    "year": "integer"
+  },
+  "Settings": {
+    "launch_at_login": "boolean",
+    "location": {
+      "mode": "string",
+      "place": {
+        "elevation": "number",
+        "label": "string",
+        "latitude": "number",
+        "longitude": "number",
+        "zone": "string"
+      }
+    },
+    "schema_version": "integer",
+    "sidereal": {
+      "ayanamsa": "string",
+      "node_type": "string"
+    },
+    "time_format": "string",
+    "tray": {
+      "colour_mode": "boolean",
+      "subjects": [
+        "string"
+      ]
+    }
+  },
+  "Snapshot": {
+    "grahas": [
+      {
+        "graha": "string",
+        "longitude": "number",
+        "nakshatra": "string",
+        "rashi": "string",
+        "retrograde": "boolean",
+        "source": "string"
+      }
+    ],
+    "illumination": "number",
+    "is_waxing": "boolean",
+    "phase": "string",
+    "source": "string",
+    "unix_ms": "integer"
+  }
+}

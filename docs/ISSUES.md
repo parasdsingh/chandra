@@ -32,6 +32,16 @@ New issues append to the table and get a detail section only when they need one.
 | I-023 | chore | Accessibility and contrast audit | M4 | open |
 | I-024 | chore | `make install`, ad-hoc signing, autostart | M4 | open |
 | I-025 | chore | Release workflow, DMG on tag | M4 | open |
+| I-027 | bug | White ring around the panel | M2 | done |
+| I-028 | bug | Week started on Tuesday in every locale | M2 | done |
+| I-029 | bug | Calendar invisible to VoiceOver: gridcells had no rows | M2 | done |
+| I-030 | feat | Day detail inside the calendar region, not a taller panel | M2 | open |
+| I-031 | feat | Settings inside the panel, reorganised for the surface | M2 | open |
+| I-032 | feat | Lunar month flow alongside solar, with correct names | M2 | open |
+| I-033 | feat | Month change by scroll and drag, not arrow buttons | M2 | open |
+| I-034 | bug | Moonset absence reshapes the detail with a dash and a new line | M2 | open |
+| I-035 | bug | Selected day is hard to see; today needs a second attribute | M2 | open |
+| I-036 | bug | Tray glyph weight does not match system menu bar icons | M2 | open |
 | I-026 | chore | Create private GitHub remote and push | M4 | blocked |
 
 ---
@@ -66,3 +76,35 @@ Outcome to record here once M2 builds a real bundle.
 ### I-026 — GitHub remote
 Deferred by choice ([D-018](DECISIONS.md#d-018)). CI workflows are written in M0 but stay
 inert until a remote exists. Unblock with `gh repo create moon-phases --private`.
+
+### I-027 — White ring around the panel — done
+A blanket `:focus-visible { outline: 2px solid var(--focus) }` in `base.css`
+applied to the panel container, which `Panel` focuses on mount so the keyboard
+works immediately. `--focus` is `#EDEDEF`, so the ring read as a bright white
+border. Fixed by declaring focus rings per control instead of globally. The
+matching blanket `:focus { outline: none }` was removed at the same time: it
+would have stripped the native focus rings from the settings window's AppKit
+controls.
+
+First diagnosed only after Screen Recording permission was granted and the real
+panel could be screenshotted. Two earlier guesses - an opaque webview background
+and a white CSS canvas - were wrong and were reverted.
+
+### I-028 — Week started on Tuesday — done
+`localeFirstWeekday` mapped `Intl` week info with `firstDay % 7`. `getWeekInfo`
+reports 1 = Monday through 7 = Sunday, and the grid is Monday-based and
+zero-indexed, so Monday must map to 0: a subtraction, not a modulo. The modulo
+sent Monday to 1, starting the week on a Tuesday, which no locale uses.
+
+### I-029 — Calendar invisible to VoiceOver — done
+Day cells carried `role="gridcell"` with no `role="row"` parent. That is invalid
+ARIA and WebKit prunes the whole subtree, so the calendar did not exist for
+assistive technology. Found by reading the live accessibility tree: 12 elements
+before the fix, 193 after, with every day cell exposing its spoken label.
+
+### I-030 to I-036 — requested changes
+Raised after seeing the running app. I-032 is the substantial one: a lunar month
+is not a relabelled Gregorian month, it runs new moon to new moon (amanta) or
+full moon to full moon (purnimanta), is named from the rashi the Sun occupies at
+that syzygy, and needs adhika masa detection for a lunar month containing no
+sankranti.

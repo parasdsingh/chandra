@@ -74,8 +74,10 @@ pub fn moon_icon(
     let transform = Transform::from_scale(scale as f32, scale as f32);
     let (r, g, b) = tint.components();
 
-    let mut paint = Paint::default();
-    paint.anti_alias = true;
+    let mut paint = Paint {
+        anti_alias: true,
+        ..Paint::default()
+    };
 
     match moon::rendering_for(illumination) {
         Rendering::RingOnly { alpha } => {
@@ -129,8 +131,10 @@ pub fn graha_icon(graha: Graha, scale: u32, tint: Tint) -> Result<Icon, RenderEr
     let transform = Transform::from_scale(unit_scale, unit_scale);
 
     let (r, g, b) = tint.components();
-    let mut paint = Paint::default();
-    paint.anti_alias = true;
+    let mut paint = Paint {
+        anti_alias: true,
+        ..Paint::default()
+    };
     paint.set_color_rgba8(r, g, b, u8::MAX);
 
     match ink {

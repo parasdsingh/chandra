@@ -1,0 +1,176 @@
+/* Settings window. A standard window, not a popover. */
+
+body.is-settings {
+  background: var(--ground);
+}
+
+.settings {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--ground);
+}
+
+.settings__tabs {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-7);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settings__tab {
+  font: var(--type-body);
+  color: var(--text-secondary);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-button);
+}
+
+.settings__tab:hover {
+  background: var(--surface-hover);
+}
+
+.settings__tab.is-active {
+  background: var(--surface-selected);
+  color: var(--text-primary);
+}
+
+.settings__body {
+  flex: 1;
+  padding: var(--s-7);
+  overflow-y: auto;
+}
+
+.settings__header {
+  margin: 0 0 var(--s-5);
+  font: var(--type-title);
+  letter-spacing: var(--track-title);
+  color: var(--text-primary);
+}
+
+.settings__row {
+  min-height: var(--s-8);
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: var(--s-5);
+  margin-bottom: var(--s-3);
+}
+
+.settings__label {
+  font: var(--type-label);
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.settings__control {
+  font: var(--type-body);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.settings__hint {
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--text-tertiary);
+}
+
+.settings__button {
+  font: var(--type-body);
+  color: var(--text-primary);
+  background: var(--surface-selected);
+  border-radius: var(--r-button);
+  padding: var(--s-2) var(--s-4);
+}
+
+.settings__button:disabled {
+  color: var(--text-tertiary);
+}
+
+.settings__results {
+  list-style: none;
+  margin: var(--s-2) 0 0 180px;
+  padding: 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.settings__result {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-button);
+  font: var(--type-body);
+  text-align: left;
+}
+
+.settings__result:hover {
+  background: var(--surface-hover);
+}
+
+.settings__empty {
+  margin: var(--s-5) 0;
+  text-align: center;
+  font: var(--type-body);
+  color: var(--text-secondary);
+}
+
+.settings__failure {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border-radius: var(--r-cell);
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--text-secondary);
+}
+
+.settings__graha {
+  display: grid;
+  grid-template-columns: 20px 100px 1fr auto;
+  align-items: center;
+  gap: var(--s-4);
+  min-height: var(--s-8);
+}
+
+.settings__graha-name {
+  font: var(--type-body);
+  color: var(--text-primary);
+}
+
+.settings input[type="search"] {
+  font: var(--type-body);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-button);
+  padding: var(--s-2) var(--s-3);
+  width: 180px;
+}
+
+/* Narrower than the search field: an elevation is at most five digits, and the
+   spare width lets its unit and explanation sit on one line beside it. */
+.settings input[type="number"] {
+  font: var(--type-body);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-button);
+  padding: var(--s-2) var(--s-3);
+  width: 84px;
+}
+
+.settings select {
+  font: var(--type-body);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-button);
+  padding: var(--s-2) var(--s-3);
+}

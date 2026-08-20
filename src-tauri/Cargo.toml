@@ -1,0 +1,51 @@
+[package]
+name = "chandra"
+description = "Moon phases and navagraha transits in the macOS menu bar."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+# Named separately from the binary so the crate can also be built as a library
+# for integration tests without producing two identically named artifacts.
+name = "chandra_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+chandra-almanac = { workspace = true }
+chandra-ephemeris = { workspace = true }
+chandra-geo = { workspace = true }
+chandra-glyph = { workspace = true }
+
+tauri = { version = "2", features = [
+    "tray-icon",
+    "image-png",
+    # Transparent windows are a private API on macOS. Needed for the panel's
+    # rounded corners and its own drop shadow, NOT for vibrancy - the panel is
+    # fully opaque (D-011).
+    "macos-private-api",
+] }
+tauri-plugin-autostart = "2"
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+jiff = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# CoreLocation is reached directly rather than through tauri-plugin-geolocation:
+# that plugin's desktop implementation returns Position::default(), which is
+# latitude 0, longitude 0, with no error. Silently placing every user in the
+# Gulf of Guinea is precisely the failure this app must not have.
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-core-location = { version = "0.3", features = [
+    "CLLocationManager",
+    "CLLocationManagerDelegate",
+    "CLLocation",
+] }

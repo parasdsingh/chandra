@@ -1,0 +1,120 @@
+/*
+ * Design tokens. The single source of truth for every colour, radius, duration,
+ * spacing step and font size in the app (docs/DESIGN.md 13).
+ *
+ * Nothing else in the front end declares a literal for any of these. If a value
+ * is needed and is not here, it belongs here first.
+ */
+
+:root {
+  /* Spacing. Base unit 4px; 2px exists only for hairline offsets and focus insets. */
+  --s-1: 2px;
+  --s-2: 4px;
+  --s-3: 8px;
+  --s-4: 12px;
+  --s-5: 16px;
+  --s-6: 20px;
+  --s-7: 24px;
+  --s-8: 32px;
+  --s-9: 40px;
+
+  /* Radii */
+  --r-panel: 12px;
+  --r-cell: 8px;
+  --r-button: 6px;
+  --r-chip: 4px;
+  --r-focus: 9px;
+
+  /* Surfaces */
+  --ground: #0a0a0b;
+  --surface: #141417;
+  --surface-selected: #1c1c20;
+  --surface-hover: rgba(255, 255, 255, 0.04);
+
+  /* Text */
+  --text-primary: #ededef;
+  --text-secondary: #a1a1a8;
+  --text-tertiary: #85858d;
+
+  /* Lines */
+  --hairline: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.12);
+
+  /* Meaning. Exactly two hues in the entire app. */
+  --accent: #d8b36a; /* TODAY ONLY */
+  --retro: #e08a8a; /* RETROGRADE ONLY */
+
+  /* Graphics */
+  --marker: #c8c8ce;
+  --disc-lit: #d4d4d9;
+  --disc-ring: rgba(255, 255, 255, 0.22);
+  --disc-ring-new: rgba(255, 255, 255, 0.34);
+
+  /* Interaction */
+  --focus: #ededef;
+  --focus-width: 2px;
+
+  /* Annotation. Deliberately identical to --text-secondary: a degraded reading
+     is a fact, not a fault, so it gets no colour of its own. */
+  --annotate: #a1a1a8;
+
+  --shadow-panel: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  /* Type */
+  --font-stack: -apple-system, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
+
+  --type-headline: 600 17px / 22px var(--font-stack);
+  --track-headline: -0.2px;
+  --type-title: 600 15px / 20px var(--font-stack);
+  --track-title: -0.1px;
+  --type-numeral: 450 13px / 16px var(--font-stack);
+  --type-body: 400 13px / 18px var(--font-stack);
+  --type-label: 400 12px / 16px var(--font-stack);
+  --type-caption: 400 11px / 14px var(--font-stack);
+  --track-caption: 0.1px;
+  --type-micro: 600 10px / 12px var(--font-stack);
+  --track-micro: 0.6px;
+
+  /* Motion */
+  --ease-panel: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  --d-panel-open: 120ms;
+  --d-panel-close: 90ms;
+  --d-height: 220ms;
+  --d-height-collapse: 180ms;
+  --d-detail-in: 140ms;
+  --d-detail-out: 60ms;
+  --d-month: 160ms;
+  --d-select: 90ms;
+  --d-hover-in: 80ms;
+  --d-hover-out: 120ms;
+  --d-glyph: 120ms;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --text-secondary: #b4b4bb;
+    --text-tertiary: #9a9aa2;
+    --hairline: rgba(255, 255, 255, 0.18);
+    --disc-ring: rgba(255, 255, 255, 0.44);
+    --focus-width: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --d-panel-open: 80ms;
+    --d-panel-close: 60ms;
+    --d-height: 0ms;
+    --d-height-collapse: 0ms;
+    --d-detail-in: 80ms;
+    --d-detail-out: 0ms;
+    --d-month: 80ms;
+    --d-select: 0ms;
+    --d-hover-in: 0ms;
+    --d-hover-out: 0ms;
+    --d-glyph: 0ms;
+  }
+}

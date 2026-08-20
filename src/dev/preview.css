@@ -1,0 +1,63 @@
+/* Harness chrome only. Nothing here styles the app itself. */
+
+.preview {
+  min-height: 100vh;
+  background: #050506;
+  padding: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: flex-start;
+  overflow: auto;
+}
+
+.preview__case {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview__case--wide {
+  width: 100%;
+}
+
+.preview__title {
+  margin: 0;
+  font: var(--type-caption);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.preview .panel-frame {
+  height: auto;
+}
+
+.preview__strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 16px 20px;
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--r-panel);
+}
+
+.preview__swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 56px;
+  font: var(--type-caption);
+  color: var(--text-tertiary);
+}
+
+/* The settings window is 520 x 420; the harness shows it at that exact size. */
+.preview__settings {
+  width: 520px;
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-panel);
+  overflow: hidden;
+}

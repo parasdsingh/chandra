@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- A menu bar accessory: no dock icon, no application menu of its own. -->
+	<key>LSUIElement</key>
+	<true/>
+	<!-- Shown verbatim in the macOS location permission prompt. -->
+	<key>NSLocationUsageDescription</key>
+	<string>Chandra uses your location to compute moonrise, moonset and the times nakshatras and rashis begin and end where you are.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Chandra uses your location to compute moonrise, moonset and the times nakshatras and rashis begin and end where you are.</string>
+</dict>
+</plist>
