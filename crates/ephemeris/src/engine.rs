@@ -354,7 +354,8 @@ fn calc_raw(jd_ut: f64, body: i32, flags: i32, context: &str) -> Result<([f64; 6
 
     // SAFETY: called under the engine lock. `xx` has the 6 elements the library
     // writes when SEFLG_SPEED is set; `err` is a 256 byte buffer as required.
-    let returned = unsafe { se::swe_calc_ut(jd_ut, body, flags, xx.as_mut_ptr(), err.as_mut_ptr()) };
+    let returned =
+        unsafe { se::swe_calc_ut(jd_ut, body, flags, xx.as_mut_ptr(), err.as_mut_ptr()) };
 
     if returned < 0 {
         return Err(Error::Calculation {

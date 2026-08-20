@@ -13,9 +13,7 @@
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
-use chandra_ephemeris::{
-    Ayanamsa, Engine, Graha, NodeType, Observer, SiderealConfig, Source,
-};
+use chandra_ephemeris::{Ayanamsa, Engine, Graha, NodeType, Observer, SiderealConfig, Source};
 use serde_json::Value;
 
 /// Positions agree with the reference to well under a milliarcsecond; the
@@ -33,8 +31,8 @@ fn engine() -> MutexGuard<'static, Engine> {
     static ENGINE: OnceLock<Mutex<Engine>> = OnceLock::new();
     ENGINE
         .get_or_init(|| {
-            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../src-tauri/resources/ephe");
+            let path =
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../src-tauri/resources/ephe");
             let engine = Engine::new(&path, SiderealConfig::default())
                 .expect("bundled ephemeris data must be present");
             Mutex::new(engine)
@@ -120,7 +118,10 @@ fn positions_match_swetest() {
             checked += 1;
         }
     }
-    assert!(checked > 100, "expected a broad sweep, only checked {checked}");
+    assert!(
+        checked > 100,
+        "expected a broad sweep, only checked {checked}"
+    );
 }
 
 #[test]
@@ -151,7 +152,10 @@ fn ketu_is_rahu_reflected() {
 #[test]
 fn illumination_matches_swetest() {
     let engine = engine();
-    for case in golden()["illumination"].as_array().expect("illumination array") {
+    for case in golden()["illumination"]
+        .as_array()
+        .expect("illumination array")
+    {
         let jd = f(case, "jd_ut");
         let got = engine.illumination(jd).expect("illumination");
 

@@ -1,0 +1,14 @@
+[package]
+name = "chandra-almanac"
+description = "Domain layer: zodiac arithmetic, phase naming, event finding, calendar assembly."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+chandra-ephemeris = { workspace = true }
+jiff = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
