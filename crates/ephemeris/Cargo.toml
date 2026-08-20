@@ -1,0 +1,22 @@
+[package]
+name = "chandra-ephemeris"
+description = "Swiss Ephemeris boundary. The only crate in the workspace containing unsafe code."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+swiss-eph = "=0.2.1"
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "warn"

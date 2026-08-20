@@ -1,0 +1,38 @@
+[workspace]
+resolver = "2"
+members = ["crates/ephemeris"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "AGPL-3.0"
+authors = ["Paras Deep Singh"]
+
+[workspace.dependencies]
+chandra-ephemeris = { path = "crates/ephemeris" }
+chandra-almanac = { path = "crates/almanac" }
+chandra-geo = { path = "crates/geo" }
+chandra-glyph = { path = "crates/glyph" }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+jiff = "0.2"
+tiny-skia = "0.12"
+
+[profile.release]
+# A menu bar app is resident all day; size and cold-start matter more than
+# compile time. LTO plus one codegen unit measurably shrinks the binary.
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+# The Swiss Ephemeris C code is unusably slow unoptimised; root-finding in debug
+# builds would take seconds per month without this.
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
