@@ -305,27 +305,37 @@
 /* ---------- graha cell marks ---------- */
 
 /* The graha's own symbol, in the same place the Moon's phase glyph sits, so both
-   calendars read the same way. State is carried by its colour and weight rather
-   than by extra marks, because a 40px cell has room for one glyph and no more. */
+   calendars read the same way. The symbol says which graha and nothing else;
+   every state it can be in is carried beside it. */
 .day-cell__graha {
   display: flex;
   color: var(--disc-lit);
 }
 
-.day-cell__graha.is-retro {
-  color: var(--retro);
+/* Sits outside the glyph's box rather than in the flow, so the symbol stays on
+   the column's centre line whether or not the day is retrograde. A ragged column
+   of glyphs is the cost of putting the mark in the flow, and it is paid on every
+   cell to annotate a few. */
+.day-cell__retro-mark {
+  position: absolute;
+  left: calc(50% + 8px);
+  bottom: 5px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-secondary);
 }
 
-.day-cell__graha.is-combust {
-  opacity: 0.4;
-}
-
-.day-cell__graha.is-outside {
+.day-cell.is-outside .day-cell__retro-mark {
   opacity: 0.45;
 }
 
-.day-cell__graha.is-combust.is-outside {
-  opacity: 0.25;
+/* Combustion does not dim the glyph. Opacity is already spoken for: it is how
+   a cell says it belongs to the neighbouring month, so a dimmed glyph inside
+   the month read as "not really here" rather than "inside the Sun's rays". The
+   rule under the glyph carries it alone, which is also what the design language
+   asks for - a span is a rule, and combustion is a span. */
+.day-cell__graha.is-outside {
+  opacity: 0.45;
 }
 
 /* An ingress or a station: one mark in the corner. A row of markers would have
@@ -340,8 +350,9 @@
   background: var(--marker);
 }
 
+/* A station is the same kind of thing as an ingress - one instant - so it takes
+   the same slot and the same ink, and differs in shape alone. */
 .day-cell__event.is-station {
-  background: var(--retro);
   border-radius: 0;
   transform: rotate(45deg);
 }
@@ -363,14 +374,16 @@
   opacity: 0.9;
 }
 
-/* A retrograde period reads as one continuous line running across whole weeks. */
+/* A retrograde period reads as one continuous line running across whole weeks.
+   The mark beside the glyph says which days; this says they are one stretch. */
 .day-cell__retro {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--retro);
+  background: var(--marker);
+  opacity: 0.5;
 }
 
 /* ---------- detail ---------- */
@@ -505,9 +518,9 @@
   padding: 0 var(--s-2);
   display: inline-grid;
   place-items: center;
-  border: 1px solid var(--retro);
+  border: 1px solid var(--text-tertiary);
   border-radius: var(--r-chip);
-  color: var(--retro);
+  color: var(--text-secondary);
   font: var(--type-body);
 }
 

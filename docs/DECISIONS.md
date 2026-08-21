@@ -24,6 +24,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-017](#d-017) | No background work, no notifications in v1 | accepted |
 | [D-018](#d-018) | GitHub remote deferred; local VC for now | accepted |
 | [D-019](#d-019) | Every state the grid draws is named in the day view; combustion judged at local noon | accepted |
+| [D-020](#d-020) | One hue. Retrograde is written, not coloured; combustion never dims | accepted |
 
 ---
 
@@ -221,3 +222,25 @@ judged at the same instant.**
   permanently negative.
 - No warning colour: combustion is an ordinary position. `--retro` stays reserved for
   retrograde motion alone.
+
+### D-020
+**One chromatic hue in the whole app. Retrograde is written `℞`; combustion is a rule and
+never a dim.**
+
+- Reported: "grayed out combust indicator is bad, find another way" and "do not rely on colour
+  for retro, use something more apt".
+- **Combustion no longer dims the glyph.** Opacity was already spoken for — it is how a cell
+  says it belongs to the neighbouring month — so a dimmed glyph inside the month read as
+  "not really here" rather than "inside the Sun's rays". The rule under the glyph carries it
+  alone, which is what the design language asks for anyway: an instant is a mark, a span is a
+  rule, and combustion is a span.
+- **Retrograde is written `℞` beside the symbol**, at 9px, placed absolutely so the symbol
+  itself stays on the column's centre line whether or not the day is retrograde. This is how
+  every printed ephemeris writes it, so it needs no key.
+- `--retro` is **removed**. It existed only to carry retrograde. A hue has to be learnt, it is
+  the first thing a grayscale or colour-blind rendering loses, and it made the graha symbol
+  carry two meanings at once — which graha, and what it is doing.
+- The station marker and the retrograde span rule move to `--marker`. The station is still
+  distinguished from an ingress by shape, which was always the primary difference.
+- `--accent` remains the only hue, and still means today and nothing else.
+- Amends DESIGN.md §1.4, §4.1, §6.3, §11.3.

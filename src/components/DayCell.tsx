@@ -113,11 +113,7 @@ export function DayCell(props: Props): JSX.Element {
             {(info) => (
               <span
                 class="day-cell__graha"
-                classList={{
-                  "is-retro": (props as GrahaProps).data?.retrograde,
-                  "is-combust": (props as GrahaProps).data?.combust,
-                  "is-outside": !props.cell.inMonth,
-                }}
+                classList={{ "is-outside": !props.cell.inMonth }}
               >
                 <GrahaGlyph info={info()} size={14} colour="currentColor" />
               </span>
@@ -125,6 +121,16 @@ export function DayCell(props: Props): JSX.Element {
           </Show>
         </Show>
       </span>
+
+      {/* Retrograde is written the way every ephemeris writes it, beside the
+          symbol it applies to. A colour cannot do this job: it has to be learnt,
+          it is the first thing a grayscale or colour-blind rendering loses, and
+          it left the glyph itself carrying two meanings at once. */}
+      <Show when={props.kind === "graha" && (props as GrahaProps).data?.retrograde}>
+        <span class="day-cell__retro-mark" aria-hidden="true">
+          ℞
+        </span>
+      </Show>
 
       {/* Combustion is a span. A rule under the numeral says "all day", where a
           marker would read as an instant. */}

@@ -21,8 +21,12 @@ Six. Each one decides a real conflict later in this document.
    not the space.
 3. **Delete before you style.** Every element must justify its own ink. There are no borders
    that could be a gap, no labels that could be a column position, no icons that could be a word.
-4. **Two hues, one job each.** Gold means *today*. Rose means *retrograde*. Nothing else in
-   the app is chromatic. Every other distinction is made by position, weight, or form.
+4. **One hue, one job.** Gold means *today*. Nothing else in the app is chromatic. Every
+   other distinction is made by position, weight, or form.
+   *Revised.* A second hue, `--retro`, carried retrograde motion until D-020. A colour has to
+   be learnt, it is the first thing a grayscale or colour-blind rendering loses, and it made
+   the graha symbol carry two meanings at once. Retrograde is now written `℞` beside the
+   symbol, which is how every printed ephemeris writes it and needs no key.
 5. **Motion explains geometry, never decorates it.** The only things that move are things that
    changed size or position. Nothing loops, pulses, shimmers, or overshoots.
 6. **Numbers never jitter.** Tabular numerals everywhere, fixed grid height regardless of
@@ -152,7 +156,6 @@ so no token depends on the large-text 3:1 allowance.
 
   /* meaning — exactly two hues */
   --accent:            #D8B36A;   /* TODAY ONLY. Never used for anything else. */
-  --retro:             #E08A8A;   /* RETROGRADE ONLY. Chip, station marker, span rule. */
 
   /* graphics */
   --marker:            #C8C8CE;   /* graha event markers */
@@ -178,7 +181,6 @@ so no token depends on the large-text 3:1 allowance.
 | `--text-secondary` | `#A1A1A8` | **7.71** | 7.16 | 6.62 | pass |
 | `--text-tertiary` | `#85858D` | **5.41** | 5.02 | 4.64 | pass |
 | `--accent` | `#D8B36A` | **9.97** | 9.26 | 8.55 | pass |
-| `--retro` | `#E08A8A` | **7.70** | 7.15 | 6.61 | pass |
 | `--marker` | `#C8C8CE` | **11.88** | 11.04 | 10.20 | pass (non-text; 3:1 needed) |
 | `--disc-lit` | `#D4D4D9` | **13.40** | 12.45 | 11.50 | pass (non-text; 3:1 needed) |
 | `--focus` | `#EDEDEF` | **16.93** | 15.73 | 14.53 | pass (non-text; 3:1 needed) |
@@ -211,7 +213,7 @@ When `prefers-contrast: more`:
 | `--disc-ring` | `rgba(255,255,255,0.22)` | `rgba(255,255,255,0.44)` | 2.42 → 4.60 |
 | `--focus` ring width | 2px | 3px | — |
 
-`--accent` and `--retro` are unchanged; both already exceed 7:1.
+`--accent` is unchanged; it already exceeds 7:1.
 
 ---
 
@@ -481,15 +483,15 @@ row, 5px each, 5px apart, maximum **3**.
 |---|---|---|---|
 | Sign ingress | filled disc | Ø5 | `--marker` |
 | Nakshatra ingress | ring | Ø5, 1px stroke, Ø3 hole | `--marker` |
-| Retrograde station | diamond | 5 × 5 square rotated 45° | `--retro` |
+| Retrograde station | diamond | 5 × 5 square rotated 45° | `--marker` |
 | Combustion (day is combust) | rule | 12 × 1px, centred, at y = 21.5 directly under the numeral | `--marker` |
-| Retrograde (day is retrograde) | span rule | 40 × 1px, full-bleed across the cell, at y = 37.5 | `--retro` |
+| Retrograde (day is retrograde) | `℞` + span rule | `℞` at 9px beside the symbol, absolutely placed so the symbol stays on the column's centre line; span rule 40 × 1px full-bleed at y = 37.5, `--marker` at 0.5 alpha |
 | More than 3 markers | `+` | 5 × 5, two 1px crossing strokes, replaces the 3rd | `--marker` |
 
 Why this reads without clutter:
 
 - Combustion and retrograde are **spans**, not instants, so they are drawn as rules at cell
-  edges, not as markers. A retrograde period becomes one continuous 1px rose line running
+  edges, not as markers. A retrograde period becomes one continuous 1px line running
   across whole weeks — visible at a glance, invisible when you are not looking for it.
 - Instants (ingress, station) are the only things in the marker row, so most cells carry
   zero or one mark.
@@ -522,7 +524,7 @@ Why this reads without clutter:
 
 | Element | Spec |
 |---|---|
-| `℞` chip | 22 × 16, r 4, 1px `--retro` border, `℞` in Body 13/400 `--retro`, right-aligned to x = 300. Present only when `speed < 0`. |
+| `℞` chip | 22 × 16, r 4, 1px `--text-tertiary` border, `℞` in Body 13/400 `--text-secondary`, right-aligned to x = 300. Present only when `speed < 0`. |
 | Longitude | sidereal, `DDD° MM′ SS″`, zero-padded, tabular. Right-aligned to x = 300. |
 | Speed | 4 decimals, explicit sign, ` °/day`. Negative is shown as `−0.0142` (U+2212 minus, not hyphen) and is reinforced by the chip. |
 | Event rows | Caption 11/400 `--text-secondary` left at x = 20, time Caption `--text-tertiary` right to x = 300. |
@@ -1007,7 +1009,7 @@ See §4.1 for the full table. Summary of the guarantees:
   Nothing in the app relies on the large-text 3:1 allowance.
 - Lowest text pair in the app: `--text-tertiary` on `--surface-selected` = **4.64:1**.
 - Every non-text graphic that carries meaning clears **3:1**: `--accent` today ring 9.97,
-  `--focus` ring 16.93, `--marker` 11.88, `--retro` 7.70, `--disc-lit` 13.40.
+  `--focus` ring 16.93, `--marker` 11.88, `--disc-lit` 13.40.
 - The two tokens below 3:1 (`--hairline` 1.19, `--border` 1.33) carry no meaning and can be
   deleted without making anything ambiguous. `--disc-ring` at 2.42 is covered by §4.1.
 
@@ -1034,7 +1036,7 @@ Nothing in the app has a pointer target smaller than **28 × 28**.
 | Today | `--accent` ring **and** `--accent` numeral | detail caption reads `TODAY · THURSDAY 20 AUGUST 2026`; `aria-current="date"` |
 | Selected day | `--surface-selected` fill | `aria-selected="true"` |
 | Focused day | `--focus` ring | `aria-activedescendant` |
-| Retrograde | `--retro` diamond, `--retro` span rule | `℞` chip **and** the speed value shown with an explicit `−` sign **and** the event row `Retrograde station` |
+| Retrograde | `℞` beside the symbol, `--marker` span rule, `--marker` diamond at a station | `℞` chip **and** the `Motion` row reading `Retrograde` **and** the speed value shown with an explicit `−` sign **and** the event row `Retrograde station` |
 | Sign ingress | filled disc marker | detail event row `Enters Simha` with its time |
 | Nakshatra ingress | ring marker | detail event row `Enters Magha` with its time |
 | Combustion | 12 × 1px rule under the numeral | detail event row `Combust` |

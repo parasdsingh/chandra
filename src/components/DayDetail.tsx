@@ -170,8 +170,9 @@ function GrahaBody(props: {
     <>
       <div class="detail__headline">
         <span class="detail__phase">{props.grahaName}</span>
-        {/* Retrograde is carried three ways: the chip, the explicit minus sign
-            on the speed, and the event row when a station falls today. */}
+        {/* The mark every ephemeris uses, next to the name it applies to.
+            Carried three more ways below: the Motion row in words, the minus
+            sign on the speed, and the event row when a station falls today. */}
         <Show when={props.detail.retrograde}>
           <span class="chip" aria-label="Retrograde">
             ℞
@@ -258,8 +259,9 @@ function GrahaBody(props: {
  * Sun and the nodes have no orb, so for them the block is absent entirely
  * rather than present and permanently negative.
  *
- * No warning colour: combustion is an ordinary position, not a fault, and
- * `--retro` is reserved for retrograde motion alone.
+ * No warning colour: combustion is an ordinary position, not a fault. Nothing
+ * in the panel is coloured to mean a state - `--accent` marks today and nothing
+ * else - so the reading is in the words.
  */
 function CombustionBlock(props: { combustion: Combustion }): JSX.Element {
   return (
