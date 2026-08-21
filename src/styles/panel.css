@@ -153,11 +153,9 @@
   will-change: transform;
 }
 
-/* Settling is the only time the strip animates. While a gesture is in progress
-   it tracks the pointer exactly, with no transition to lag behind it. */
-.scroller__strip.is-settling {
-  transition: transform var(--d-month) var(--ease-panel);
-}
+/* The strip has no transition. Both the gesture and the settle write the
+   transform directly, frame by frame, so a new gesture can take over a settle
+   already in flight instead of waiting for it to end. */
 
 .scroller__month {
   position: absolute;

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::day::{graha_day, moon_day, GrahaDay, MoonDay};
 use crate::error::Result;
-use crate::events::{combustion_orb, events_in_month, Event};
+use crate::events::{combustion_at, combustion_from, events_in_month, Event};
 use crate::lunar::MonthSystem;
 use crate::phase::{self, PhaseName};
 use crate::time::{days_in_month, CivilDay, DateKey};
@@ -122,17 +122,15 @@ pub fn moon_month(
     // carrying the previous value forward halves the ephemeris calls.
     let mut elongation_start = elongation(engine, days[0].start_jd)?;
 
-    let moon_orb = combustion_orb(Graha::Chandra, false).unwrap_or(0.0);
-
     for day in days {
         let elongation_end = elongation(engine, day.end_jd)?;
         let illumination = engine.illumination(day.noon_jd())?;
         let principal = phase::principal_phase_in(elongation_start, elongation_end);
 
-        // Elongation at local noon, folded to the shorter way round, is the
-        // distance from the Sun the combustion orb is measured against.
-        let noon_elongation = elongation(engine, day.noon_jd())?;
-        let separation = noon_elongation.min(360.0 - noon_elongation);
+        // Combustion is judged at local noon, the day's midpoint, for every
+        // subject alike. The day view asks at the same instant, so the mark on
+        // a cell and the reading inside it always agree.
+        let combustion = combustion_at(engine, Graha::Chandra, day.noon_jd())?;
 
         cells.push(MoonCell {
             date: day.date,
@@ -142,7 +140,7 @@ pub fn moon_month(
                 .map(|(name, _)| name)
                 .unwrap_or_else(|| phase::intermediate_phase(elongation_start)),
             principal: principal.is_some(),
-            combust: separation < moon_orb,
+            combust: combustion.combust,
         });
         sources.push(illumination.source);
         elongation_start = elongation_end;
@@ -181,9 +179,12 @@ pub fn graha_month(
     for day in days {
         let position = engine.position(day.noon_jd(), graha)?;
         let sun = engine.position(day.noon_jd(), Graha::Surya)?;
-        let separation = crate::roots::signed_delta(position.longitude, sun.longitude).abs();
-        let combust =
-            combustion_orb(graha, position.is_retrograde()).is_some_and(|orb| separation < orb);
+        let combustion = combustion_from(
+            graha,
+            position.longitude,
+            sun.longitude,
+            position.is_retrograde(),
+        );
 
         cells.push(GrahaCell {
             date: day.date,
@@ -192,7 +193,7 @@ pub fn graha_month(
             nakshatra: Nakshatra::from_longitude(position.longitude),
             retrograde: position.is_retrograde(),
             speed: position.speed,
-            combust,
+            combust: combustion.combust,
         });
         sources.push(position.source);
     }

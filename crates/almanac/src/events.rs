@@ -84,6 +84,50 @@ pub fn combustion_orb(graha: Graha, retrograde: bool) -> Option<f64> {
     })
 }
 
+/// Where a graha stands relative to the Sun at one instant.
+///
+/// One type, and one pair of functions producing it, so a month cell and the day
+/// that cell opens can never disagree about whether a day is combust: both ask
+/// the same question with the same orb.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Combustion {
+    /// Angular distance from the Sun, folded to 0 to 180 degrees.
+    pub separation: f64,
+    /// The orb in force. Absent for the Sun and the nodes, which have none.
+    pub orb: Option<f64>,
+    pub combust: bool,
+}
+
+/// Combustion from longitudes already in hand.
+///
+/// Separate from [`combustion_at`] so a caller that has just fetched both
+/// positions does not fetch them again.
+pub fn combustion_from(
+    graha: Graha,
+    longitude: f64,
+    sun_longitude: f64,
+    retrograde: bool,
+) -> Combustion {
+    let separation = crate::roots::signed_delta(longitude, sun_longitude).abs();
+    let orb = combustion_orb(graha, retrograde);
+    Combustion {
+        separation,
+        orb,
+        combust: orb.is_some_and(|orb| separation < orb),
+    }
+}
+
+/// Combustion at an instant.
+pub fn combustion_at(engine: &Engine, graha: Graha, jd: f64) -> Result<Combustion> {
+    let bodies = engine.positions(jd, &[graha, Graha::Surya])?;
+    Ok(combustion_from(
+        graha,
+        bodies[0].longitude,
+        bodies[1].longitude,
+        bodies[0].is_retrograde(),
+    ))
+}
+
 /// Every event for one graha between two instants.
 pub fn events_in_range(
     engine: &Engine,

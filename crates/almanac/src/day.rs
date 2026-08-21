@@ -4,12 +4,16 @@ use chandra_ephemeris::{Engine, Graha, Observer, Source};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::events::{combustion_at, Combustion};
 use crate::phase::{self, PhaseName};
 use crate::spans::{divisions_in_day, Division, Span};
 use crate::time::{CivilDay, DateKey, Moment};
 use crate::zodiac::{degrees_in_rashi, pada, Nakshatra, Rashi};
 
-/// The six fields of the v1 moon detail, and nothing beyond them.
+/// The v1 moon detail, and nothing beyond it.
+///
+/// Combustion is here because the month grid marks it and a mark the day it
+/// opens cannot explain is worse than no mark at all.
 ///
 /// Tithi, yoga, karana and muhurta are deliberately absent rather than computed
 /// and hidden: see `docs/DECISIONS.md` D-010.
@@ -25,6 +29,9 @@ pub struct MoonDay {
     pub is_waxing: bool,
     pub moonrise: Option<Moment>,
     pub moonset: Option<Moment>,
+    /// How far from the Sun, and whether that puts the Moon inside its rays.
+    /// Judged at local noon, the same instant the month grid marks.
+    pub combustion: Combustion,
     pub nakshatras: Vec<NakshatraSpan>,
     pub rashis: Vec<RashiSpan>,
     pub source: Source,
@@ -66,6 +73,9 @@ pub struct GrahaDay {
     pub retrograde: bool,
     pub rise: Option<Moment>,
     pub set: Option<Moment>,
+    /// How far from the Sun, and whether that puts the graha inside its rays.
+    /// Judged at local noon, the same instant the month grid marks.
+    pub combustion: Combustion,
     pub nakshatras: Vec<NakshatraSpan>,
     pub rashis: Vec<RashiSpan>,
     pub source: Source,
@@ -122,6 +132,7 @@ pub fn moon_day(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<M
         is_waxing: phase::is_waxing(elongation_start),
         moonrise: rise_set.rise.map(|jd| day.moment(jd)).transpose()?,
         moonset: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
+        combustion: combustion_at(engine, Graha::Chandra, day.noon_jd())?,
         nakshatras,
         rashis,
         source,
@@ -147,6 +158,7 @@ pub fn graha_day(
         retrograde: position.is_retrograde(),
         rise: rise_set.rise.map(|jd| day.moment(jd)).transpose()?,
         set: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
+        combustion: combustion_at(engine, graha, day.noon_jd())?,
         nakshatras: nakshatra_spans(engine, graha, day, reference)?,
         rashis: rashi_spans(engine, graha, day, reference)?,
         source: position.source,

@@ -143,6 +143,12 @@ function Calendar(props: SectionProps): JSX.Element {
 
   return (
     <div class="settings__section">
+      {/* Says the scope out loud. The section is reached from whichever
+          subject's panel happens to be open, which made a setting that has
+          always been one calendar-wide choice read as that subject's own. */}
+      <p class="settings__hint">
+        Used by every calendar — the Moon and each graha alike.
+      </p>
       <p class="settings__hint">
         A lunar month runs between syzygies, not between calendar dates, and is
         named from where the Sun stands at that moment.

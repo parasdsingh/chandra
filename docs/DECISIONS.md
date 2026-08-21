@@ -14,7 +14,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-007](#d-007) | Location resolves through an ordered fallback chain | accepted |
 | [D-008](#d-008) | Tray icons rendered as macOS template images by default | accepted |
 | [D-009](#d-009) | Moon permanent in menu bar; each graha its own toggleable item | accepted |
-| [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted |
+| [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted, amended by D-019 |
 | [D-011](#d-011) | Translucent panel using the system popover material | accepted, revised |
 | [D-012](#d-012) | Private repo, unsigned local build, ad-hoc codesign | accepted |
 | [D-013](#d-013) | Product name is Chandra; bundle id `com.parasdsingh.chandra` | accepted |
@@ -23,6 +23,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-016](#d-016) | Event times found by bracket + Brent refinement | accepted |
 | [D-017](#d-017) | No background work, no notifications in v1 | accepted |
 | [D-018](#d-018) | GitHub remote deferred; local VC for now | accepted |
+| [D-019](#d-019) | Every state the grid draws is named in the day view; combustion judged at local noon | accepted |
 
 ---
 
@@ -197,3 +198,26 @@ entry/exit, rashi with entry/exit.**
 - The repo is initialised and committed locally on `main`.
 - `gh repo create moon-phases --private` and the first push happen on request, not
   automatically. CI workflows are authored in M0 but only take effect once a remote exists.
+
+### D-019
+**A state the grid draws must be readable in words in the day it opens, and both must be
+judged at the same instant.**
+
+- Reported: "combust, retro, etc. statuses are not shown in day view."
+- The grid marked combustion with a rule under the glyph and retrograde with a rule at the
+  cell's edge. Neither appeared in the day view, so a mark had nothing to explain it.
+- The day view now carries a `From Sun` row for every subject that has a combustion orb, with
+  the orb named in a caption on the days it applies, and a `Motion` row reading `Direct` or
+  `Retrograde`.
+- This adds one field beyond the D-010 list. The argument is narrow and does not reopen
+  D-010 generally: the field exists because the grid already draws the state, not because
+  panchanga has more limbs.
+- **Combustion is judged at local noon** — the day's midpoint — for every subject, in both the
+  cell and the day detail. Divisions are still attributed at sunrise; combustion is not,
+  because a mark on a cell and the reading inside it disagreeing is worse than either choice
+  of instant. `chandra_almanac::events::combustion_at` is the single place the question is
+  asked, and `the_combustion_mark_and_the_day_it_opens_agree` is the test that holds it.
+- The Sun and the nodes have no orb. For them the block is absent, not present and
+  permanently negative.
+- No warning colour: combustion is an ordinary position. `--retro` stays reserved for
+  retrograde motion alone.

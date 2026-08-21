@@ -148,6 +148,31 @@ export function formatDegrees(parts: [number, number, number]): string {
   )}″`;
 }
 
+/**
+ * An angle as degrees and arcminutes: `7° 12′`.
+ *
+ * Arcseconds are dropped. This formats a separation from the Sun, which is
+ * compared against an orb quoted in whole degrees, so a third place would be
+ * precision the reading does not have a use for.
+ */
+export function formatSeparation(degrees: number): string {
+  const whole = Math.floor(degrees);
+  const minutes = Math.round((degrees - whole) * 60);
+  // Rounding 59.7 arcminutes up must carry into the degree, not print 60.
+  return minutes === 60
+    ? `${whole + 1}° 00′`
+    : `${whole}° ${minutes.toString().padStart(2, "0")}′`;
+}
+
+/** Spoken form for a separation, for assistive technology. */
+export function spokenSeparation(degrees: number): string {
+  const whole = Math.floor(degrees);
+  const minutes = Math.round((degrees - whole) * 60);
+  return minutes === 60
+    ? `${whole + 1} degrees`
+    : `${whole} degrees ${minutes} minutes`;
+}
+
 /** Spoken form for assistive technology, where `°′″` are not read usefully. */
 export function spokenDegrees(parts: [number, number, number]): string {
   const [degrees, minutes, seconds] = parts;

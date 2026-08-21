@@ -8,6 +8,11 @@
     "zone": "string"
   },
   "GrahaDay": {
+    "combustion": {
+      "combust": "boolean",
+      "orb": "number",
+      "separation": "number"
+    },
     "date": {
       "day": "integer",
       "month": "integer",
@@ -105,6 +110,11 @@
     "time_zone": "string"
   },
   "MoonDay": {
+    "combustion": {
+      "combust": "boolean",
+      "orb": "number",
+      "separation": "number"
+    },
     "date": {
       "day": "integer",
       "month": "integer",

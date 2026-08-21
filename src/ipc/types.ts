@@ -133,6 +133,19 @@ export interface RashiSpan {
   prevailing: boolean;
 }
 
+/**
+ * Where a subject stands relative to the Sun, judged at local noon.
+ *
+ * `orb` is absent for the Sun and the nodes, which have no combustion at all;
+ * `combust` is then always false and the day view says nothing about it.
+ */
+export interface Combustion {
+  /** Angular distance from the Sun, 0 to 180 degrees. */
+  separation: number;
+  orb: number | null;
+  combust: boolean;
+}
+
 export interface MoonDay {
   kind: "moon";
   date: DateKey;
@@ -142,6 +155,7 @@ export interface MoonDay {
   is_waxing: boolean;
   moonrise: Moment | null;
   moonset: Moment | null;
+  combustion: Combustion;
   nakshatras: NakshatraSpan[];
   rashis: RashiSpan[];
   source: Source;
@@ -158,6 +172,7 @@ export interface GrahaDay {
   retrograde: boolean;
   rise: Moment | null;
   set: Moment | null;
+  combustion: Combustion;
   nakshatras: NakshatraSpan[];
   rashis: RashiSpan[];
   source: Source;

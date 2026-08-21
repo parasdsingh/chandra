@@ -1,16 +1,21 @@
 /**
  * The expanded day detail.
  *
- * The moon view shows exactly the six v1 fields and nothing else
- * (docs/DECISIONS.md D-010). Degraded readings - no moonrise, circumpolar, a
- * Moshier position - are stated as facts in words, with no warning colour and no
- * icon: they are normal, not faults.
+ * The moon view stays inside the v1 field list (docs/DECISIONS.md D-010): phase,
+ * illumination, rise and set, nakshatra, rashi, and distance from the Sun, which
+ * is here because the grid marks combustion and a mark the day cannot explain is
+ * worse than no mark.
+ *
+ * Every state the grid draws is also named in words here. Degraded readings - no
+ * moonrise, circumpolar, a Moshier position - are stated as facts, with no
+ * warning colour and no icon: they are normal, not faults.
  */
 
 import type { JSX } from "solid-js";
 import { For, Show } from "solid-js";
 
 import type {
+  Combustion,
   DayDetail as Detail,
   GrahaDay,
   MoonDay,
@@ -22,12 +27,14 @@ import {
   formatBoundary,
   formatDegrees,
   formatIllumination,
+  formatSeparation,
   formatSpan,
   formatSpeed,
   formatTime,
   formatWeekday,
   phaseLabel,
   spokenDegrees,
+  spokenSeparation,
 } from "../lib/format";
 import { describeEvent } from "./MonthGrid";
 
@@ -127,6 +134,8 @@ function MoonBody(props: { detail: MoonDay; context: FormatContext }): JSX.Eleme
         </Show>
       </div>
 
+      <CombustionBlock combustion={props.detail.combustion} />
+
       {/* The label names the field once, on the first row. A second span in the
           same day is a continuation of that field, not a new unlabelled field,
           and is dimmed so the one prevailing at sunrise reads first. */}
@@ -176,6 +185,13 @@ function GrahaBody(props: {
           value={formatDegrees(props.detail.degrees_in_rashi)}
           spoken={spokenDegrees(props.detail.degrees_in_rashi)}
         />
+        {/* Named in words as well as by the sign on the speed and the chip in
+            the headline. A minus sign at 13px is not a state anyone should have
+            to infer. */}
+        <Row
+          label="Motion"
+          value={props.detail.retrograde ? "Retrograde" : "Direct"}
+        />
         <Row label="Speed" value={formatSpeed(props.detail.speed)} />
       </div>
 
@@ -193,6 +209,8 @@ function GrahaBody(props: {
           context={props.context}
         />
       </div>
+
+      <CombustionBlock combustion={props.detail.combustion} />
 
       {/* Every graha stands in a nakshatra and a rashi, so the day view is the
           same shape for all nine and for the Moon. */}
@@ -229,6 +247,36 @@ function GrahaBody(props: {
         </div>
       </Show>
     </>
+  );
+}
+
+/**
+ * Distance from the Sun, and combustion when it applies.
+ *
+ * Shown for every subject that has an orb, combust or not, so the block keeps
+ * one shape and the reading that decides combustion is always on screen. The
+ * Sun and the nodes have no orb, so for them the block is absent entirely
+ * rather than present and permanently negative.
+ *
+ * No warning colour: combustion is an ordinary position, not a fault, and
+ * `--retro` is reserved for retrograde motion alone.
+ */
+function CombustionBlock(props: { combustion: Combustion }): JSX.Element {
+  return (
+    <Show when={props.combustion.orb !== null}>
+      <div class="detail__block">
+        <Row
+          label="From Sun"
+          value={formatSeparation(props.combustion.separation)}
+          spoken={spokenSeparation(props.combustion.separation)}
+        />
+        <Show when={props.combustion.combust}>
+          <p class="detail__caption">
+            Combust — inside the {props.combustion.orb}° orb
+          </p>
+        </Show>
+      </div>
+    </Show>
   );
 }
 

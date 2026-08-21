@@ -1,5 +1,10 @@
 {
   "grahaDay": {
+    "combustion": {
+      "combust": false,
+      "orb": 17.0,
+      "separation": 131.12174556490356
+    },
     "date": {
       "day": 24,
       "month": 2,
@@ -893,6 +898,11 @@
     "time_zone": "Asia/Kolkata"
   },
   "moonDay": {
+    "combustion": {
+      "combust": false,
+      "orb": 12.0,
+      "separation": 91.71915103767118
+    },
     "date": {
       "day": 20,
       "month": 8,
@@ -976,6 +986,11 @@
     "source": "swieph"
   },
   "moonDayNoRise": {
+    "combustion": {
+      "combust": false,
+      "orb": 12.0,
+      "separation": 87.75390506384475
+    },
     "date": {
       "day": 6,
       "month": 8,
@@ -1426,6 +1441,11 @@
     "time_zone": "Asia/Kolkata"
   },
   "moshierDay": {
+    "combustion": {
+      "combust": false,
+      "orb": 12.0,
+      "separation": 77.15220520036962
+    },
     "date": {
       "day": 20,
       "month": 8,

@@ -153,3 +153,62 @@ swaps inside a fixed-height region, the panel's height is constant and the windo
 is exactly its size. That also made the popover material possible: the material
 fills the whole window, so an oversized window would have shown a large
 translucent rectangle below the panel.
+
+### I-042 — Month scrolling stalled and lost its place — done
+Reported as: scroll down a month, scroll back up, and the strip shows the previous
+month but hangs before it aligns and the title catches up. Four separate defects,
+each found by measuring rather than by reading:
+
+1. **The strip could wedge permanently.** Settling animated a CSS transition and
+   committed on `transitionend`. That event never arrives when the target equals
+   the current value, which is exactly what a click on a day produced: settle to
+   an offset already held, no transition, no event, and the `settling` guard left
+   raised, refusing every gesture afterwards. `transitionend` also bubbles, so any
+   day cell's own transition could commit the wrong month. Now a
+   `requestAnimationFrame` loop, which finishes because it counts frames.
+
+2. **Every month blanked at the moment of the commit.** The grid read straight
+   from three Solid resources, and a resource drops to `undefined` while it
+   refetches. Committing changed all three keys at once, so the strip emptied and
+   the title cleared until three IPC round trips returned - even though every
+   month involved was already in hand. `Panel` now holds months in a `Map` keyed
+   by identity and renders from that; the resources only fetch.
+
+3. **An interrupted settle threw its month away.** The commit was owed until the
+   animation ended, so a gesture arriving mid-settle cancelled it. Four quick
+   flicks moved three months. Movement is now banked as it happens: a whole
+   month of travel promotes the neighbour and reduces the offset by that month's
+   height in one batch, which is a no-op on screen because the neighbour is
+   already drawn there. Nothing is ever owed.
+
+4. **The flick detector could not fire.** Two causes, both only visible with an
+   on-screen trace of every event. The sample window kept a minimum of one
+   sample, and WebKit coalesces wheel events under load - a whole gesture can
+   arrive as one delta more than a window apart from the last - so the window
+   collapsed to a single sample and reported no motion. And release speed was
+   tested against a wall clock, which is a race with the re-render a month change
+   triggers: the idle timer fired 190ms after the last event rather than 110, past
+   the allowance. The window now keeps two samples whatever their age, and a
+   wheel is given no staleness test at all, because the idle timer that ends the
+   gesture is the stop.
+
+Verified in the installed app with synthesised trackpad events: one gesture each
+way returns to the starting month with the title correct and the grid aligned;
+five separated gestures step exactly five months; the same five back returns to
+the start. Travel maps to distance, so a run of quick partial gestures covers the
+ground it was given rather than one month per gesture.
+
+### I-043 — Combustion and retrograde were invisible in the day view — done
+The grid marked both; the day that mark opens said nothing about either. See
+D-019. Combustion was also judged at local noon in the cell and at sunrise in the
+day, which could have made the two disagree outright; both now ask
+`combustion_at` at local noon, and a test walks a whole month asserting they
+match.
+
+### I-044 — The month system read as a per-graha setting — done
+Not a data defect: the system is held once in settings, the cursor is built in one
+place from it, and every subject resolves the same days and the same label. Now
+proved by `every_subject_shares_one_month_system`, which compares each graha's
+month against the Moon's across all three systems. The report came from the
+settings section being reached from whichever subject's panel was open, with
+nothing on screen saying the choice was calendar-wide. The section now says so.

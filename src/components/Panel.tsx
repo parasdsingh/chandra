@@ -63,40 +63,93 @@ export function Panel(props: Props): JSX.Element {
   const firstWeekday = localeFirstWeekday();
 
   /**
+   * Months already fetched, held by identity.
+   *
+   * A Solid resource drops to `undefined` while it refetches, so reading the
+   * grid straight from three resources emptied all three the instant a scroll
+   * committed: the strip went blank and the title cleared until the round trips
+   * came back, even though every month involved was already known. Holding them
+   * by identity means committing promotes a month that is already in hand and
+   * the frame after a commit is identical to the frame before it.
+   *
+   * Bounded, because navigation re-anchors and old keys are then unreachable.
+   */
+  const months = new Map<string, MoonMonth | GrahaMonth>();
+  const [loaded, setLoaded] = createSignal(0);
+
+  const MONTH_MEMORY = 32;
+
+  function remember(key: string, month: MoonMonth | GrahaMonth) {
+    months.set(key, month);
+    while (months.size > MONTH_MEMORY) {
+      const oldest = months.keys().next();
+      if (oldest.done) break;
+      months.delete(oldest.value);
+    }
+    setLoaded((count) => count + 1);
+  }
+
+  function monthKey(delta: number): string {
+    return [
+      props.subject,
+      props.boot.settings.calendar.month_system,
+      anchor(),
+      offset() + delta,
+    ].join("|");
+  }
+
+  /** The month `delta` steps away, or undefined until its first fetch lands. */
+  function monthAt(delta: number): MoonMonth | GrahaMonth | undefined {
+    loaded();
+    return months.get(monthKey(delta));
+  }
+
+  /**
    * One resource per visible month.
    *
-   * The scroller shows three at once, so all three are loaded. Neighbours are
-   * cache hits after the first visit, which is what lets a drag reveal the
-   * next month already drawn rather than empty.
+   * The scroller shows three at once, so all three are loaded. The resource is
+   * the fetch; what it returns is put in `months` and read from there.
    */
   function monthResource(delta: number) {
     const key = createMemo(() => ({
+      id: monthKey(delta),
       subject: props.subject,
       anchor: anchor(),
       offset: offset() + delta,
-      system: props.boot.settings.calendar.month_system,
     }));
 
-    const [data] = createResource(key, async (current) => {
+    createResource(key, async (current) => {
+      if (months.has(current.id)) return true;
       try {
-        return current.subject === "chandra"
-          ? ((await ipc.moonMonth(current.anchor, current.offset)) as MoonMonth)
-          : ((await ipc.grahaMonth(
-              current.subject,
-              current.anchor,
-              current.offset,
-            )) as GrahaMonth);
+        const month =
+          current.subject === "chandra"
+            ? ((await ipc.moonMonth(current.anchor, current.offset)) as MoonMonth)
+            : ((await ipc.grahaMonth(
+                current.subject,
+                current.anchor,
+                current.offset,
+              )) as GrahaMonth);
+        remember(current.id, month);
       } catch (thrown) {
         if (delta === 0) setError(toError(thrown));
-        return undefined;
       }
+      return true;
     });
-    return data;
   }
 
-  const previousMonth = monthResource(-1);
-  const monthData = monthResource(0);
-  const nextMonth = monthResource(1);
+  monthResource(-1);
+  monthResource(0);
+  monthResource(1);
+
+  const monthData = () => monthAt(0);
+
+  /**
+   * Which month the strip is showing while it moves, before it has committed.
+   *
+   * Kept here rather than in the scroller so the header title changes at the
+   * moment the new month takes over the window.
+   */
+  const [visibleDelta, setVisibleDelta] = createSignal(0);
 
   /**
    * Keeps the offset small.
@@ -108,7 +161,7 @@ export function Panel(props: Props): JSX.Element {
    * months, so the cache still hits and nothing on screen changes.
    */
   createEffect(() => {
-    const month = monthData();
+    const month = monthAt(0);
     if (month && Math.abs(offset()) >= 6) {
       batch(() => {
         setAnchor(month.anchor_unix_ms);
@@ -298,7 +351,7 @@ export function Panel(props: Props): JSX.Element {
   const headerTitle = () => {
     if (view() === "settings") return SECTION_TITLES[section()];
     if (view() === "day") return "";
-    return monthData()?.label ?? "";
+    return monthAt(visibleDelta())?.label ?? "";
   };
 
   return (
@@ -326,9 +379,9 @@ export function Panel(props: Props): JSX.Element {
           <Show when={view() === "calendar"}>
             <CalendarScroller
               firstWeekday={firstWeekday}
-              previous={previousMonth()}
-              current={monthData()}
-              next={nextMonth()}
+              previous={monthAt(-1)}
+              current={monthAt(0)}
+              next={monthAt(1)}
               kind={props.subject === "chandra" ? "moon" : "graha"}
               info={grahaInfo()}
               selected={selected()}
@@ -336,6 +389,7 @@ export function Panel(props: Props): JSX.Element {
               southern={props.boot.location.latitude < 0}
               onSelect={openDay}
               onCommit={(delta) => setOffset((current) => current + delta)}
+              onVisibleChange={setVisibleDelta}
             />
           </Show>
 

@@ -663,3 +663,111 @@ fn every_lunar_month_name_occurs_across_a_year() {
         "a year of lunar months should use all twelve names, saw {seen:?}"
     );
 }
+
+/// A mark on a cell and the reading inside it must be the same fact.
+///
+/// The grid marks a day combust; opening that day shows the separation from the
+/// Sun that decided it. Judging them at different instants would let a cell be
+/// marked while the day it opens said nothing, which is the kind of discrepancy
+/// nobody reports as a bug and everybody stops trusting.
+#[test]
+fn the_combustion_mark_and_the_day_it_opens_agree() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    // August 2026 contains a new moon, so the Moon is combust on some of these
+    // days and not on others: the test would pass vacuously otherwise.
+    let month = almanac.moon_month(solar(2026, 8)).expect("moon month");
+    let mut combust_days = 0;
+
+    for cell in &month.days {
+        let DayDetail::Moon(day) = almanac
+            .day_detail(Graha::Chandra, cell.date)
+            .expect("moon detail")
+        else {
+            panic!("moon detail");
+        };
+        assert_eq!(
+            cell.combust, day.combustion.combust,
+            "{:?}: cell and day disagree about combustion",
+            cell.date
+        );
+        assert_eq!(
+            day.combustion.orb,
+            Some(12.0),
+            "the Moon's orb is 12 degrees"
+        );
+        assert!(
+            day.combustion.combust == (day.combustion.separation < 12.0),
+            "{:?}: combustion must follow from the separation shown",
+            cell.date
+        );
+        combust_days += usize::from(cell.combust);
+    }
+    assert!(
+        combust_days > 0 && combust_days < month.days.len(),
+        "expected both combust and non-combust days, got {combust_days}"
+    );
+
+    for graha in [Graha::Budha, Graha::Shukra, Graha::Guru] {
+        let month = almanac
+            .graha_month(graha, solar(2026, 8))
+            .expect("graha month");
+        for cell in &month.days {
+            let DayDetail::Graha(day) = almanac.day_detail(graha, cell.date).expect("detail")
+            else {
+                panic!("graha detail");
+            };
+            assert_eq!(
+                cell.combust, day.combustion.combust,
+                "{graha:?} {:?}: cell and day disagree about combustion",
+                cell.date
+            );
+        }
+    }
+
+    // The Sun cannot be combust by itself, and the nodes have no visibility to
+    // lose. They carry no orb, so the day view omits the block entirely.
+    for graha in [Graha::Surya, Graha::Rahu, Graha::Ketu] {
+        let DayDetail::Graha(day) = almanac
+            .day_detail(graha, DateKey::new(2026, 8, 14).unwrap())
+            .expect("detail")
+        else {
+            panic!("graha detail");
+        };
+        assert_eq!(day.combustion.orb, None, "{graha:?} has no combustion orb");
+        assert!(!day.combustion.combust);
+    }
+}
+
+/// The month system is a property of the calendar, not of the subject.
+///
+/// Every subject's month must span the same civil days and carry the same name,
+/// so switching from the Moon to a graha changes what is plotted and nothing
+/// else. The cursor carrying the system is built in exactly one place
+/// (`src-tauri/src/state.rs::cursor`, from settings), which is what makes this
+/// hold for the application as well as for the library.
+#[test]
+fn every_subject_shares_one_month_system() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    for system in [System::Solar, System::Amanta, System::Purnimanta] {
+        let cursor = MonthCursor {
+            system,
+            ..solar(2026, 8)
+        };
+        let moon = almanac.moon_month(cursor).expect("moon month");
+
+        for graha in [Graha::Mangala, Graha::Shukra, Graha::Shani] {
+            let month = almanac.graha_month(graha, cursor).expect("graha month");
+            assert_eq!(month.label, moon.label, "{graha:?} {system:?}: label");
+            assert_eq!(month.system, system, "{graha:?} {system:?}: system");
+            assert_eq!(
+                month.days.iter().map(|day| day.date).collect::<Vec<_>>(),
+                moon.days.iter().map(|day| day.date).collect::<Vec<_>>(),
+                "{graha:?} {system:?}: days"
+            );
+        }
+    }
+}
