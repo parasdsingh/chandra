@@ -62,7 +62,10 @@ ephemeris; no missed or duplicated stations.
 
 Recorded so they are not silently forgotten, and not built until asked.
 
-- Full panchanga: tithi, yoga, karana, vara *(D-010)*
+- ~~Tithi and vara~~ — shipped in lunar mode only *(D-021)*. Solar mode keeps the D-010 fields
+- Yoga and karana *(D-010, argued again in D-021)* — neither explains a number in the grid, and
+  a karana is half a tithi and derivable from the row above it. Slot after Nakshatra and before
+  Rashi if ever added, which is the canonical panchang order
 - Muhurta: Rahu Kaal, Yamaganda, Gulika, Abhijit, Brahma Muhurta, Durmuhurtam
 - Notifications for new/full moon, sankranti, retrograde stations *(D-017)*
 - Aspects, drishti, conjunctions
