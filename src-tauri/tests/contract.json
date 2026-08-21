@@ -41,6 +41,34 @@
         "prevailing": "boolean"
       }
     ],
+    "panchanga": {
+      "reference": "string",
+      "sunrise": {
+        "day_offset": "integer",
+        "unix_ms": "integer"
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "exit": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "index": "integer",
+          "name": "string",
+          "number": "integer",
+          "paksha": "string",
+          "prevailing": "boolean",
+          "source": "string",
+          "sunrises": "integer"
+        }
+      ],
+      "vara": "integer",
+      "vara_name": "string"
+    },
     "rashis": [
       {
         "entry": {
@@ -70,6 +98,7 @@
     "speed": "number"
   },
   "GrahaMonth": {
+    "adhika": "boolean",
     "anchor_unix_ms": "integer",
     "days": [
       {
@@ -79,13 +108,28 @@
           "month": "integer",
           "year": "integer"
         },
+        "in_month": "boolean",
         "longitude": "number",
         "nakshatra": "string",
         "rashi": "string",
         "retrograde": "boolean",
-        "speed": "number"
+        "speed": "number",
+        "tithi": {
+          "index": "integer",
+          "kshaya": [],
+          "name": "string",
+          "number": "integer",
+          "paksha": "string",
+          "reference": "string",
+          "sunrise": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "vriddhi": "null"
+        }
       }
     ],
+    "era_year": "integer",
     "events": [
       {
         "at": {
@@ -104,7 +148,9 @@
       }
     ],
     "graha": "string",
+    "kshaya_masa_name": "null",
     "label": "string",
+    "name": "string",
     "source": "string",
     "system": "string",
     "time_zone": "string"
@@ -148,6 +194,34 @@
         "prevailing": "boolean"
       }
     ],
+    "panchanga": {
+      "reference": "string",
+      "sunrise": {
+        "day_offset": "integer",
+        "unix_ms": "integer"
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "exit": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "index": "integer",
+          "name": "string",
+          "number": "integer",
+          "paksha": "string",
+          "prevailing": "boolean",
+          "source": "string",
+          "sunrises": "integer"
+        }
+      ],
+      "vara": "integer",
+      "vara_name": "string"
+    },
     "phase": "string",
     "principal_at": {
       "day_offset": "integer",
@@ -172,6 +246,7 @@
     "source": "string"
   },
   "MoonMonth": {
+    "adhika": "boolean",
     "anchor_unix_ms": "integer",
     "days": [
       {
@@ -182,12 +257,36 @@
           "year": "integer"
         },
         "illumination": "number",
+        "in_month": "boolean",
         "is_waxing": "boolean",
         "phase": "string",
-        "principal": "boolean"
+        "principal": "boolean",
+        "tithi": {
+          "index": "integer",
+          "kshaya": [
+            {
+              "index": "integer",
+              "name": "string",
+              "number": "integer",
+              "paksha": "string"
+            }
+          ],
+          "name": "string",
+          "number": "integer",
+          "paksha": "string",
+          "reference": "string",
+          "sunrise": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "vriddhi": "null"
+        }
       }
     ],
+    "era_year": "integer",
+    "kshaya_masa_name": "null",
     "label": "string",
+    "name": "string",
     "source": "string",
     "system": "string",
     "time_zone": "string"

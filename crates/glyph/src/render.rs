@@ -3,7 +3,7 @@
 use chandra_ephemeris::Graha;
 use tiny_skia::{FillRule, LineCap, LineJoin, Paint, Pixmap, Stroke, Transform};
 
-use crate::glyphs::{self, Ink, DESIGN_GRID, STROKE_WIDTH};
+use crate::glyphs::{self, Ink, DESIGN_GRID, RETROGRADE_STROKE, STROKE_WIDTH};
 use crate::moon::{self, Rendering};
 use crate::path;
 
@@ -121,8 +121,29 @@ pub fn moon_icon(
     Ok(to_icon(pixmap))
 }
 
-/// Renders a graha's template glyph.
-pub fn graha_icon(graha: Graha, scale: u32, tint: Tint) -> Result<Icon, RenderError> {
+/// Size the graha glyph shrinks to when a retrograde mark is drawn beside it.
+///
+/// Small enough to free the lower right corner, large enough that the symbol is
+/// still the thing the eye lands on. The mark annotates the glyph; it does not
+/// share the slot with it.
+const GLYPH_WITH_MARK_POINTS: f32 = 16.5;
+
+/// Size and position of the retrograde mark inside the slot.
+const MARK_POINTS: f32 = 10.0;
+const MARK_ORIGIN: f32 = SLOT_POINTS - MARK_POINTS - 0.5;
+
+/// Renders a graha's template glyph, marked `℞` while it is retrograde.
+///
+/// Retrograde is the one state the menu bar carries. It is the rarest and the
+/// most watched, and at 22 points one mark is all that stays legible; everything
+/// else a graha can be doing is named in the calendar, where there is room for
+/// words.
+pub fn graha_icon(
+    graha: Graha,
+    scale: u32,
+    tint: Tint,
+    retrograde: bool,
+) -> Result<Icon, RenderError> {
     let size = SLOT_POINTS as u32 * scale;
     let mut pixmap = Pixmap::new(size, size).ok_or(RenderError::Allocation {
         width: size,
@@ -132,8 +153,15 @@ pub fn graha_icon(graha: Graha, scale: u32, tint: Tint) -> Result<Icon, RenderEr
     let (data, ink) = glyphs::glyph(graha);
     let path = path::parse(data)?;
 
-    // The 24 unit design grid maps onto the 22pt slot, then onto pixels.
-    let unit_scale = SLOT_POINTS / DESIGN_GRID * scale as f32;
+    // The 24 unit design grid maps onto the slot, then onto pixels. A marked
+    // glyph is drawn smaller and pinned to the top left, which is where the
+    // corner it gives up is.
+    let glyph_points = if retrograde {
+        GLYPH_WITH_MARK_POINTS
+    } else {
+        SLOT_POINTS
+    };
+    let unit_scale = glyph_points / DESIGN_GRID * scale as f32;
     let transform = Transform::from_scale(unit_scale, unit_scale);
 
     let (r, g, b) = tint.components();
@@ -148,17 +176,38 @@ pub fn graha_icon(graha: Graha, scale: u32, tint: Tint) -> Result<Icon, RenderEr
             pixmap.fill_path(&path, &paint, FillRule::Winding, transform, None);
         }
         Ink::Stroke => {
-            let stroke = Stroke {
-                width: STROKE_WIDTH,
-                line_cap: LineCap::Round,
-                line_join: LineJoin::Round,
-                ..Stroke::default()
-            };
-            pixmap.stroke_path(&path, &paint, &stroke, transform, None);
+            pixmap.stroke_path(&path, &paint, &glyph_stroke(), transform, None);
         }
     }
 
+    if retrograde {
+        let mark = path::parse(glyphs::RETROGRADE)?;
+        let mark_scale = MARK_POINTS / DESIGN_GRID * scale as f32;
+        let offset = MARK_ORIGIN * scale as f32;
+        let placement =
+            Transform::from_scale(mark_scale, mark_scale).post_translate(offset, offset);
+        pixmap.stroke_path(&mark, &paint, &mark_stroke(), placement, None);
+    }
+
     Ok(to_icon(pixmap))
+}
+
+fn glyph_stroke() -> Stroke {
+    Stroke {
+        width: STROKE_WIDTH,
+        line_cap: LineCap::Round,
+        line_join: LineJoin::Round,
+        ..Stroke::default()
+    }
+}
+
+fn mark_stroke() -> Stroke {
+    Stroke {
+        width: RETROGRADE_STROKE,
+        line_cap: LineCap::Round,
+        line_join: LineJoin::Round,
+        ..Stroke::default()
+    }
 }
 
 fn ring_stroke() -> Stroke {
@@ -323,7 +372,7 @@ mod tests {
     fn every_graha_renders_visible_distinguishable_ink() {
         let mut signatures = Vec::new();
         for graha in Graha::ALL {
-            let icon = graha_icon(graha, 2, Tint::Template).expect("render");
+            let icon = graha_icon(graha, 2, Tint::Template, false).expect("render");
             assert_eq!((icon.width, icon.height), (44, 44));
 
             let covered = coverage(&icon);
@@ -350,11 +399,67 @@ mod tests {
         }
     }
 
+    /// Alpha-weighted ink inside a square region of a 44x44 icon.
+    fn ink_in(icon: &Icon, from_x: u32, from_y: u32, size: u32) -> f64 {
+        let mut ink = 0.0;
+        for y in from_y..from_y + size {
+            for x in from_x..from_x + size {
+                ink += icon.rgba[((y * icon.width + x) * 4 + 3) as usize] as f64 / 255.0;
+            }
+        }
+        ink
+    }
+
+    /// The retrograde mark must annotate the glyph, not replace it.
+    ///
+    /// A menu bar icon has 22 points and one job: say which graha this is. The
+    /// mark is an annotation on that, drawn in the lower right corner the glyph
+    /// gives up by shrinking. Total coverage is not the test - the Sun's disc
+    /// loses more area by shrinking than the mark adds - so the corner is
+    /// measured directly.
+    #[test]
+    fn the_retrograde_mark_annotates_the_glyph_without_replacing_it() {
+        for graha in Graha::ALL {
+            let plain = graha_icon(graha, 2, Tint::Template, false).expect("render");
+            let marked = graha_icon(graha, 2, Tint::Template, true).expect("render");
+
+            assert_ne!(plain.rgba, marked.rgba, "{} is unmarked", graha.name());
+            assert_eq!((marked.width, marked.height), (44, 44));
+
+            assert!(
+                ink_in(&marked, 26, 26, 18) > ink_in(&plain, 26, 26, 18) + 8.0,
+                "{}: the mark did not land in the lower right corner",
+                graha.name()
+            );
+            assert!(
+                (0.03..0.60).contains(&coverage(&marked)),
+                "{}: marked icon covers {} of the slot",
+                graha.name(),
+                coverage(&marked)
+            );
+
+            // Still a template image: macOS inverts these by alpha, and any
+            // colour left in the RGB channels would survive as a tint.
+            for pixel in marked.rgba.chunks_exact(4) {
+                assert_eq!([pixel[0], pixel[1], pixel[2]], [0, 0, 0]);
+            }
+        }
+
+        // Nothing of the mark falls outside the slot: the outermost row and
+        // column must stay clear, or macOS clips it against its neighbour.
+        let marked = graha_icon(Graha::Shani, 2, Tint::Template, true).expect("render");
+        for index in 0..44u32 {
+            let edge = |x: u32, y: u32| marked.rgba[((y * 44 + x) * 4 + 3) as usize];
+            assert_eq!(edge(43, index), 0, "ink on the right edge");
+            assert_eq!(edge(index, 43), 0, "ink on the bottom edge");
+        }
+    }
+
     #[test]
     fn template_icons_carry_shape_in_alpha_only() {
         // macOS inverts a template image using its alpha channel; any colour in
         // the RGB channels would survive inversion and show as a tint.
-        let icon = graha_icon(Graha::Shani, 2, Tint::Template).expect("render");
+        let icon = graha_icon(Graha::Shani, 2, Tint::Template, false).expect("render");
         for pixel in icon.rgba.chunks_exact(4) {
             assert_eq!(
                 [pixel[0], pixel[1], pixel[2]],
@@ -374,6 +479,7 @@ mod tests {
                 g: 237,
                 b: 239,
             },
+            false,
         )
         .expect("render");
 
@@ -388,7 +494,7 @@ mod tests {
     #[test]
     fn ink_stays_inside_the_slot() {
         for graha in Graha::ALL {
-            let icon = graha_icon(graha, 2, Tint::Template).expect("render");
+            let icon = graha_icon(graha, 2, Tint::Template, false).expect("render");
             let edge_ink = icon
                 .rgba
                 .chunks_exact(4)

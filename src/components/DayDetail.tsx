@@ -16,10 +16,12 @@ import { For, Show } from "solid-js";
 
 import type {
   Combustion,
+  DayPanchanga,
   DayDetail as Detail,
   GrahaDay,
   MoonDay,
   Moment,
+  TithiSpan,
   TransitEvent,
 } from "../ipc/types";
 import type { FormatContext } from "../lib/format";
@@ -64,12 +66,18 @@ function Body(props: Props): JSX.Element {
         <>
           {/* Weekday only: the header already carries the date, and printing it
               twice in a 320px panel is the clutter the layout exists to avoid. */}
+          {/* The vara completes the second limb at no cost: one word, in the
+              row that already names the weekday. Only in a lunar month, where
+              it is part of what the day is called. */}
           <div class="detail__date">
             <Show when={props.isToday}>
               <span class="detail__today">TODAY</span>
               <span> · </span>
             </Show>
             {formatWeekday(detail().date)}
+            <Show when={detail().panchanga}>
+              {(panchanga) => <span> · {panchanga().vara_name}</span>}
+            </Show>
           </div>
 
           <Show
@@ -109,10 +117,19 @@ function MoonBody(props: { detail: MoonDay; context: FormatContext }): JSX.Eleme
         </span>
       </div>
 
+      {/* The grid states a tithi number; this is where it is named in words,
+          with the boundaries that decide it. A number nobody can check is worse
+          than no number at all. */}
+      <TithiBlock panchanga={props.detail.panchanga} context={props.context} />
+
       {/* A missing rise or set is stated on its own row, in the value column.
           Rendering a dash plus a caption underneath added a line and changed the
           shape of the block depending on the day. */}
       <div class="detail__block">
+        <SunriseRow
+          panchanga={props.detail.panchanga}
+          context={props.context}
+        />
         <Show
           when={!circumpolar()}
           fallback={
@@ -196,7 +213,13 @@ function GrahaBody(props: {
         <Row label="Speed" value={formatSpeed(props.detail.speed)} />
       </div>
 
+      <TithiBlock panchanga={props.detail.panchanga} context={props.context} />
+
       <div class="detail__block">
+        <SunriseRow
+          panchanga={props.detail.panchanga}
+          context={props.context}
+        />
         <RiseRow
           label="Rise"
           moment={props.detail.rise}
@@ -278,6 +301,92 @@ function CombustionBlock(props: { combustion: Combustion }): JSX.Element {
           </p>
         </Show>
       </div>
+    </Show>
+  );
+}
+
+/**
+ * The tithis touching the day, prevailing one first.
+ *
+ * Reuses the same block the nakshatra and rashi rows use, so the three read as
+ * one list: label on the first row, continuations dimmed, boundaries in the
+ * caption. The caption also carries why a number was skipped or repeated, which
+ * is the only place in the app those two words appear (DESIGN 11.3).
+ */
+function TithiBlock(props: {
+  panchanga: DayPanchanga | null;
+  context: FormatContext;
+}): JSX.Element {
+  return (
+    <Show when={props.panchanga}>
+      {(panchanga) => (
+        <SpanBlock
+          label="Tithi"
+          spans={panchanga().tithis.map((span) => ({
+            value: `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}`,
+            caption: tithiCaption(span, props.context),
+            prevailing: span.prevailing,
+          }))}
+        />
+      )}
+    </Show>
+  );
+}
+
+/**
+ * A tithi's boundaries, and what makes it unusual.
+ *
+ * An unresolved boundary says so rather than printing a guessed time: the other
+ * side is still real and still shown.
+ */
+function tithiCaption(span: TithiSpan, context: FormatContext): string {
+  const window =
+    span.entry && span.exit
+      ? formatSpan(span.entry, span.exit, context)
+      : span.entry
+        ? `${formatBoundary(span.entry, context)} → time unavailable`
+        : span.exit
+          ? `time unavailable → ${formatBoundary(span.exit, context)}`
+          : "times unavailable";
+
+  const note =
+    span.sunrises === 0
+      ? "kshaya, no sunrise"
+      : span.sunrises === 2
+        ? "two sunrises"
+        : "";
+
+  return note ? `${window} · ${note}` : window;
+}
+
+/**
+ * Sunrise, the instant the day's tithi, nakshatra and rashi are all read at.
+ *
+ * Without it the numbers in the grid cannot be checked against anything. Where
+ * the Sun does not rise the row says so and names local noon, which is the
+ * substitute actually used - not a blank and not a dash.
+ */
+function SunriseRow(props: {
+  panchanga: DayPanchanga | null;
+  context: FormatContext;
+}): JSX.Element {
+  return (
+    <Show when={props.panchanga}>
+      {(panchanga) => (
+        <Show
+          when={panchanga().sunrise}
+          fallback={
+            <Row label="Sunrise" value="does not rise; read at noon" muted />
+          }
+        >
+          {(sunrise) => (
+            <Row
+              label="Sunrise"
+              value={formatBoundary(sunrise(), props.context)}
+            />
+          )}
+        </Show>
+      )}
     </Show>
   );
 }

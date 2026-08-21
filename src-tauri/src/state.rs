@@ -41,12 +41,14 @@ impl AppState {
     ///
     /// The system lives in settings rather than in the request, so the calendar
     /// cannot be showing lunar months while a background prefetch asks for solar
-    /// ones.
-    pub fn cursor(&self, anchor_unix_ms: i64, offset: i32) -> MonthCursor {
+    /// ones. The opening weekday does come from the request: it is what the
+    /// viewer's locale reports, which is a fact only the front end holds.
+    pub fn cursor(&self, anchor_unix_ms: i64, offset: i32, first_weekday: u8) -> MonthCursor {
         MonthCursor {
             anchor_unix_ms,
             offset,
             system: self.settings().calendar.month_system,
+            first_weekday: first_weekday % 7,
         }
     }
 

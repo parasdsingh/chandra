@@ -3,38 +3,34 @@
 import type { JSX } from "solid-js";
 import { For, Show } from "solid-js";
 
-import type { GridDay } from "../lib/calendar";
 import { sameDate } from "../lib/calendar";
 import { weekdayLabels } from "../lib/format";
 import type {
+  CellTithi,
   DateKey,
+  GrahaCell,
   GrahaInfo,
   GrahaMonth,
+  MoonCell,
   MoonMonth,
   TransitEvent,
 } from "../ipc/types";
-import { DayCell } from "./DayCell";
+import { DayCell, tithiLabel } from "./DayCell";
 import { phaseLabel } from "../lib/format";
 
 interface Props {
-  grid: GridDay[];
   firstWeekday: number;
   /** Glyph for a graha calendar; unused for the Moon. */
   info?: GrahaInfo;
-  month: MoonMonth | GrahaMonth | undefined;
+  month: MoonMonth | GrahaMonth;
   kind: "moon" | "graha";
   selected: DateKey | null;
   today: DateKey;
   southern: boolean;
-  direction: number;
   onSelect: (date: DateKey) => void;
 }
 
-const sameDay = (a: DateKey, b: DateKey) =>
-  a.year === b.year && a.month === b.month && a.day === b.day;
-
-function eventsFor(month: GrahaMonth | undefined, date: DateKey): TransitEvent[] {
-  if (!month) return [];
+function eventsFor(month: GrahaMonth, date: DateKey): TransitEvent[] {
   return month.events.filter(
     (event) =>
       event.date.year === date.year &&
@@ -56,6 +52,10 @@ export function WeekdayRow(props: { firstWeekday: number }): JSX.Element {
 /**
  * One month's 42 cells, 240px tall.
  *
+ * The cells arrive already laid out: the back end decides which civil days the
+ * grid holds, because only it knows where a lunar month begins and ends. All
+ * that happens here is the split into rows.
+ *
  * Separated from the weekday row so several months can be stacked and moved
  * together while the headings stay put.
  */
@@ -75,50 +75,47 @@ export function MonthCells(props: Props): JSX.Element {
         role="grid"
         aria-rowcount={6}
         aria-colcount={7}
-        aria-label={props.month?.label ?? ""}
+        aria-label={props.month.label}
       >
-        <For each={weeks(props.grid)}>
+        <For each={weeks(props.month.days as (MoonCell | GrahaCell)[])}>
           {(week) => (
             <div class="week" role="row">
               <For each={week}>
-          {(cell) => {
-            const dayData = () =>
-              cell.inMonth
-                ? props.month?.days.find((d) => sameDay(d.date, cell.date))
-                : undefined;
+                {(cell) => {
+                  const common = {
+                    selected: sameDate(props.selected, cell.date),
+                    today: sameDate(props.today, cell.date),
+                    focused: sameDate(focusedDate(), cell.date),
+                    onSelect: () => props.onSelect(cell.date),
+                  };
 
-            const common = {
-              cell,
-              selected: sameDate(props.selected, cell.date),
-              today: sameDate(props.today, cell.date),
-              focused: sameDate(focusedDate(), cell.date),
-              onSelect: () => props.onSelect(cell.date),
-            };
-
-            return (
-              <Show
-                when={props.kind === "moon"}
-                fallback={
-                  <DayCell
-                    {...common}
-                    kind="graha"
-                    data={dayData() as never}
-                    events={eventsFor(props.month as GrahaMonth, cell.date)}
-                    info={props.info}
-                    label={grahaCellLabel(cell, eventsFor(props.month as GrahaMonth, cell.date), (dayData() as never as { retrograde?: boolean })?.retrograde ?? false)}
-                  />
-                }
-              >
-                <DayCell
-                  {...common}
-                  kind="moon"
-                  data={dayData() as never}
-                  southern={props.southern}
-                  label={moonCellLabel(cell, dayData() as never)}
-                />
-              </Show>
-            );
-          }}
+                  return (
+                    <Show
+                      when={props.kind === "moon"}
+                      fallback={
+                        <DayCell
+                          {...common}
+                          kind="graha"
+                          data={cell as GrahaCell}
+                          events={eventsFor(props.month as GrahaMonth, cell.date)}
+                          info={props.info}
+                          label={grahaCellLabel(
+                            cell as GrahaCell,
+                            eventsFor(props.month as GrahaMonth, cell.date),
+                          )}
+                        />
+                      }
+                    >
+                      <DayCell
+                        {...common}
+                        kind="moon"
+                        data={cell as MoonCell}
+                        southern={props.southern}
+                        label={moonCellLabel(cell as MoonCell)}
+                      />
+                    </Show>
+                  );
+                }}
               </For>
             </div>
           )}
@@ -129,34 +126,60 @@ export function MonthCells(props: Props): JSX.Element {
 }
 
 /** Splits the flat 42-cell grid into six rows of seven. */
-function weeks(grid: GridDay[]): GridDay[][] {
-  return Array.from({ length: 6 }, (_, row) => grid.slice(row * 7, row * 7 + 7));
+function weeks<T>(cells: T[]): T[][] {
+  return Array.from({ length: 6 }, (_, row) => cells.slice(row * 7, row * 7 + 7));
 }
 
-/** Spoken label. Phase is never conveyed by the glyph alone (DESIGN 11.3). */
-function moonCellLabel(
-  cell: GridDay,
-  data: { phase: string; illumination: number } | undefined,
-): string {
-  const date = `${cell.date.day} ${monthName(cell.date.month)}`;
-  if (!data) return date;
-  const phase = phaseLabel(data.phase as never).toLowerCase();
-  return `${date}, ${phase}, ${Math.round(data.illumination * 100)} percent illuminated`;
+/** Spoken date. A cell says the Gregorian date whichever calendar is in force. */
+function spokenDate(date: DateKey): string {
+  return `${date.day} ${monthName(date.month)}`;
 }
 
-function grahaCellLabel(
-  cell: GridDay,
-  events: TransitEvent[],
-  retrograde: boolean,
-): string {
-  const parts = [`${cell.date.day} ${monthName(cell.date.month)}`];
-  if (retrograde) parts.push("retrograde");
+/**
+ * The tithi, spoken in full.
+ *
+ * `S8` is a printed abbreviation, not a word, so nothing that reads the cell
+ * aloud is ever given it. Kshaya and vriddhi are named too: they are the reason
+ * the numbers jump or repeat, and a screen reader that omitted them would leave
+ * the sequence looking broken (DESIGN 11.3).
+ */
+function spokenTithi(tithi: CellTithi): string {
+  const parts = [
+    `${tithi.paksha === "shukla" ? "Shukla" : "Krishna"} ${tithi.name}`,
+  ];
+  if (tithi.reference === "local_noon") parts.push("tithi at local noon");
+  if (tithi.vriddhi === "first") parts.push("first of two sunrises");
+  if (tithi.vriddhi === "second") parts.push("second sunrise");
+  for (const skipped of tithi.kshaya) {
+    parts.push(`${skipped.name} skipped, no sunrise`);
+  }
+  return parts.join(", ");
+}
+
+function moonCellLabel(cell: MoonCell): string {
+  const parts = [spokenDate(cell.date)];
+  if (cell.tithi) parts.push(spokenTithi(cell.tithi));
+  parts.push(
+    `${phaseLabel(cell.phase).toLowerCase()}, ${Math.round(cell.illumination * 100)} percent illuminated`,
+  );
+  if (cell.combust) parts.push("combust");
+  if (!cell.in_month) parts.push("outside this month");
+  return parts.join(", ");
+}
+
+function grahaCellLabel(cell: GrahaCell, events: TransitEvent[]): string {
+  const parts = [spokenDate(cell.date)];
+  if (cell.tithi) parts.push(spokenTithi(cell.tithi));
+  if (cell.retrograde) parts.push("retrograde");
+  if (cell.combust) parts.push("combust");
   if (events.length > 0) {
-    const described = events.map(describeEvent).join(", ");
     parts.push(
-      `${events.length} ${events.length === 1 ? "event" : "events"}: ${described}`,
+      `${events.length} ${events.length === 1 ? "event" : "events"}: ${events
+        .map(describeEvent)
+        .join(", ")}`,
     );
   }
+  if (!cell.in_month) parts.push("outside this month");
   return parts.join(", ");
 }
 
@@ -182,3 +205,5 @@ function monthName(month: number): string {
     month: "long",
   }).format(new Date(Date.UTC(2000, month - 1, 1, 12)));
 }
+
+export { tithiLabel };

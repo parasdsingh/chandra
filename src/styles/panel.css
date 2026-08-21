@@ -288,6 +288,86 @@
   align-items: center;
 }
 
+/* ---------- lunar cell ---------- */
+
+/* In a lunar month the tithi is what the day is called, so it takes the label
+   position the Gregorian day holds in solar mode, and the Gregorian day becomes
+   the annotation underneath. Nothing moves; the two lines swap roles. */
+
+/* The paksha letter is a prefix on the number, not a word: no gap, and set back
+   so the number reads first. It inherits the accent on today, because `S8` is
+   one label and half of it in a different colour would read as two. */
+.day-cell__paksha {
+  color: var(--text-tertiary);
+}
+
+.day-cell.is-today .day-cell__paksha,
+.day-cell.is-selected .day-cell__paksha {
+  color: inherit;
+}
+
+.day-cell__gregorian {
+  font: var(--type-micro);
+  letter-spacing: var(--track-micro);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.day-cell.is-outside .day-cell__gregorian {
+  opacity: 0.45;
+}
+
+/* A tithi that began and ended between two sunrises: the grid's numbers jump at
+   this cell. The whole tithi is compressed inside one day, so at day scale it
+   behaves as an instant and takes a marker.
+
+   Top left, not the usual top right: on a graha calendar the right-hand slot is
+   an ingress or a station, and the same dot in the same corner meaning either
+   the calendar skipped a day or the graha changed sign would be unreadable.
+   Left is the calendar; right is the subject. */
+.day-cell__kshaya {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--marker);
+}
+
+/* Directly under the tithi, where DESIGN 6.3 puts it. At the cell's foot it
+   would underline the Gregorian date instead of marking the day. */
+.day-cell.is-lunar .day-cell__combust {
+  top: 21px;
+  bottom: auto;
+  left: 13px;
+  right: 13px;
+}
+
+/* A tithi holding two sunrises names two days. Full-bleed on both, so the pair
+   reads as one span bracketed across two cells rather than as a number printed
+   twice by mistake. */
+.day-cell__vriddhi {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--marker);
+  opacity: 0.55;
+}
+
+/* In lunar mode the mark runs with the tithi rather than reaching for a corner
+   the ingress marker already owns. Raised half a line, the way an ephemeris sets
+   it. */
+.day-cell__retro-mark.is-inline {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  top: -4px;
+  margin-left: 1px;
+}
+
 .phase-glyph {
   display: block;
   animation: glyph-in var(--d-glyph) var(--ease-standard);

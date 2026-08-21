@@ -16,6 +16,7 @@ pub mod phase;
 pub mod roots;
 pub mod spans;
 pub mod time;
+pub mod tithi;
 pub mod zodiac;
 
 pub use almanac::{Almanac, Location, MonthCursor, Snapshot, SnapshotGraha};

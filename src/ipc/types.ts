@@ -60,9 +60,73 @@ export interface Moment {
 /** Gregorian, new moon to new moon, or full moon to full moon. */
 export type MonthSystem = "solar" | "amanta" | "purnimanta";
 
+/** Half a lunar month: waxing or waning. */
+export type Paksha = "shukla" | "krishna";
+
+/** Which instant a day's tithi was taken at. */
+export type TithiReference = "sunrise" | "local_noon";
+
+/** A civil day's place in a tithi that spans two sunrises. */
+export type Vriddhi = "first" | "second";
+
+/** A tithi no civil day is named after, because it held no sunrise. */
+export interface SkippedTithi {
+  index: number;
+  paksha: Paksha;
+  number: number;
+  /** The full form: `Shukla Shashthi`. */
+  name: string;
+}
+
+/**
+ * The lunar day a grid cell is named after. Absent in solar mode.
+ *
+ * `number` is what the cell prints, because amanta and purnimanta count from
+ * opposite ends; `index` is the astronomical 1-30 and is only for equality.
+ */
+export interface CellTithi {
+  index: number;
+  number: number;
+  paksha: Paksha;
+  /** `Ashtami`, `Purnima`, `Amavasya`. */
+  name: string;
+  reference: TithiReference;
+  sunrise: Moment | null;
+  kshaya: SkippedTithi[];
+  vriddhi: Vriddhi | null;
+}
+
+/** A tithi touching one civil day, with its true boundaries. */
+export interface TithiSpan {
+  index: number;
+  number: number;
+  paksha: Paksha;
+  name: string;
+  /** `null` only when the boundary did not resolve. No time is ever guessed. */
+  entry: Moment | null;
+  exit: Moment | null;
+  /** Sunrises inside the span: 0 is a kshaya, 2 a vriddhi. */
+  sunrises: number;
+  prevailing: boolean;
+  source: Source;
+}
+
+/** The panchanga limbs a lunar calendar needs. Absent in solar mode. */
+export interface DayPanchanga {
+  tithis: TithiSpan[];
+  sunrise: Moment | null;
+  reference: TithiReference;
+  /** 0 = Ravivara, independent of the locale's first day of week. */
+  vara: number;
+  vara_name: string;
+}
+
 export interface MoonCell {
   /** Full civil date: a lunar month crosses Gregorian month boundaries. */
   date: DateKey;
+  /** False for the grid's leading and trailing cells. */
+  in_month: boolean;
+  tithi: CellTithi | null;
   illumination: number;
   is_waxing: boolean;
   phase: PhaseKey;
@@ -72,18 +136,27 @@ export interface MoonCell {
 }
 
 export interface MoonMonth {
-  /** `August 2026`, `Shravana 2026`, `Adhika Shravana 2026`. */
+  /** `August 2026`, `Shravana 2083`, `Adhika Shravana 2080`. */
   label: string;
+  /** The name alone, so the header can set `Adhika` apart from it. */
+  name: string;
+  adhika: boolean;
+  kshaya_masa_name: string | null;
+  /** Vikram Samvat. `null` in solar mode, which counts Gregorian years. */
+  era_year: number | null;
   system: MonthSystem;
   /** An instant inside this month; navigation steps from it. */
   anchor_unix_ms: number;
   time_zone: string;
+  /** Exactly 42 cells, in reading order, laid out by the back end. */
   days: MoonCell[];
   source: Source;
 }
 
 export interface GrahaCell {
   date: DateKey;
+  in_month: boolean;
+  tithi: CellTithi | null;
   longitude: number;
   rashi: string;
   nakshatra: string;
@@ -104,6 +177,10 @@ export interface TransitEvent {
 export interface GrahaMonth {
   graha: GrahaKey;
   label: string;
+  name: string;
+  adhika: boolean;
+  kshaya_masa_name: string | null;
+  era_year: number | null;
   system: MonthSystem;
   anchor_unix_ms: number;
   time_zone: string;
@@ -156,6 +233,7 @@ export interface MoonDay {
   moonrise: Moment | null;
   moonset: Moment | null;
   combustion: Combustion;
+  panchanga: DayPanchanga | null;
   nakshatras: NakshatraSpan[];
   rashis: RashiSpan[];
   source: Source;
@@ -173,6 +251,7 @@ export interface GrahaDay {
   rise: Moment | null;
   set: Moment | null;
   combustion: Combustion;
+  panchanga: DayPanchanga | null;
   nakshatras: NakshatraSpan[];
   rashis: RashiSpan[];
   source: Source;

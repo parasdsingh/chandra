@@ -87,22 +87,31 @@ fn merge(a: Value, b: Value) -> Value {
 
 /// Shape of a day detail merged across a month, so every optional field is
 /// represented by a day on which it is present.
+///
+/// Both month systems are sampled: the panchanga block exists only in a lunar
+/// month, and a fixture built from solar days alone would record it as absent
+/// and let the two sides drift apart unnoticed.
 fn merged_day_shape(almanac: &Almanac, graha: Graha) -> Value {
-    (1..=28)
-        .filter_map(|day| chandra_almanac::time::DateKey::new(2026, 8, day).ok())
-        .filter_map(|date| almanac.day_detail(graha, date).ok())
+    [MonthSystem::Solar, MonthSystem::Amanta]
+        .into_iter()
+        .flat_map(|system| {
+            (1..=28)
+                .filter_map(|day| chandra_almanac::time::DateKey::new(2026, 8, day).ok())
+                .filter_map(move |date| almanac.day_detail(graha, date, system).ok())
+        })
         .map(|detail| shape(&serde_json::to_value(detail).unwrap()))
         .reduce(merge)
         .expect("a month yields at least one day")
 }
 
-fn cursor(year: i32, month: u32) -> MonthCursor {
+fn cursor_in(year: i32, month: u32, system: MonthSystem) -> MonthCursor {
     MonthCursor {
         anchor_unix_ms: (chandra_ephemeris::jd_to_unix_seconds(chandra_ephemeris::julian_day(
             year, month, 15, 0.25,
         )) * 1000.0) as i64,
         offset: 0,
-        system: MonthSystem::Solar,
+        system,
+        first_weekday: 0,
     }
 }
 
@@ -127,23 +136,41 @@ fn ipc_payload_shapes_match_the_committed_contract() {
     let almanac = almanac();
     let mut shapes: BTreeMap<&str, Value> = BTreeMap::new();
 
+    // Merged across both systems for the same reason day shapes are: a cell's
+    // tithi exists only in a lunar month.
     shapes.insert(
         "MoonMonth",
-        shape(
-            &serde_json::to_value(almanac.moon_month(cursor(2026, 8)).expect("moon month"))
-                .unwrap(),
-        ),
+        [MonthSystem::Solar, MonthSystem::Amanta]
+            .into_iter()
+            .map(|system| {
+                shape(
+                    &serde_json::to_value(
+                        almanac
+                            .moon_month(cursor_in(2026, 8, system))
+                            .expect("moon month"),
+                    )
+                    .unwrap(),
+                )
+            })
+            .reduce(merge)
+            .expect("both systems yield a month"),
     );
     shapes.insert(
         "GrahaMonth",
-        shape(
-            &serde_json::to_value(
-                almanac
-                    .graha_month(Graha::Mangala, cursor(2025, 2))
-                    .expect("graha month"),
-            )
-            .unwrap(),
-        ),
+        [MonthSystem::Solar, MonthSystem::Amanta]
+            .into_iter()
+            .map(|system| {
+                shape(
+                    &serde_json::to_value(
+                        almanac
+                            .graha_month(Graha::Mangala, cursor_in(2025, 2, system))
+                            .expect("graha month"),
+                    )
+                    .unwrap(),
+                )
+            })
+            .reduce(merge)
+            .expect("both systems yield a month"),
     );
     shapes.insert("MoonDay", merged_day_shape(&almanac, Graha::Chandra));
     shapes.insert("GrahaDay", merged_day_shape(&almanac, Graha::Mangala));

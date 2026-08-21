@@ -10,7 +10,7 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use chandra_almanac::lunar::MonthSystem as System;
-use chandra_almanac::month::DayDetail;
+use chandra_almanac::month::{DayDetail, GrahaCell, GrahaMonth, MoonCell, MoonMonth};
 use chandra_almanac::time::DateKey;
 use chandra_almanac::zodiac::{NAKSHATRA_ARC, RASHI_ARC};
 use chandra_almanac::{Almanac, Location, MonthCursor};
@@ -50,7 +50,22 @@ fn solar(year: i32, month: u32) -> MonthCursor {
         )) * 1000.0) as i64,
         offset: 0,
         system: System::Solar,
+        // Monday-first, so the grid layout is fixed across every test.
+        first_weekday: 0,
     }
+}
+
+/// The cells of the month itself.
+///
+/// A month view carries the whole 42 cell grid, so the leading and trailing days
+/// of the neighbouring months are in `days` too. Every assertion about "the
+/// month" means these.
+fn inside(month: &MoonMonth) -> Vec<&MoonCell> {
+    month.days.iter().filter(|cell| cell.in_month).collect()
+}
+
+fn inside_graha(month: &GrahaMonth) -> Vec<&GrahaCell> {
+    month.days.iter().filter(|cell| cell.in_month).collect()
 }
 
 fn reset(almanac: &Almanac) {
@@ -75,10 +90,18 @@ fn a_month_has_one_cell_per_day() {
 
     for (year, month, expected) in [(2026, 8, 31), (2026, 2, 28), (2024, 2, 29), (2026, 4, 30)] {
         let view = almanac.moon_month(solar(year, month)).expect("month");
-        assert_eq!(view.days.len(), expected, "{year}-{month}");
-        assert_eq!(view.days[0].date.day, 1);
-        assert_eq!(view.days[expected - 1].date.day, expected as i8);
+        let days = inside(&view);
+
+        // The grid is always six rows, whatever the month holds.
+        assert_eq!(view.days.len(), 42, "{year}-{month} grid");
+        assert_eq!(days.len(), expected, "{year}-{month}");
+        assert_eq!(days[0].date.day, 1);
+        assert_eq!(days[expected - 1].date.day, expected as i8);
         assert_eq!(view.source, Source::Swieph);
+
+        // The leading and trailing cells carry real data, not blanks: they are
+        // drawn dimmed, not left empty.
+        assert!(view.days.iter().all(|cell| cell.illumination >= 0.0));
     }
 }
 
@@ -97,7 +120,7 @@ fn illumination_is_a_fraction_and_tracks_the_phase() {
         );
     }
 
-    for cell in view.days.iter().filter(|c| c.principal) {
+    for cell in inside(&view).into_iter().filter(|c| c.principal) {
         use chandra_almanac::phase::PhaseName::*;
         match cell.phase {
             FullMoon => assert!(
@@ -126,7 +149,7 @@ fn every_principal_phase_falls_on_exactly_one_day() {
     reset(&almanac);
 
     let view = almanac.moon_month(solar(2026, 8)).expect("month");
-    let principal: Vec<_> = view.days.iter().filter(|c| c.principal).collect();
+    let principal: Vec<_> = inside(&view).into_iter().filter(|c| c.principal).collect();
 
     assert!(
         (3..=5).contains(&principal.len()),
@@ -149,7 +172,11 @@ fn nakshatra_entry_and_exit_land_on_exact_boundaries() {
     reset(&almanac);
 
     let detail = almanac
-        .day_detail(Graha::Chandra, DateKey::new(2026, 8, 20).unwrap())
+        .day_detail(
+            Graha::Chandra,
+            DateKey::new(2026, 8, 20).unwrap(),
+            System::Solar,
+        )
         .expect("detail");
     let DayDetail::Moon(moon) = detail else {
         panic!("the Moon must produce a moon detail");
@@ -185,7 +212,11 @@ fn a_span_boundary_is_the_instant_the_longitude_crosses_it() {
     reset(&almanac);
 
     let detail = almanac
-        .day_detail(Graha::Chandra, DateKey::new(2026, 8, 20).unwrap())
+        .day_detail(
+            Graha::Chandra,
+            DateKey::new(2026, 8, 20).unwrap(),
+            System::Solar,
+        )
         .expect("detail");
     let DayDetail::Moon(moon) = detail else {
         panic!("moon detail");
@@ -225,7 +256,11 @@ fn moonrise_and_moonset_stay_inside_the_day_they_are_reported_for() {
     let mut days_with_no_rise = 0;
     for day in 1..=31 {
         let DayDetail::Moon(moon) = almanac
-            .day_detail(Graha::Chandra, DateKey::new(2026, 8, day).unwrap())
+            .day_detail(
+                Graha::Chandra,
+                DateKey::new(2026, 8, day).unwrap(),
+                System::Solar,
+            )
             .expect("detail")
         else {
             panic!("moon detail");
@@ -268,8 +303,9 @@ fn graha_months_find_stations_and_ingresses() {
     );
     assert_eq!(stations[0].date.day, 24, "station date");
 
-    let before = view.days.iter().find(|d| d.date.day == 20).unwrap();
-    let after = view.days.iter().find(|d| d.date.day == 28).unwrap();
+    let days = inside_graha(&view);
+    let before = days.iter().find(|d| d.date.day == 20).unwrap();
+    let after = days.iter().find(|d| d.date.day == 28).unwrap();
     assert!(before.retrograde, "Mangala retrograde before the station");
     assert!(!after.retrograde, "Mangala direct after the station");
 }
@@ -328,7 +364,7 @@ fn changing_the_ayanamsa_changes_positions_and_clears_the_cache() {
         .graha_month(Graha::Shani, solar(2026, 8))
         .expect("month");
 
-    let difference = (lahiri.days[0].longitude - raman.days[0].longitude).abs();
+    let difference = (inside_graha(&lahiri)[0].longitude - inside_graha(&raman)[0].longitude).abs();
     assert!(
         difference > 1.0,
         "Lahiri and Raman differ by about 1.4 degrees; got {difference}"
@@ -339,7 +375,7 @@ fn changing_the_ayanamsa_changes_positions_and_clears_the_cache() {
         .graha_month(Graha::Shani, solar(2026, 8))
         .expect("month");
     assert!(
-        (back.days[0].longitude - lahiri.days[0].longitude).abs() < 1e-9,
+        (inside_graha(&back)[0].longitude - inside_graha(&lahiri)[0].longitude).abs() < 1e-9,
         "returning to Lahiri must reproduce the original figures"
     );
 }
@@ -350,7 +386,10 @@ fn changing_location_changes_rise_times() {
     reset(&almanac);
 
     let date = DateKey::new(2026, 8, 20).unwrap();
-    let DayDetail::Moon(here) = almanac.day_detail(Graha::Chandra, date).expect("detail") else {
+    let DayDetail::Moon(here) = almanac
+        .day_detail(Graha::Chandra, date, System::Solar)
+        .expect("detail")
+    else {
         panic!("moon detail");
     };
 
@@ -360,7 +399,10 @@ fn changing_location_changes_rise_times() {
             zone_name: "Australia/Sydney".into(),
         })
         .expect("relocate");
-    let DayDetail::Moon(sydney) = almanac.day_detail(Graha::Chandra, date).expect("detail") else {
+    let DayDetail::Moon(sydney) = almanac
+        .day_detail(Graha::Chandra, date, System::Solar)
+        .expect("detail")
+    else {
         panic!("moon detail");
     };
 
@@ -396,6 +438,55 @@ fn a_cold_month_is_assembled_well_inside_the_budget() {
         "warm moon month took {warm:?}, must be served from cache"
     );
     assert!(warm < cold, "the cache must actually be faster");
+}
+
+/// A lunar month costs more, and must still fit.
+///
+/// It walks syzygies to find its own boundaries and resolves a sunrise for every
+/// one of the 44 days the grid and its neighbours span. The tithis are then
+/// shared: the second subject drawn on the same month must not pay for them
+/// again, which is what the frame cache exists for.
+#[test]
+fn a_lunar_month_stays_inside_the_budget_and_is_computed_once() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    let cursor = MonthCursor {
+        system: System::Amanta,
+        ..solar(2031, 3)
+    };
+
+    let started = Instant::now();
+    let month = almanac.moon_month(cursor).expect("month");
+    let cold = started.elapsed();
+    assert!(
+        month.days.iter().all(|cell| cell.tithi.is_some()),
+        "every cell of a lunar grid carries a tithi"
+    );
+    assert!(
+        cold.as_millis() < 150,
+        "cold lunar month took {cold:?}, budget 30ms with headroom"
+    );
+
+    // A different subject over the same month: the tithis are already resolved,
+    // so this must not repeat the 44 sunrises.
+    let started = Instant::now();
+    let graha = almanac
+        .graha_month(Graha::Mangala, cursor)
+        .expect("graha month");
+    let shared = started.elapsed();
+    assert!(
+        graha.days.iter().all(|cell| cell.tithi.is_some()),
+        "a graha grid names the same lunar days"
+    );
+    assert!(
+        shared < cold,
+        "the second subject re-resolved the tithis: {shared:?} against {cold:?}"
+    );
+
+    // Solar mode names no tithi, and pays nothing for it.
+    let solar_month = almanac.moon_month(solar(2031, 3)).expect("month");
+    assert!(solar_month.days.iter().all(|cell| cell.tithi.is_none()));
 }
 
 #[test]
@@ -460,6 +551,30 @@ fn report_timings() {
     let _ = almanac.moon_month(solar(2033, 7)).expect("month");
     line("moon month, cached", t.elapsed());
 
+    // A lunar month costs more: it walks syzygies to find its own boundaries,
+    // and resolves a sunrise for all 44 days the grid and its neighbours span.
+    let lunar = MonthCursor {
+        system: System::Amanta,
+        ..solar(2033, 7)
+    };
+    let t = Instant::now();
+    let _ = almanac.moon_month(lunar).expect("month");
+    line("lunar moon month, cold", t.elapsed());
+
+    let t = Instant::now();
+    let _ = almanac.graha_month(Graha::Mangala, lunar).expect("month");
+    line("lunar graha month, frames cached", t.elapsed());
+
+    let t = Instant::now();
+    let _ = almanac
+        .day_detail(
+            Graha::Chandra,
+            DateKey::new(2033, 7, 15).unwrap(),
+            System::Amanta,
+        )
+        .expect("detail");
+    line("lunar moon day detail", t.elapsed());
+
     for graha in [Graha::Budha, Graha::Mangala, Graha::Guru, Graha::Shani] {
         let t = Instant::now();
         let _ = almanac.graha_month(graha, solar(2033, 7)).expect("month");
@@ -468,13 +583,21 @@ fn report_timings() {
 
     let t = Instant::now();
     let _ = almanac
-        .day_detail(Graha::Chandra, DateKey::new(2033, 7, 15).unwrap())
+        .day_detail(
+            Graha::Chandra,
+            DateKey::new(2033, 7, 15).unwrap(),
+            System::Solar,
+        )
         .expect("detail");
     line("moon day detail", t.elapsed());
 
     let t = Instant::now();
     let _ = almanac
-        .day_detail(Graha::Shani, DateKey::new(2033, 7, 15).unwrap())
+        .day_detail(
+            Graha::Shani,
+            DateKey::new(2033, 7, 15).unwrap(),
+            System::Solar,
+        )
         .expect("detail");
     line("Shani day detail (slowest body)", t.elapsed());
 
@@ -680,9 +803,9 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
     let month = almanac.moon_month(solar(2026, 8)).expect("moon month");
     let mut combust_days = 0;
 
-    for cell in &month.days {
+    for cell in inside(&month) {
         let DayDetail::Moon(day) = almanac
-            .day_detail(Graha::Chandra, cell.date)
+            .day_detail(Graha::Chandra, cell.date, System::Solar)
             .expect("moon detail")
         else {
             panic!("moon detail");
@@ -705,7 +828,7 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
         combust_days += usize::from(cell.combust);
     }
     assert!(
-        combust_days > 0 && combust_days < month.days.len(),
+        combust_days > 0 && combust_days < inside(&month).len(),
         "expected both combust and non-combust days, got {combust_days}"
     );
 
@@ -713,8 +836,10 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
         let month = almanac
             .graha_month(graha, solar(2026, 8))
             .expect("graha month");
-        for cell in &month.days {
-            let DayDetail::Graha(day) = almanac.day_detail(graha, cell.date).expect("detail")
+        for cell in inside_graha(&month) {
+            let DayDetail::Graha(day) = almanac
+                .day_detail(graha, cell.date, System::Solar)
+                .expect("detail")
             else {
                 panic!("graha detail");
             };
@@ -730,7 +855,7 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
     // lose. They carry no orb, so the day view omits the block entirely.
     for graha in [Graha::Surya, Graha::Rahu, Graha::Ketu] {
         let DayDetail::Graha(day) = almanac
-            .day_detail(graha, DateKey::new(2026, 8, 14).unwrap())
+            .day_detail(graha, DateKey::new(2026, 8, 14).unwrap(), System::Solar)
             .expect("detail")
         else {
             panic!("graha detail");
@@ -764,10 +889,223 @@ fn every_subject_shares_one_month_system() {
             assert_eq!(month.label, moon.label, "{graha:?} {system:?}: label");
             assert_eq!(month.system, system, "{graha:?} {system:?}: system");
             assert_eq!(
-                month.days.iter().map(|day| day.date).collect::<Vec<_>>(),
-                moon.days.iter().map(|day| day.date).collect::<Vec<_>>(),
+                inside_graha(&month)
+                    .iter()
+                    .map(|day| day.date)
+                    .collect::<Vec<_>>(),
+                inside(&moon).iter().map(|day| day.date).collect::<Vec<_>>(),
                 "{graha:?} {system:?}: days"
             );
         }
     }
+}
+
+/// The grid's tithi numbers must be the ones a panchang prints.
+///
+/// Checked against the shape of a lunar month rather than against a table of
+/// dates: an amanta month opens on Shukla Pratipada and closes on Amavasya, a
+/// purnimanta month opens on Krishna Pratipada and closes on Purnima, and in
+/// both the numbers advance by one a day except where a tithi is skipped or
+/// repeated - which is exactly what the marks are for.
+#[test]
+fn a_lunar_month_runs_from_one_end_of_the_tithis_to_the_other() {
+    use chandra_almanac::tithi::Paksha;
+
+    let almanac = almanac();
+    reset(&almanac);
+
+    let month = |system| {
+        almanac
+            .moon_month(MonthCursor {
+                system,
+                ..solar(2026, 8)
+            })
+            .expect("month")
+    };
+
+    let amanta = month(System::Amanta);
+    let days = inside(&amanta);
+    let first = days[0].tithi.as_ref().expect("lunar cells carry a tithi");
+    let last = days[days.len() - 1].tithi.as_ref().expect("tithi");
+
+    assert_eq!(amanta.label, "Shravana 2083", "Vikram Samvat year");
+    assert_eq!(first.paksha, Paksha::Shukla);
+    assert_eq!(first.number, 1, "an amanta month opens on Shukla Pratipada");
+    assert_eq!(last.paksha, Paksha::Krishna);
+    assert_eq!(last.number, 15, "and closes on Amavasya");
+    assert_eq!(last.name, "Amavasya");
+
+    let purnimanta = month(System::Purnimanta);
+    let days = inside(&purnimanta);
+    let first = days[0].tithi.as_ref().expect("tithi");
+    let last = days[days.len() - 1].tithi.as_ref().expect("tithi");
+
+    assert_eq!(first.paksha, Paksha::Krishna);
+    assert_eq!(
+        first.number, 1,
+        "a purnimanta month opens on Krishna Pratipada"
+    );
+    assert_eq!(last.paksha, Paksha::Shukla);
+    assert_eq!(last.number, 15, "and closes on Purnima");
+    assert_eq!(last.name, "Purnima");
+
+    // Purnima and Amavasya each fall exactly once inside an amanta month.
+    let syzygies = inside(&amanta)
+        .iter()
+        .filter_map(|cell| cell.tithi.as_ref())
+        .filter(|tithi| tithi.number == 15)
+        .count();
+    assert_eq!(syzygies, 2, "one Purnima and one Amavasya");
+}
+
+/// Every cell of the grid advances by one tithi, and where it does not, it says
+/// so.
+///
+/// This is the invariant the kshaya dot and the vriddhi rule exist to protect. A
+/// jump with no kshaya recorded, or a repeat with no vriddhi, would be a bug the
+/// user would read as a wrong number.
+#[test]
+fn a_jump_or_a_repeat_in_the_tithi_numbers_is_always_marked() {
+    use chandra_almanac::tithi::{Tithi, Vriddhi};
+
+    let almanac = almanac();
+    reset(&almanac);
+
+    let mut jumps = 0;
+    let mut repeats = 0;
+
+    // A year of lunar months, so both cases are certain to occur: a synodic
+    // month holds 30 tithis in 29.53 days, so roughly one a month is one or the
+    // other.
+    for offset in 0..13 {
+        let month = almanac
+            .moon_month(MonthCursor {
+                system: System::Amanta,
+                offset,
+                ..solar(2026, 8)
+            })
+            .expect("month");
+
+        for pair in month.days.windows(2) {
+            let here = pair[0].tithi.as_ref().expect("tithi");
+            let next = pair[1].tithi.as_ref().expect("tithi");
+            let steps = Tithi::from_index(here.index)
+                .unwrap()
+                .steps_to(Tithi::from_index(next.index).unwrap());
+
+            match steps {
+                0 => {
+                    repeats += 1;
+                    assert_eq!(
+                        here.vriddhi,
+                        Some(Vriddhi::First),
+                        "{:?} repeats its tithi without being marked",
+                        pair[0].date
+                    );
+                    assert_eq!(next.vriddhi, Some(Vriddhi::Second), "{:?}", pair[1].date);
+                    assert!(here.kshaya.is_empty(), "a repeat cannot also skip");
+                }
+                1 => assert!(
+                    here.kshaya.is_empty(),
+                    "{:?} advances by one but claims a skip",
+                    pair[0].date
+                ),
+                more => {
+                    jumps += 1;
+                    assert_eq!(
+                        here.kshaya.len(),
+                        more as usize - 1,
+                        "{:?} jumps {more} tithis and must name every one it passed",
+                        pair[0].date
+                    );
+                    // The named tithis are the ones actually in between.
+                    let mut expected = Tithi::from_index(here.index).unwrap().next();
+                    for skipped in &here.kshaya {
+                        assert_eq!(skipped.index, expected.index());
+                        assert_eq!(skipped.name, expected.full_name());
+                        expected = expected.next();
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(jumps > 0, "a year of lunar months contains a kshaya tithi");
+    assert!(
+        repeats > 0,
+        "a year of lunar months contains a vriddhi tithi"
+    );
+}
+
+/// The grid and the day it opens must name the same tithi.
+///
+/// The cell reads the tithi at sunrise; the day view resolves the spans that
+/// touch the day and marks one prevailing. Two routines, one answer - or the
+/// number in the grid means nothing.
+#[test]
+fn the_cell_and_the_day_it_opens_name_the_same_tithi() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    let month = almanac
+        .moon_month(MonthCursor {
+            system: System::Amanta,
+            ..solar(2026, 8)
+        })
+        .expect("month");
+
+    for cell in inside(&month) {
+        let tithi = cell.tithi.as_ref().expect("tithi");
+        let DayDetail::Moon(day) = almanac
+            .day_detail(Graha::Chandra, cell.date, System::Amanta)
+            .expect("detail")
+        else {
+            panic!("moon detail");
+        };
+        let panchanga = day.panchanga.expect("a lunar day carries a panchanga");
+        let prevailing = panchanga
+            .tithis
+            .iter()
+            .find(|span| span.prevailing)
+            .expect("exactly one span prevails");
+
+        assert_eq!(
+            prevailing.index, tithi.index,
+            "{:?}: cell and day disagree about the tithi",
+            cell.date
+        );
+        assert_eq!(prevailing.number, tithi.number);
+        assert_eq!(prevailing.paksha, tithi.paksha);
+        assert_eq!(prevailing.name, tithi.name);
+
+        // Every span's boundaries are ordered, and the day's spans are
+        // contiguous: one ends where the next begins.
+        for span in &panchanga.tithis {
+            if let (Some(entry), Some(exit)) = (span.entry, span.exit) {
+                assert!(entry.unix_ms < exit.unix_ms, "{:?} {span:?}", cell.date);
+            }
+        }
+        for pair in panchanga.tithis.windows(2) {
+            if let (Some(exit), Some(entry)) = (pair[0].exit, pair[1].entry) {
+                assert!(
+                    (exit.unix_ms - entry.unix_ms).abs() < 1000,
+                    "{:?}: a gap between consecutive tithis",
+                    cell.date
+                );
+            }
+        }
+    }
+
+    // Solar mode carries no panchanga at all: it is absent, not empty.
+    let DayDetail::Moon(day) = almanac
+        .day_detail(
+            Graha::Chandra,
+            DateKey::new(2026, 8, 20).unwrap(),
+            System::Solar,
+        )
+        .expect("detail")
+    else {
+        panic!("moon detail");
+    };
+    assert!(day.panchanga.is_none());
 }

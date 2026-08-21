@@ -40,6 +40,14 @@ fn main() {
 
     for graha in Graha::ALL {
         println!("\n{}", graha.name());
-        draw(&graha_icon(graha, 2, Tint::Template).expect("render"), 22);
+        draw(
+            &graha_icon(graha, 2, Tint::Template, false).expect("render"),
+            22,
+        );
+        println!("{} retrograde", graha.name());
+        draw(
+            &graha_icon(graha, 2, Tint::Template, true).expect("render"),
+            22,
+        );
     }
 }

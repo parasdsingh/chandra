@@ -12,6 +12,25 @@ pub const DESIGN_GRID: f32 = 24.0;
 /// Stroke width in design units.
 pub const STROKE_WIDTH: f32 = 1.8;
 
+/// The retrograde mark, `℞`, on the same 24 unit grid.
+///
+/// The notation every printed ephemeris uses, so it needs no key. Drawn rather
+/// than set in type because the menu bar icon is rasterised without a font: there
+/// is no text shaping in this crate, and there is no system font to ask.
+pub const RETROGRADE: &str = concat!(
+    "M 7 4 L 7 20 ",
+    "M 7 4 L 13 4 C 17 4 17.5 6 17.5 8 C 17.5 10 17 12 13 12 L 7 12 ",
+    "M 11.5 12 L 17 20 ",
+    "M 17.5 15.5 L 11.5 21"
+);
+
+/// Stroke width for the retrograde mark, in design units.
+///
+/// Heavier than a glyph's because it is drawn at roughly a third of the size: at
+/// [`STROKE_WIDTH`] the mark rendered as a grey smudge in the menu bar rather
+/// than as a letter.
+pub const RETROGRADE_STROKE: f32 = 2.9;
+
 /// How a glyph's path is painted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ink {

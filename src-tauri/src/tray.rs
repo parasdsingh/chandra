@@ -132,12 +132,16 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
         let Some(item) = app.tray_by_id(&tray_id(graha)) else {
             continue;
         };
-        let icon = graha_icon(graha, ICON_SCALE, tint)
+        let position = snapshot.grahas.iter().find(|p| p.graha == graha);
+
+        // Retrograde is the one state the menu bar carries. Everything else a
+        // graha can be doing is named in the calendar, in words.
+        let retrograde = position.is_some_and(|p| p.retrograde);
+        let icon = graha_icon(graha, ICON_SCALE, tint, retrograde)
             .map_err(|e| AppError::Engine(format!("cannot draw the {} icon: {e}", graha.name())))?;
         item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
             .map_err(|e| AppError::Engine(format!("cannot set the {} icon: {e}", graha.name())))?;
 
-        let position = snapshot.grahas.iter().find(|p| p.graha == graha);
         let tooltip = match position {
             Some(p) => format!(
                 "{} - {}{}",

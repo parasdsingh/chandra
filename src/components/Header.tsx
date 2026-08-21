@@ -109,8 +109,20 @@ export function Header(props: Props): JSX.Element {
         </span>
       </Show>
 
+      {/* `Adhika` is a qualifier on the month name, not part of it. Setting it
+          apart is what stops `Adhika Shravana` from reading as a thirteenth
+          month name of its own. Split from the fitted string rather than passed
+          separately, so the measuring ladder above still sees one label. */}
       <div class="header__label" ref={labelElement} aria-label={full()}>
-        {fitted()}
+        <Show when={qualifier(fitted())} fallback={fitted()}>
+          {(split) => (
+            <>
+              {split().before}
+              <span class="header__qualifier">Adhika </span>
+              {split().after}
+            </>
+          )}
+        </Show>
       </div>
 
       <Show when={props.view !== "settings"}>
@@ -124,6 +136,13 @@ export function Header(props: Props): JSX.Element {
       </Show>
     </header>
   );
+}
+
+/** Splits a label around the `Adhika` prefix, if it carries one. */
+function qualifier(label: string): { before: string; after: string } | null {
+  const at = label.indexOf("Adhika ");
+  if (at < 0) return null;
+  return { before: label.slice(0, at), after: label.slice(at + "Adhika ".length) };
 }
 
 function Chevron(): JSX.Element {

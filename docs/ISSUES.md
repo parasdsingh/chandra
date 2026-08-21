@@ -212,3 +212,33 @@ proved by `every_subject_shares_one_month_system`, which compares each graha's
 month against the Moon's across all three systems. The report came from the
 settings section being reached from whichever subject's panel was open, with
 nothing on screen saying the choice was calendar-wide. The section now says so.
+
+### I-045 — Lunar mode still showed Gregorian dates — done
+The month label and the day range were lunar; every cell still printed the
+Gregorian day. Designed first in `docs/design/lunar-dates.md`, then implemented
+as D-021. The cell now prints the tithi in panchang notation with the Gregorian
+day beneath it, kshaya and vriddhi are marked rather than smoothed over, and the
+year is Vikram Samvat.
+
+Two things had to move to the back end to make it correct:
+
+- **The grid.** The front end laid out 42 cells by guessing dates either side of
+  the month's first day, which works for a Gregorian month and cannot work for a
+  lunar one. It now receives 42 cells with an `in_month` flag, so the leading and
+  trailing cells carry real data instead of being drawn blank.
+- **The tithi.** Computed once per month and shared by every subject, because a
+  day is named the same whichever graha is plotted on it. Measured at 11.7ms for
+  a cold lunar month against a 30ms budget; the second subject over the same
+  month costs 7.7ms because the tithis are already resolved.
+
+Verified in the installed app against Shravana 2083 (13 Aug - 11 Sep 2026): the
+month opens on `S1` and closes on `A`, `P` falls on 28 August, `K13` is skipped
+between 10 and 11 August with the dot on the earlier cell, and `S12` is repeated
+across 24 and 25 August with the rule joining them.
+
+### I-046 — The menu bar showed no state at all — done
+`℞` in the lower right of a retrograde graha's icon, with the glyph shrunk to
+free the corner. Verified against Shani, retrograde on 21 August 2026: the icon
+reads `♄℞` in the menu bar at real size. Retrograde only, by the user's choice -
+a template image varies in alpha alone, so a second state would have to be
+another shape in another corner of a 22 point square.

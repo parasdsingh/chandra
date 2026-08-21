@@ -21,15 +21,31 @@ import type {
 
 export const bootstrap = () => invoke<Bootstrap>("bootstrap");
 
-/** The month containing `anchorUnixMs`, stepped by `offset` months. */
-export const moonMonth = (anchorUnixMs: number, offset: number) =>
-  invoke<MoonMonth>("moon_month", { anchorUnixMs, offset });
+/**
+ * The month containing `anchorUnixMs`, stepped by `offset` months.
+ *
+ * `firstWeekday` is the locale's opening weekday, zero-based from Monday. The
+ * back end lays the 42 cells out, because only it knows which civil days a lunar
+ * month contains; the weekday is the one fact it cannot derive.
+ */
+export const moonMonth = (
+  anchorUnixMs: number,
+  offset: number,
+  firstWeekday: number,
+) => invoke<MoonMonth>("moon_month", { anchorUnixMs, offset, firstWeekday });
 
 export const grahaMonth = (
   graha: GrahaKey,
   anchorUnixMs: number,
   offset: number,
-) => invoke<GrahaMonth>("graha_month", { graha, anchorUnixMs, offset });
+  firstWeekday: number,
+) =>
+  invoke<GrahaMonth>("graha_month", {
+    graha,
+    anchorUnixMs,
+    offset,
+    firstWeekday,
+  });
 
 export const dayDetail = (
   graha: GrahaKey,

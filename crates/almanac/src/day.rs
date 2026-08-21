@@ -5,10 +5,33 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 use crate::events::{combustion_at, Combustion};
+use crate::lunar::MonthSystem;
 use crate::phase::{self, PhaseName};
 use crate::spans::{divisions_in_day, Division, Span};
-use crate::time::{CivilDay, DateKey, Moment};
+use crate::time::{self, CivilDay, DateKey, Moment};
+use crate::tithi::{self, Reference, TithiSpan};
 use crate::zodiac::{degrees_in_rashi, pada, Nakshatra, Rashi};
+
+/// The panchanga limbs a lunar calendar needs to explain the day it drew.
+///
+/// Present only in a lunar month. The grid states a tithi number there, and a
+/// number nobody can check is worse than no number: `tithis` names it in words
+/// with its true boundaries, and `sunrise` is the instant it was taken at, so
+/// the reading can be audited rather than trusted.
+///
+/// Yoga and karana are still absent (`docs/DECISIONS.md` D-010). Neither appears
+/// in the grid, so neither has a number to explain; a karana is in any case half
+/// a tithi and derivable from the row above it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DayPanchanga {
+    /// Every tithi touching the civil day, in order.
+    pub tithis: Vec<TithiSpan>,
+    pub sunrise: Option<Moment>,
+    pub reference: Reference,
+    /// 0 = Ravivara. Independent of the locale's first day of week.
+    pub vara: u8,
+    pub vara_name: String,
+}
 
 /// The v1 moon detail, and nothing beyond it.
 ///
@@ -32,6 +55,8 @@ pub struct MoonDay {
     /// How far from the Sun, and whether that puts the Moon inside its rays.
     /// Judged at local noon, the same instant the month grid marks.
     pub combustion: Combustion,
+    /// Present only in a lunar month.
+    pub panchanga: Option<DayPanchanga>,
     pub nakshatras: Vec<NakshatraSpan>,
     pub rashis: Vec<RashiSpan>,
     pub source: Source,
@@ -76,6 +101,9 @@ pub struct GrahaDay {
     /// How far from the Sun, and whether that puts the graha inside its rays.
     /// Judged at local noon, the same instant the month grid marks.
     pub combustion: Combustion,
+    /// The same lunar day the Moon's view shows. A day is named the same
+    /// whichever subject is being read on it.
+    pub panchanga: Option<DayPanchanga>,
     pub nakshatras: Vec<NakshatraSpan>,
     pub rashis: Vec<RashiSpan>,
     pub source: Source,
@@ -89,14 +117,64 @@ pub struct GrahaDay {
 /// keeps the calendar usable at latitudes where the traditional rule has nothing
 /// to point at.
 fn reference_instant(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<f64> {
-    let sunrise = engine
-        .rise_set(day.start_jd, Graha::Surya, observer)?
-        .rise
-        .filter(|&jd| jd >= day.start_jd && jd < day.end_jd);
-    Ok(sunrise.unwrap_or_else(|| day.noon_jd()))
+    Ok(sunrise_of(engine, day, observer)?.unwrap_or_else(|| day.noon_jd()))
 }
 
-pub fn moon_day(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<MoonDay> {
+/// Sunrise inside this civil day, if the Sun rises at all.
+fn sunrise_of(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<Option<f64>> {
+    Ok(engine
+        .rise_set(day.start_jd, Graha::Surya, observer)?
+        .rise
+        .filter(|&jd| jd >= day.start_jd && jd < day.end_jd))
+}
+
+/// The day's panchanga, in a lunar month.
+///
+/// The spans are counted against the sunrises of this day and its neighbours,
+/// because a tithi routinely begins the day before and ends the day after, and
+/// whether it holds none, one or two of them is what makes it a kshaya, an
+/// ordinary tithi, or a vriddhi.
+fn panchanga(
+    engine: &Engine,
+    day: &CivilDay,
+    observer: Observer,
+    system: MonthSystem,
+) -> Result<Option<DayPanchanga>> {
+    if !system.is_lunar() {
+        return Ok(None);
+    }
+
+    let sunrise = sunrise_of(engine, day, observer)?;
+    let reference = sunrise.unwrap_or_else(|| day.noon_jd());
+
+    let neighbours = [day.previous()?, day.clone(), day.next()?];
+    let mut sunrises = Vec::with_capacity(3);
+    for neighbour in &neighbours {
+        if let Some(jd) = sunrise_of(engine, neighbour, observer)? {
+            sunrises.push(jd);
+        }
+    }
+
+    let vara = time::vara(day.date)?;
+    Ok(Some(DayPanchanga {
+        tithis: tithi::spans_in_day(engine, day, reference, &sunrises)?,
+        sunrise: sunrise.map(|jd| day.moment(jd)).transpose()?,
+        reference: if sunrise.is_some() {
+            Reference::Sunrise
+        } else {
+            Reference::LocalNoon
+        },
+        vara,
+        vara_name: time::VARA_NAMES[vara as usize].to_string(),
+    }))
+}
+
+pub fn moon_day(
+    engine: &Engine,
+    day: &CivilDay,
+    observer: Observer,
+    system: MonthSystem,
+) -> Result<MoonDay> {
     let reference = reference_instant(engine, day, observer)?;
 
     let noon = engine.illumination(day.noon_jd())?;
@@ -133,6 +211,7 @@ pub fn moon_day(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<M
         moonrise: rise_set.rise.map(|jd| day.moment(jd)).transpose()?,
         moonset: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
         combustion: combustion_at(engine, Graha::Chandra, day.noon_jd())?,
+        panchanga: panchanga(engine, day, observer, system)?,
         nakshatras,
         rashis,
         source,
@@ -144,6 +223,7 @@ pub fn graha_day(
     graha: Graha,
     day: &CivilDay,
     observer: Observer,
+    system: MonthSystem,
 ) -> Result<GrahaDay> {
     let reference = reference_instant(engine, day, observer)?;
     let position = engine.position(reference, graha)?;
@@ -159,6 +239,7 @@ pub fn graha_day(
         rise: rise_set.rise.map(|jd| day.moment(jd)).transpose()?,
         set: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
         combustion: combustion_at(engine, graha, day.noon_jd())?,
+        panchanga: panchanga(engine, day, observer, system)?,
         nakshatras: nakshatra_spans(engine, graha, day, reference)?,
         rashis: rashi_spans(engine, graha, day, reference)?,
         source: position.source,

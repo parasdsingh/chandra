@@ -1,15 +1,24 @@
 /**
  * One 40 x 40 day cell.
  *
- * Anatomy is fixed (docs/DESIGN.md 5.4): numeral above, content below. The date
- * is the label; the phase or the event row is the content.
+ * Anatomy is fixed (docs/DESIGN.md 5.4): a label above, content below. Which is
+ * which depends on the calendar in force, and that is the whole of the
+ * difference between the two modes:
+ *
+ * - Solar: the Gregorian day labels the cell, the phase or graha glyph is the
+ *   content.
+ * - Lunar: the tithi labels the cell, because that is what the day is called,
+ *   and the Gregorian day becomes the annotation underneath.
+ *
+ * State marks - combustion, retrograde, ingress, station, kshaya, vriddhi - are
+ * drawn on the cell rather than on the glyph, so they survive that swap.
  */
 
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 
-import type { GridDay } from "../lib/calendar";
 import type {
+  CellTithi,
   EventKind,
   GrahaCell,
   GrahaInfo,
@@ -20,26 +29,24 @@ import { GrahaGlyph } from "./GrahaGlyph";
 import { PhaseGlyph } from "./PhaseGlyph";
 
 interface CommonProps {
-  cell: GridDay;
   selected: boolean;
   today: boolean;
   focused: boolean;
+  label: string;
   onSelect: () => void;
 }
 
 interface MoonProps extends CommonProps {
   kind: "moon";
-  data: MoonCell | undefined;
+  data: MoonCell;
   southern: boolean;
-  label: string;
 }
 
 interface GrahaProps extends CommonProps {
   kind: "graha";
-  data: GrahaCell | undefined;
+  data: GrahaCell;
   events: TransitEvent[];
   info: GrahaInfo | undefined;
-  label: string;
 }
 
 type Props = MoonProps | GrahaProps;
@@ -52,15 +59,42 @@ const MARKED_EVENTS: EventKind[] = [
   "direct_station",
 ];
 
+/**
+ * What a tithi is called in a cell.
+ *
+ * `S1`-`S14`, `P` for Purnima, `K1`-`K14`, `A` for Amavasya - the notation
+ * printed panchangs use. Derived from the paksha and the number within it, never
+ * from the astronomical 1-30 index: amanta and purnimanta months count from
+ * opposite ends of that index, so it is right in one and wrong in the other.
+ */
+export function tithiLabel(tithi: CellTithi): { prefix: string; value: string } {
+  if (tithi.number === 15) {
+    return { prefix: "", value: tithi.paksha === "shukla" ? "P" : "A" };
+  }
+  return {
+    prefix: tithi.paksha === "shukla" ? "S" : "K",
+    value: String(tithi.number),
+  };
+}
+
+/** Three-letter month, uppercased, for the cell that opens a Gregorian month. */
+function monthAbbreviation(month: number): string {
+  return new Intl.DateTimeFormat(undefined, { timeZone: "UTC", month: "short" })
+    .format(new Date(Date.UTC(2000, month - 1, 1, 12)))
+    .toUpperCase();
+}
+
 export function DayCell(props: Props): JSX.Element {
-  const combustToday = () =>
-    props.kind === "moon"
-      ? ((props as MoonProps).data?.combust ?? false)
-      : ((props as GrahaProps).data?.combust ?? false);
+  const date = () => props.data.date;
+  const inMonth = () => props.data.in_month;
+  const tithi = () => props.data.tithi;
+  const retrograde = () =>
+    props.kind === "graha" && (props as GrahaProps).data.retrograde;
 
   const classes = () => ({
     "day-cell": true,
-    "is-outside": !props.cell.inMonth,
+    "is-lunar": tithi() !== null,
+    "is-outside": !inMonth(),
     "is-selected": props.selected,
     "is-today": props.today,
   });
@@ -77,6 +111,16 @@ export function DayCell(props: Props): JSX.Element {
         event.kind === "retrograde_station" || event.kind === "direct_station",
     );
 
+  /**
+   * The Gregorian day, which becomes the annotation in lunar mode.
+   *
+   * It carries the month only where the month changes. Printing it on every
+   * cell would be the same three letters 30 times; printing it nowhere would
+   * leave a lunar month that runs 13 Aug to 11 Sep with no visible seam.
+   */
+  const gregorian = () =>
+    date().day === 1 ? `1 ${monthAbbreviation(date().month)}` : String(date().day);
+
   return (
     <div
       classList={classes()}
@@ -86,72 +130,119 @@ export function DayCell(props: Props): JSX.Element {
       aria-label={props.label}
       tabindex={props.focused ? 0 : -1}
       onClick={props.onSelect}
-      data-day={props.cell.date.day}
+      data-day={date().day}
     >
-      <span class="day-cell__numeral">{props.cell.date.day}</span>
+      <Show
+        when={tithi()}
+        fallback={<span class="day-cell__numeral">{date().day}</span>}
+      >
+        {(lunar) => (
+          <span class="day-cell__numeral">
+            <Show when={tithiLabel(lunar()).prefix}>
+              {(prefix) => <span class="day-cell__paksha">{prefix()}</span>}
+            </Show>
+            {tithiLabel(lunar()).value}
+            {/* In lunar mode the mark runs with the label, so a wide numeral
+                pushes it along instead of both reaching for the same corner.
+                The corner is the marker slot, and an ingress lives there. */}
+            <Show when={retrograde()}>
+              <span class="day-cell__retro-mark is-inline" aria-hidden="true">
+                ℞
+              </span>
+            </Show>
+          </span>
+        )}
+      </Show>
 
-      {/* Both kinds put their subject's glyph in the same place, so the two
-          calendars read the same way: the numeral labels the day, the glyph is
-          what the day is about. */}
       <span class="day-cell__content">
-        <Show when={props.kind === "moon"}>
-          <Show when={(props as MoonProps).data}>
-            {(data) => (
+        <Show
+          when={tithi()}
+          fallback={
+            <Show when={props.kind === "moon"} fallback={<GrahaMark {...props} />}>
               <PhaseGlyph
-                illumination={data().illumination}
-                waxing={data().is_waxing}
+                illumination={(props as MoonProps).data.illumination}
+                waxing={(props as MoonProps).data.is_waxing}
                 southern={(props as MoonProps).southern}
                 size={14}
-                dim={!props.cell.inMonth}
+                dim={!inMonth()}
               />
-            )}
-          </Show>
-        </Show>
-
-        <Show when={props.kind === "graha"}>
-          <Show when={(props as GrahaProps).info}>
-            {(info) => (
-              <span
-                class="day-cell__graha"
-                classList={{ "is-outside": !props.cell.inMonth }}
-              >
-                <GrahaGlyph info={info()} size={14} colour="currentColor" />
-              </span>
-            )}
-          </Show>
+            </Show>
+          }
+        >
+          {/* In lunar mode the second line is the Gregorian date. The subject's
+              own symbol is not repeated here: the header already carries it, and
+              every state it used to anchor is drawn on the cell itself. */}
+          <span class="day-cell__gregorian">{gregorian()}</span>
         </Show>
       </span>
 
-      {/* Retrograde is written the way every ephemeris writes it, beside the
-          symbol it applies to. A colour cannot do this job: it has to be learnt,
-          it is the first thing a grayscale or colour-blind rendering loses, and
-          it left the glyph itself carrying two meanings at once. */}
-      <Show when={props.kind === "graha" && (props as GrahaProps).data?.retrograde}>
+      {/* In solar mode the mark sits beside the glyph, placed out of the flow so
+          the glyph stays on the column's centre line whether or not the day is
+          retrograde. A colour cannot do this job: it has to be learnt, and it is
+          the first thing a grayscale or colour-blind rendering loses. */}
+      <Show when={!tithi() && retrograde()}>
         <span class="day-cell__retro-mark" aria-hidden="true">
           ℞
         </span>
       </Show>
 
-      {/* Combustion is a span. A rule under the numeral says "all day", where a
-          marker would read as an instant. */}
-      <Show when={combustToday()}>
+      {/* Combustion is a span. A rule says "all day", where a marker would read
+          as an instant.
+
+          Not drawn for the Moon in a lunar month: the Moon is combust exactly
+          around Amavasya, which the numeral already names, and a rule under the
+          Gregorian line read as an underline on the date rather than as a state
+          (DESIGN 1.3, no duplicated ink). */}
+      <Show when={props.data.combust && !(props.kind === "moon" && tithi())}>
         <span class="day-cell__combust" />
       </Show>
 
       {/* A retrograde period becomes one continuous line running across whole
-          weeks: visible at a glance, invisible when not looked for. */}
-      <Show when={props.kind === "graha" && (props as GrahaProps).data?.retrograde}>
+          weeks: visible at a glance, invisible when not looked for.
+
+          Only in solar mode. In a lunar month the cell's bottom edge carries the
+          vriddhi rule, and two full-width rules in one slot would say two things
+          with one shape. The mark beside the tithi already appears on every day
+          of the stretch, so the stretch is still legible. */}
+      <Show when={!tithi() && retrograde()}>
         <span class="day-cell__retro" />
       </Show>
 
+      {/* A tithi that began and ended inside this day is one the grid never
+          names, so the numbers jump at this cell. Unmarked that would read as a
+          bug; marked, it reads as the calendar it is. */}
+      <Show when={(tithi()?.kshaya.length ?? 0) > 0}>
+        <span class="day-cell__kshaya" />
+      </Show>
+
+      {/* A tithi holding two sunrises names two days. The rule runs full width
+          on both of them, so the pair reads as one span bracketed across two
+          cells rather than as a repeated number. */}
+      <Show when={tithi()?.vriddhi}>
+        <span class="day-cell__vriddhi" />
+      </Show>
+
       {/* An event is an instant, so it gets a single mark in the corner rather
-          than a row competing with the glyph for the cell's 40 pixels. */}
+          than a row competing with the content for the cell's 40 pixels. */}
       <Show when={marked().length > 0}>
-        <span
-          class="day-cell__event"
-          classList={{ "is-station": isStation() }}
-        />
+        <span class="day-cell__event" classList={{ "is-station": isStation() }} />
       </Show>
     </div>
+  );
+}
+
+/** The graha's symbol, drawn only in solar mode where the second line is free. */
+function GrahaMark(props: Props): JSX.Element {
+  return (
+    <Show when={props.kind === "graha" && (props as GrahaProps).info}>
+      {(info) => (
+        <span
+          class="day-cell__graha"
+          classList={{ "is-outside": !props.data.in_month }}
+        >
+          <GrahaGlyph info={info()} size={14} colour="currentColor" />
+        </span>
+      )}
+    </Show>
   );
 }

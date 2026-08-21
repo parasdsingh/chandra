@@ -32,7 +32,6 @@ import type { JSX } from "solid-js";
 import { batch, createSignal, For, onCleanup, Show } from "solid-js";
 
 import type { DateKey, GrahaInfo, GrahaMonth, MoonMonth } from "../ipc/types";
-import { buildGrid } from "../lib/calendar";
 import { MonthCells, WeekdayRow } from "./MonthGrid";
 
 /** Height of one month of cells: six rows of 40px. */
@@ -343,10 +342,6 @@ export function CalendarScroller(props: Props): JSX.Element {
                 <Show when={entry.month}>
                   {(month) => (
                     <MonthCells
-                      grid={buildGrid(
-                        month().days.map((day) => day.date),
-                        props.firstWeekday,
-                      )}
                       firstWeekday={props.firstWeekday}
                       month={month()}
                       kind={props.kind}
@@ -354,7 +349,6 @@ export function CalendarScroller(props: Props): JSX.Element {
                       selected={props.selected}
                       today={props.today}
                       southern={props.southern}
-                      direction={0}
                       onSelect={(date) => {
                         // A drag that ends over a cell must not also select it.
                         if (moved) return;

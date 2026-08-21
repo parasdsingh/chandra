@@ -93,6 +93,16 @@ pub struct LunarMonth {
     /// Sun stayed in a single rashi for its whole length. It repeats the name of
     /// the month that follows it.
     pub adhika: bool,
+    /// Sankrantis inside the month: `0` intercalary, `1` ordinary, `2` a kshaya
+    /// masa, where the Sun crosses two rashis and a month name is skipped
+    /// entirely. Carried as a count rather than as two flags so the three states
+    /// cannot contradict each other.
+    pub sankranti_count: u8,
+    /// The second name when `sankranti_count == 2`. `None` otherwise.
+    pub kshaya_masa_name: Option<&'static str>,
+    /// Vikram Samvat year. The era begins at Chaitra, so it does not line up
+    /// with the Gregorian year the month happens to fall in.
+    pub vikram_year: i16,
     /// Julian Day of the syzygy that opens the month.
     pub start_jd: f64,
     /// Julian Day of the syzygy that opens the next month.
@@ -107,13 +117,33 @@ pub struct LunarMonth {
 
 impl LunarMonth {
     /// Display name, with the intercalary prefix where one applies.
+    ///
+    /// A kshaya masa carries both names joined by an en dash: the Sun crossed
+    /// two rashis inside one lunar month, so one name has no month of its own
+    /// and is not simply dropped.
     pub fn display_name(&self) -> String {
-        if self.adhika {
-            format!("Adhika {}", self.name)
-        } else {
-            self.name.to_string()
+        match (self.adhika, self.kshaya_masa_name) {
+            (true, _) => format!("Adhika {}", self.name),
+            (false, Some(second)) => format!("{}\u{2013}{}", self.name, second),
+            (false, None) => self.name.to_string(),
         }
     }
+}
+
+/// Vikram Samvat year for a month.
+///
+/// The era begins at Chaitra, in March or April, so it runs 57 ahead of the
+/// Gregorian year for most of its length and 56 ahead for the part that falls
+/// after 1 January. Deciding by the Gregorian year alone would be wrong for a
+/// quarter of every year; deciding by the month name alone would be wrong for
+/// Pausha, which starts in December in some years and in January in others.
+fn vikram_year(name_index: usize, first_day: DateKey) -> i16 {
+    // Chaitra opens the era; Pausha, Magha and Phalguna close it.
+    let position_in_era = (name_index + 1) % 12;
+    let closing_months = position_in_era >= 9;
+    let after_new_year = closing_months && first_day.month <= 3;
+
+    first_day.year + if after_new_year { 56 } else { 57 }
 }
 
 /// The Moon's elongation from the Sun in degrees, `[0, 360)`.
@@ -274,7 +304,11 @@ fn build(
     let next_new_moon = next_syzygy(engine, naming_jd + 1.0, 0.0)?;
     let sun_at_end = engine.position(next_new_moon, Graha::Surya)?;
     let rashi_at_end = Rashi::from_longitude(sun_at_end.longitude).index();
-    let adhika = rashi_at_start == rashi_at_end;
+
+    // How many rashi boundaries the Sun crossed inside the month. None is an
+    // intercalary month; two is a kshaya masa, where a name is skipped.
+    let sankranti_count = ((rashi_at_end + 12 - rashi_at_start) % 12) as u8;
+    let adhika = sankranti_count == 0;
 
     // The name always comes from the rashi the Sun occupies at the new moon.
     // An intercalary month needs no adjustment: because the Sun does not leave
@@ -292,6 +326,10 @@ fn build(
     Ok(LunarMonth {
         name: NAMES_BY_SOLAR_RASHI[name_index],
         adhika,
+        sankranti_count,
+        kshaya_masa_name: (sankranti_count == 2)
+            .then(|| NAMES_BY_SOLAR_RASHI[(name_index + 1) % 12]),
+        vikram_year: vikram_year(name_index, first_day),
         start_jd,
         end_jd,
         first_day,

@@ -35,6 +35,7 @@
         "prevailing": true
       }
     ],
+    "panchanga": null,
     "rashis": [
       {
         "entry": {
@@ -64,8 +65,84 @@
     "speed": -0.0005101790010891006
   },
   "grahaMonth": {
+    "adhika": false,
     "anchor_unix_ms": 1739601000000,
     "days": [
+      {
+        "combust": false,
+        "date": {
+          "day": 27,
+          "month": 1,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 87.77143647041285,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": true,
+        "speed": -0.3435792119335126,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 28,
+          "month": 1,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 87.43237066020664,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": true,
+        "speed": -0.33445630243617613,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 29,
+          "month": 1,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 87.10271021453292,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": true,
+        "speed": -0.32477403669244365,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 30,
+          "month": 1,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 86.78299724405854,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": true,
+        "speed": -0.3145675173451506,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 31,
+          "month": 1,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 86.47373691319768,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": true,
+        "speed": -0.3038755525211511,
+        "tithi": null
+      },
       {
         "combust": false,
         "date": {
@@ -73,11 +150,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 86.175393762904,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.29274048492891463
+        "speed": -0.29274048492891463,
+        "tithi": null
       },
       {
         "combust": false,
@@ -86,11 +165,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 85.88838851449538,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.2812074363336563
+        "speed": -0.2812074363336563,
+        "tithi": null
       },
       {
         "combust": false,
@@ -99,11 +180,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 85.61309593381917,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.26932295704263526
+        "speed": -0.26932295704263526,
+        "tithi": null
       },
       {
         "combust": false,
@@ -112,11 +195,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 85.3498441264925,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.2571335651213209
+        "speed": -0.2571335651213209,
+        "tithi": null
       },
       {
         "combust": false,
@@ -125,11 +210,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 85.09891529447796,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.2446843528335353
+        "speed": -0.2446843528335353,
+        "tithi": null
       },
       {
         "combust": false,
@@ -138,11 +225,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 84.86054769686048,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.2320179685046009
+        "speed": -0.2320179685046009,
+        "tithi": null
       },
       {
         "combust": false,
@@ -151,11 +240,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 84.63493845591807,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.21917396112130424
+        "speed": -0.21917396112130424,
+        "tithi": null
       },
       {
         "combust": false,
@@ -164,11 +255,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 84.42224685215267,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.20618842560053233
+        "speed": -0.20618842560053233,
+        "tithi": null
       },
       {
         "combust": false,
@@ -177,11 +270,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 84.22259784717679,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.19309390160546275
+        "speed": -0.19309390160546275,
+        "tithi": null
       },
       {
         "combust": false,
@@ -190,11 +285,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 84.03608563576582,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.179919398001707
+        "speed": -0.179919398001707,
+        "tithi": null
       },
       {
         "combust": false,
@@ -203,11 +300,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.86277707278461,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.1666906279163419
+        "speed": -0.1666906279163419,
+        "tithi": null
       },
       {
         "combust": false,
@@ -216,11 +315,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.70271483367297,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.15343031324968334
+        "speed": -0.15343031324968334,
+        "tithi": null
       },
       {
         "combust": false,
@@ -229,11 +330,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.55592017535211,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.1401586551941425
+        "speed": -0.1401586551941425,
+        "tithi": null
       },
       {
         "combust": false,
@@ -242,11 +345,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.42239523100406,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.1268937678867142
+        "speed": -0.1268937678867142,
+        "tithi": null
       },
       {
         "combust": false,
@@ -255,11 +360,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.30212482195964,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.11365223594604364
+        "speed": -0.11365223594604364,
+        "tithi": null
       },
       {
         "combust": false,
@@ -268,11 +375,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.1950778560583,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.10044935103862487
+        "speed": -0.10044935103862487,
+        "tithi": null
       },
       {
         "combust": false,
@@ -281,11 +390,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.10120843216814,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.0872994538109091
+        "speed": -0.0872994538109091,
+        "tithi": null
       },
       {
         "combust": false,
@@ -294,11 +405,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 83.02045678215043,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.07421596178613471
+        "speed": -0.07421596178613471,
+        "tithi": null
       },
       {
         "combust": false,
@@ -307,11 +420,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.95275017957357,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.061211369007861144
+        "speed": -0.061211369007861144,
+        "tithi": null
       },
       {
         "combust": false,
@@ -320,11 +435,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.89800388962463,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.04829716897995505
+        "speed": -0.04829716897995505,
+        "tithi": null
       },
       {
         "combust": false,
@@ -333,11 +450,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.85612220573255,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.03548380363785533
+        "speed": -0.03548380363785533,
+        "tithi": null
       },
       {
         "combust": false,
@@ -346,11 +465,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.82699955115324,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.02278057771785623
+        "speed": -0.02278057771785623,
+        "tithi": null
       },
       {
         "combust": false,
@@ -359,11 +480,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.81052158036218,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": true,
-        "speed": -0.010195732868233985
+        "speed": -0.010195732868233985,
+        "tithi": null
       },
       {
         "combust": false,
@@ -372,11 +495,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.80656614302563,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": false,
-        "speed": 0.002263314339290469
+        "speed": 0.002263314339290469,
+        "tithi": null
       },
       {
         "combust": false,
@@ -385,11 +510,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.81500393746101,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": false,
-        "speed": 0.014589574713504416
+        "speed": 0.014589574713504416,
+        "tithi": null
       },
       {
         "combust": false,
@@ -398,11 +525,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.83569863358208,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": false,
-        "speed": 0.026775861708323998
+        "speed": 0.026775861708323998,
+        "tithi": null
       },
       {
         "combust": false,
@@ -411,11 +540,13 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.86850631558255,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": false,
-        "speed": 0.03881408386469751
+        "speed": 0.03881408386469751,
+        "tithi": null
       },
       {
         "combust": false,
@@ -424,13 +555,151 @@
           "month": 2,
           "year": 2025
         },
+        "in_month": true,
         "longitude": 82.91327425223616,
         "nakshatra": "punarvasu",
         "rashi": "mithuna",
         "retrograde": false,
-        "speed": 0.05069462379357248
+        "speed": 0.05069462379357248,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 1,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 82.96983928356778,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.06240628374636182,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 2,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.03802638727582,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.07393668654809112,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 3,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.11764806062558,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.08527342030845031,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 4,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.20850492040428,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.0964053540534104,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 5,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.31038748840301,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.107323584179042,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 6,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.42307875629953,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.11802197940557865,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 7,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.54635698744734,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.1284971734669066,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 8,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.67999832565526,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.1387482111936742,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 9,
+          "month": 3,
+          "year": 2025
+        },
+        "in_month": false,
+        "longitude": 83.82377899167446,
+        "nakshatra": "punarvasu",
+        "rashi": "mithuna",
+        "retrograde": false,
+        "speed": 0.1487761322255321,
+        "tithi": null
       }
     ],
+    "era_year": null,
     "events": [
       {
         "at": {
@@ -449,7 +718,9 @@
       }
     ],
     "graha": "mangala",
+    "kshaya_masa_name": null,
     "label": "February 2025",
+    "name": "February",
     "source": "swieph",
     "system": "solar",
     "time_zone": "Asia/Kolkata"
@@ -528,9 +799,228 @@
       "stroke_width": 1.7999999523162842
     }
   ],
+  "lunarDay": {
+    "combustion": {
+      "combust": false,
+      "orb": 12.0,
+      "separation": 91.71915103767118
+    },
+    "date": {
+      "day": 20,
+      "month": 8,
+      "year": 2026
+    },
+    "illumination": 0.5162629687117175,
+    "is_waxing": true,
+    "kind": "moon",
+    "moonrise": {
+      "day_offset": 0,
+      "unix_ms": 1787209415937
+    },
+    "moonset": null,
+    "nakshatras": [
+      {
+        "entry": {
+          "day_offset": -1,
+          "unix_ms": 1787102223660
+        },
+        "exit": {
+          "day_offset": 0,
+          "unix_ms": 1787197106556
+        },
+        "lord": "guru",
+        "nakshatra": "vishakha",
+        "name": "Vishakha",
+        "pada": 4,
+        "prevailing": true
+      },
+      {
+        "entry": {
+          "day_offset": 0,
+          "unix_ms": 1787197106556
+        },
+        "exit": {
+          "day_offset": 1,
+          "unix_ms": 1787293392431
+        },
+        "lord": "shani",
+        "nakshatra": "anuradha",
+        "name": "Anuradha",
+        "pada": 1,
+        "prevailing": false
+      }
+    ],
+    "panchanga": {
+      "reference": "sunrise",
+      "sunrise": {
+        "day_offset": 0,
+        "unix_ms": 1787186278923
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787147400984
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "index": 8,
+          "name": "Ashtami",
+          "number": 8,
+          "paksha": "shukla",
+          "prevailing": true,
+          "source": "swieph",
+          "sunrises": 1
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787335601761
+          },
+          "index": 9,
+          "name": "Navami",
+          "number": 9,
+          "paksha": "shukla",
+          "prevailing": false,
+          "source": "swieph",
+          "sunrises": 1
+        }
+      ],
+      "vara": 4,
+      "vara_name": "Guruvara"
+    },
+    "phase": "first_quarter",
+    "principal_at": {
+      "day_offset": 0,
+      "unix_ms": 1787194118451
+    },
+    "rashis": [
+      {
+        "entry": {
+          "day_offset": -3,
+          "unix_ms": 1786963779307
+        },
+        "exit": {
+          "day_offset": 0,
+          "unix_ms": 1787173228347
+        },
+        "name": "Tula",
+        "prevailing": false,
+        "rashi": "tula",
+        "western": "Libra"
+      },
+      {
+        "entry": {
+          "day_offset": 0,
+          "unix_ms": 1787173228347
+        },
+        "exit": {
+          "day_offset": 2,
+          "unix_ms": 1787390366946
+        },
+        "name": "Vrishchika",
+        "prevailing": true,
+        "rashi": "vrishchika",
+        "western": "Scorpio"
+      }
+    ],
+    "source": "swieph"
+  },
   "lunarMonth": {
+    "adhika": false,
     "anchor_unix_ms": 1787898600000,
     "days": [
+      {
+        "combust": false,
+        "date": {
+          "day": 10,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.08537658714706547,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 27,
+          "kshaya": [
+            {
+              "index": 28,
+              "name": "Krishna Trayodashi",
+              "number": 13,
+              "paksha": "krishna"
+            }
+          ],
+          "name": "Dvadashi",
+          "number": 12,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786322208567
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 11,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.03064089497469491,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 29,
+          "kshaya": [],
+          "name": "Chaturdashi",
+          "number": 14,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786408617300
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": true,
+        "date": {
+          "day": 12,
+          "month": 8,
+          "year": 2026
+        },
+        "illumination": 0.003170361307868852,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "new_moon",
+        "principal": true,
+        "tithi": {
+          "index": 30,
+          "kshaya": [],
+          "name": "Amavasya",
+          "number": 15,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786495025661
+          },
+          "vriddhi": null
+        }
+      },
       {
         "combust": true,
         "date": {
@@ -539,9 +1029,23 @@
           "year": 2026
         },
         "illumination": 0.00395678390040749,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 1,
+          "kshaya": [],
+          "name": "Pratipada",
+          "number": 1,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786581433646
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -551,9 +1055,23 @@
           "year": 2026
         },
         "illumination": 0.03142584922093544,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 2,
+          "kshaya": [],
+          "name": "Dvitiya",
+          "number": 2,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786667841252
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -563,9 +1081,23 @@
           "year": 2026
         },
         "illumination": 0.08199591558120584,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 3,
+          "kshaya": [],
+          "name": "Tritiya",
+          "number": 3,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786754248477
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -575,9 +1107,23 @@
           "year": 2026
         },
         "illumination": 0.15094541864291589,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 4,
+          "kshaya": [],
+          "name": "Chaturthi",
+          "number": 4,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786840655320
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -587,9 +1133,23 @@
           "year": 2026
         },
         "illumination": 0.23325877600918626,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 5,
+          "kshaya": [],
+          "name": "Panchami",
+          "number": 5,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1786927061782
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -599,9 +1159,23 @@
           "year": 2026
         },
         "illumination": 0.32422457320576187,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 6,
+          "kshaya": [],
+          "name": "Shashthi",
+          "number": 6,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787013467867
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -611,9 +1185,23 @@
           "year": 2026
         },
         "illumination": 0.41972369438519164,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 7,
+          "kshaya": [],
+          "name": "Saptami",
+          "number": 7,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787099873579
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -623,9 +1211,23 @@
           "year": 2026
         },
         "illumination": 0.5162629687117175,
+        "in_month": true,
         "is_waxing": true,
         "phase": "first_quarter",
-        "principal": true
+        "principal": true,
+        "tithi": {
+          "index": 8,
+          "kshaya": [],
+          "name": "Ashtami",
+          "number": 8,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787186278923
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -635,9 +1237,23 @@
           "year": 2026
         },
         "illumination": 0.6108528773037096,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 9,
+          "kshaya": [],
+          "name": "Navami",
+          "number": 9,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787272683906
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -647,9 +1263,23 @@
           "year": 2026
         },
         "illumination": 0.7008204241976393,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 10,
+          "kshaya": [],
+          "name": "Dashami",
+          "number": 10,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787359088535
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -659,9 +1289,23 @@
           "year": 2026
         },
         "illumination": 0.7836236863362221,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 11,
+          "kshaya": [],
+          "name": "Ekadashi",
+          "number": 11,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787445492820
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -671,9 +1315,23 @@
           "year": 2026
         },
         "illumination": 0.8567126011212225,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 12,
+          "kshaya": [],
+          "name": "Dvadashi",
+          "number": 12,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787531896770
+          },
+          "vriddhi": "first"
+        }
       },
       {
         "combust": false,
@@ -683,9 +1341,23 @@
           "year": 2026
         },
         "illumination": 0.9174663171695503,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 12,
+          "kshaya": [],
+          "name": "Dvadashi",
+          "number": 12,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787618300396
+          },
+          "vriddhi": "second"
+        }
       },
       {
         "combust": false,
@@ -695,9 +1367,23 @@
           "year": 2026
         },
         "illumination": 0.9632273400147273,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 13,
+          "kshaya": [],
+          "name": "Trayodashi",
+          "number": 13,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787704703709
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -707,9 +1393,23 @@
           "year": 2026
         },
         "illumination": 0.9914406125607594,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 14,
+          "kshaya": [],
+          "name": "Chaturdashi",
+          "number": 14,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787791106723
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -719,9 +1419,23 @@
           "year": 2026
         },
         "illumination": 0.9998868389874883,
+        "in_month": true,
         "is_waxing": true,
         "phase": "full_moon",
-        "principal": true
+        "principal": true,
+        "tithi": {
+          "index": 15,
+          "kshaya": [],
+          "name": "Purnima",
+          "number": 15,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787877509451
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -731,9 +1445,23 @@
           "year": 2026
         },
         "illumination": 0.986974819302486,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 16,
+          "kshaya": [],
+          "name": "Pratipada",
+          "number": 1,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1787963911907
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -743,9 +1471,23 @@
           "year": 2026
         },
         "illumination": 0.9520354716335284,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 17,
+          "kshaya": [],
+          "name": "Dvitiya",
+          "number": 2,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788050314108
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -755,9 +1497,23 @@
           "year": 2026
         },
         "illumination": 0.895553234704672,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 18,
+          "kshaya": [],
+          "name": "Tritiya",
+          "number": 3,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788136716069
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -767,9 +1523,23 @@
           "year": 2026
         },
         "illumination": 0.8192867583982917,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 19,
+          "kshaya": [],
+          "name": "Chaturthi",
+          "number": 4,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788223117806
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -779,9 +1549,30 @@
           "year": 2026
         },
         "illumination": 0.7262651379552835,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 20,
+          "kshaya": [
+            {
+              "index": 21,
+              "name": "Krishna Shashthi",
+              "number": 6,
+              "paksha": "krishna"
+            }
+          ],
+          "name": "Panchami",
+          "number": 5,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788309519335
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -791,9 +1582,23 @@
           "year": 2026
         },
         "illumination": 0.6206796239262624,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 22,
+          "kshaya": [],
+          "name": "Saptami",
+          "number": 7,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788395920673
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -803,9 +1608,23 @@
           "year": 2026
         },
         "illumination": 0.5077029429521038,
+        "in_month": true,
         "is_waxing": false,
         "phase": "last_quarter",
-        "principal": true
+        "principal": true,
+        "tithi": {
+          "index": 23,
+          "kshaya": [],
+          "name": "Ashtami",
+          "number": 8,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788482321835
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -815,9 +1634,23 @@
           "year": 2026
         },
         "illumination": 0.3932516995146817,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 24,
+          "kshaya": [],
+          "name": "Navami",
+          "number": 9,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788568722835
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -827,9 +1660,23 @@
           "year": 2026
         },
         "illumination": 0.2836748427017409,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 25,
+          "kshaya": [],
+          "name": "Dashami",
+          "number": 10,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788655123688
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -839,9 +1686,23 @@
           "year": 2026
         },
         "illumination": 0.1853318963720441,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 26,
+          "kshaya": [],
+          "name": "Ekadashi",
+          "number": 11,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788741524405
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -851,9 +1712,23 @@
           "year": 2026
         },
         "illumination": 0.10404656141506907,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 27,
+          "kshaya": [],
+          "name": "Dvadashi",
+          "number": 12,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788827924999
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": false,
@@ -863,9 +1738,23 @@
           "year": 2026
         },
         "illumination": 0.044490740176462984,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 28,
+          "kshaya": [],
+          "name": "Trayodashi",
+          "number": 13,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1788914325482
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": true,
@@ -875,9 +1764,23 @@
           "year": 2026
         },
         "illumination": 0.009637552991828446,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": {
+          "index": 29,
+          "kshaya": [],
+          "name": "Chaturdashi",
+          "number": 14,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789000725864
+          },
+          "vriddhi": null
+        }
       },
       {
         "combust": true,
@@ -887,12 +1790,263 @@
           "year": 2026
         },
         "illumination": 0.0004567962823784355,
+        "in_month": true,
         "is_waxing": false,
         "phase": "new_moon",
-        "principal": true
+        "principal": true,
+        "tithi": {
+          "index": 30,
+          "kshaya": [],
+          "name": "Amavasya",
+          "number": 15,
+          "paksha": "krishna",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789087126156
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 12,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.01596665299845834,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 1,
+          "kshaya": [],
+          "name": "Pratipada",
+          "number": 1,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789173526369
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 13,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.053622824148814086,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 2,
+          "kshaya": [],
+          "name": "Dvitiya",
+          "number": 2,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789259926516
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 14,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.10990156400152795,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 3,
+          "kshaya": [],
+          "name": "Tritiya",
+          "number": 3,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789346326608
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 15,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.1808889719473914,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 4,
+          "kshaya": [],
+          "name": "Chaturthi",
+          "number": 4,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789432726659
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 16,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.2627324831794032,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 5,
+          "kshaya": [],
+          "name": "Panchami",
+          "number": 5,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789519126683
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 17,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.3518941861218645,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 6,
+          "kshaya": [],
+          "name": "Shashthi",
+          "number": 6,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789605526694
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 18,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.44521750408786726,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_crescent",
+        "principal": false,
+        "tithi": {
+          "index": 7,
+          "kshaya": [],
+          "name": "Saptami",
+          "number": 7,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789691926709
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 19,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.5398562619754059,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "first_quarter",
+        "principal": true,
+        "tithi": {
+          "index": 8,
+          "kshaya": [],
+          "name": "Ashtami",
+          "number": 8,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789778326743
+          },
+          "vriddhi": null
+        }
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 20,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.6331234078541882,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false,
+        "tithi": {
+          "index": 9,
+          "kshaya": [],
+          "name": "Navami",
+          "number": 9,
+          "paksha": "shukla",
+          "reference": "sunrise",
+          "sunrise": {
+            "day_offset": 0,
+            "unix_ms": 1789864726813
+          },
+          "vriddhi": null
+        }
       }
     ],
-    "label": "Shravana 2026",
+    "era_year": 2083,
+    "kshaya_masa_name": null,
+    "label": "Shravana 2083",
+    "name": "Shravana",
     "source": "swieph",
     "system": "amanta",
     "time_zone": "Asia/Kolkata"
@@ -948,6 +2102,7 @@
         "prevailing": false
       }
     ],
+    "panchanga": null,
     "phase": "first_quarter",
     "principal_at": {
       "day_offset": 0,
@@ -1036,6 +2191,7 @@
         "prevailing": false
       }
     ],
+    "panchanga": null,
     "phase": "last_quarter",
     "principal_at": {
       "day_offset": 0,
@@ -1060,8 +2216,79 @@
     "source": "swieph"
   },
   "moonMonth": {
+    "adhika": false,
     "anchor_unix_ms": 1786861800000,
     "days": [
+      {
+        "combust": false,
+        "date": {
+          "day": 27,
+          "month": 7,
+          "year": 2026
+        },
+        "illumination": 0.948702900688225,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 28,
+          "month": 7,
+          "year": 2026
+        },
+        "illumination": 0.9824104443427867,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "waxing_gibbous",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 29,
+          "month": 7,
+          "year": 2026
+        },
+        "illumination": 0.9984726900641883,
+        "in_month": false,
+        "is_waxing": true,
+        "phase": "full_moon",
+        "principal": true,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 30,
+          "month": 7,
+          "year": 2026
+        },
+        "illumination": 0.9956158387090601,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 31,
+          "month": 7,
+          "year": 2026
+        },
+        "illumination": 0.9731090662770077,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false,
+        "tithi": null
+      },
       {
         "combust": false,
         "date": {
@@ -1070,9 +2297,11 @@
           "year": 2026
         },
         "illumination": 0.9309062054316386,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1082,9 +2311,11 @@
           "year": 2026
         },
         "illumination": 0.8697532530990038,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1094,9 +2325,11 @@
           "year": 2026
         },
         "illumination": 0.7912592115202408,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1106,9 +2339,11 @@
           "year": 2026
         },
         "illumination": 0.6979432113034766,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1118,9 +2353,11 @@
           "year": 2026
         },
         "illumination": 0.5932747959148585,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1130,9 +2367,11 @@
           "year": 2026
         },
         "illumination": 0.4817083921629036,
+        "in_month": true,
         "is_waxing": false,
         "phase": "last_quarter",
-        "principal": true
+        "principal": true,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1142,9 +2381,11 @@
           "year": 2026
         },
         "illumination": 0.36867634038331576,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1154,9 +2395,11 @@
           "year": 2026
         },
         "illumination": 0.260459114940215,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1166,9 +2409,11 @@
           "year": 2026
         },
         "illumination": 0.1638259708180353,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1178,9 +2423,11 @@
           "year": 2026
         },
         "illumination": 0.08537658714706547,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1190,9 +2437,11 @@
           "year": 2026
         },
         "illumination": 0.03064089497469491,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": true,
@@ -1202,9 +2451,11 @@
           "year": 2026
         },
         "illumination": 0.003170361307868852,
+        "in_month": true,
         "is_waxing": false,
         "phase": "new_moon",
-        "principal": true
+        "principal": true,
+        "tithi": null
       },
       {
         "combust": true,
@@ -1214,9 +2465,11 @@
           "year": 2026
         },
         "illumination": 0.00395678390040749,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1226,9 +2479,11 @@
           "year": 2026
         },
         "illumination": 0.03142584922093544,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1238,9 +2493,11 @@
           "year": 2026
         },
         "illumination": 0.08199591558120584,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1250,9 +2507,11 @@
           "year": 2026
         },
         "illumination": 0.15094541864291589,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1262,9 +2521,11 @@
           "year": 2026
         },
         "illumination": 0.23325877600918626,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1274,9 +2535,11 @@
           "year": 2026
         },
         "illumination": 0.32422457320576187,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1286,9 +2549,11 @@
           "year": 2026
         },
         "illumination": 0.41972369438519164,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_crescent",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1298,9 +2563,11 @@
           "year": 2026
         },
         "illumination": 0.5162629687117175,
+        "in_month": true,
         "is_waxing": true,
         "phase": "first_quarter",
-        "principal": true
+        "principal": true,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1310,9 +2577,11 @@
           "year": 2026
         },
         "illumination": 0.6108528773037096,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1322,9 +2591,11 @@
           "year": 2026
         },
         "illumination": 0.7008204241976393,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1334,9 +2605,11 @@
           "year": 2026
         },
         "illumination": 0.7836236863362221,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1346,9 +2619,11 @@
           "year": 2026
         },
         "illumination": 0.8567126011212225,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1358,9 +2633,11 @@
           "year": 2026
         },
         "illumination": 0.9174663171695503,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1370,9 +2647,11 @@
           "year": 2026
         },
         "illumination": 0.9632273400147273,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1382,9 +2661,11 @@
           "year": 2026
         },
         "illumination": 0.9914406125607594,
+        "in_month": true,
         "is_waxing": true,
         "phase": "waxing_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1394,9 +2675,11 @@
           "year": 2026
         },
         "illumination": 0.9998868389874883,
+        "in_month": true,
         "is_waxing": true,
         "phase": "full_moon",
-        "principal": true
+        "principal": true,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1406,9 +2689,11 @@
           "year": 2026
         },
         "illumination": 0.986974819302486,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1418,9 +2703,11 @@
           "year": 2026
         },
         "illumination": 0.9520354716335284,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
       },
       {
         "combust": false,
@@ -1430,12 +2717,101 @@
           "year": 2026
         },
         "illumination": 0.895553234704672,
+        "in_month": true,
         "is_waxing": false,
         "phase": "waning_gibbous",
-        "principal": false
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 1,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.8192867583982917,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 2,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.7262651379552835,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 3,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.6206796239262624,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_gibbous",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 4,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.5077029429521038,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "last_quarter",
+        "principal": true,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 5,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.3932516995146817,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false,
+        "tithi": null
+      },
+      {
+        "combust": false,
+        "date": {
+          "day": 6,
+          "month": 9,
+          "year": 2026
+        },
+        "illumination": 0.2836748427017409,
+        "in_month": false,
+        "is_waxing": false,
+        "phase": "waning_crescent",
+        "principal": false,
+        "tithi": null
       }
     ],
+    "era_year": null,
+    "kshaya_masa_name": null,
     "label": "August 2026",
+    "name": "August",
     "source": "swieph",
     "system": "solar",
     "time_zone": "Asia/Kolkata"
@@ -1494,6 +2870,7 @@
         "prevailing": false
       }
     ],
+    "panchanga": null,
     "phase": "waning_crescent",
     "principal_at": null,
     "rashis": [

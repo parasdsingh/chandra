@@ -15,9 +15,10 @@ use serde::{Deserialize, Serialize};
 use crate::cache::Lru;
 use crate::error::{Error, Result};
 use crate::lunar::{self, LunarMonth, MonthSystem};
-use crate::month::{self, DayDetail, GrahaMonth, MoonMonth};
+use crate::month::{self, DayDetail, GrahaMonth, MonthLabel, MoonMonth};
 use crate::phase::{self, PhaseName};
-use crate::time::{CivilDay, DateKey};
+use crate::time::{self, CivilDay, DateKey};
+use crate::tithi::CellTithi;
 use crate::zodiac::{Nakshatra, Rashi};
 
 /// Months held per subject before the coldest is dropped.
@@ -45,27 +46,47 @@ pub struct MonthCursor {
     pub anchor_unix_ms: i64,
     pub offset: i32,
     pub system: MonthSystem,
+    /// Which weekday the grid opens on, zero-based from Monday, as the viewer's
+    /// locale reports it. The grid is laid out here rather than in the front
+    /// end, so the layout needs the one presentation fact this layer cannot
+    /// derive.
+    pub first_weekday: u8,
 }
 
-/// A month resolved to concrete days.
+/// A month resolved to the 42 cells the grid draws, and what it is called.
 struct Resolved {
-    days: Vec<CivilDay>,
-    label: String,
-    system: MonthSystem,
+    grid: Vec<(CivilDay, bool)>,
+    naming: MonthLabel,
+}
+
+impl Resolved {
+    /// The month's first civil day, which identifies it uniquely in either
+    /// system without needing a numbering scheme for lunar months.
+    fn first_day(&self) -> DateKey {
+        self.grid
+            .iter()
+            .find(|(_, in_month)| *in_month)
+            .map(|(day, _)| day.date)
+            .unwrap_or(self.grid[0].0.date)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum CacheKey {
     // Keyed on the month's first civil day, which identifies a month uniquely in
-    // either system without needing a numbering scheme for lunar months.
-    Moon(MonthSystem, DateKey),
-    Graha(Graha, MonthSystem, DateKey),
+    // either system without needing a numbering scheme for lunar months, plus
+    // the weekday the grid opens on, which decides which 42 cells it holds.
+    Moon(MonthSystem, DateKey, u8),
+    Graha(Graha, MonthSystem, DateKey, u8),
+    /// The lunar days of a grid, shared by every subject drawn on it.
+    Frames(MonthSystem, DateKey, u8),
 }
 
 #[derive(Debug, Clone)]
 enum Cached {
     Moon(MoonMonth),
     Graha(Box<GrahaMonth>),
+    Frames(Vec<CellTithi>),
 }
 
 struct Settings {
@@ -131,18 +152,33 @@ impl Almanac {
         self.invalidate()
     }
 
-    /// Resolves a cursor to the month's civil days and its display label.
+    /// Resolves a cursor to the 42 cells the grid draws and its display label.
     fn resolve(&self, cursor: MonthCursor) -> Result<Resolved> {
         let settings = self.read_settings()?;
         let jd = chandra_ephemeris::unix_seconds_to_jd(cursor.anchor_unix_ms as f64 / 1000.0);
 
         if cursor.system == MonthSystem::Solar {
             let anchor_day = CivilDay::new(DateKey::new(1, 1, 1)?, &settings.zone)?.date_of(jd)?;
-            let shifted = shift_gregorian(anchor_day.year, anchor_day.month, cursor.offset);
+            let (year, month_number) =
+                shift_gregorian(anchor_day.year, anchor_day.month, cursor.offset);
+            let days = month::month_days(year, month_number, &settings.zone)?;
+            let name = gregorian_month_name(year, month_number)?;
+
             return Ok(Resolved {
-                days: month::month_days(shifted.0, shifted.1, &settings.zone)?,
-                label: gregorian_label(shifted.0, shifted.1)?,
-                system: cursor.system,
+                grid: time::grid_days(
+                    days[0].date,
+                    days[days.len() - 1].date,
+                    cursor.first_weekday,
+                    &settings.zone,
+                )?,
+                naming: MonthLabel {
+                    label: format!("{name} {year}"),
+                    name,
+                    adhika: false,
+                    kshaya_masa_name: None,
+                    era_year: None,
+                    system: cursor.system,
+                },
             });
         }
 
@@ -167,26 +203,66 @@ impl Almanac {
         };
 
         Ok(Resolved {
-            label: format!("{} {}", month.display_name(), month.first_day.year),
-            days: month::days_between(month.first_day, month.last_day, &settings.zone)?,
-            system: cursor.system,
+            naming: MonthLabel {
+                label: format!("{} {}", month.display_name(), month.vikram_year),
+                name: month.name.to_string(),
+                adhika: month.adhika,
+                kshaya_masa_name: month.kshaya_masa_name.map(str::to_string),
+                era_year: Some(month.vikram_year),
+                system: cursor.system,
+            },
+            grid: time::grid_days(
+                month.first_day,
+                month.last_day,
+                cursor.first_weekday,
+                &settings.zone,
+            )?,
         })
+    }
+
+    /// The lunar days of a grid, from the cache where possible.
+    ///
+    /// `None` in solar mode: a Gregorian calendar does not name tithis, and
+    /// computing them to throw away would spend a sunrise on every one of 42
+    /// cells for nothing.
+    fn frames(&self, resolved: &Resolved, cursor: MonthCursor) -> Result<Option<Vec<CellTithi>>> {
+        if !cursor.system.is_lunar() {
+            return Ok(None);
+        }
+
+        let key = CacheKey::Frames(cursor.system, resolved.first_day(), cursor.first_weekday);
+        if let Some(Cached::Frames(cached)) = self.cached(key)? {
+            return Ok(Some(cached));
+        }
+
+        let settings = self.read_settings()?;
+        let built = month::tithi_frames(
+            &self.engine,
+            &resolved.grid,
+            settings.location.observer,
+            &settings.zone,
+        )?;
+        drop(settings);
+
+        self.store(key, Cached::Frames(built.clone()))?;
+        Ok(Some(built))
     }
 
     pub fn moon_month(&self, cursor: MonthCursor) -> Result<MoonMonth> {
         let resolved = self.resolve(cursor)?;
-        let key = CacheKey::Moon(resolved.system, resolved.days[0].date);
+        let key = CacheKey::Moon(cursor.system, resolved.first_day(), cursor.first_weekday);
         if let Some(Cached::Moon(cached)) = self.cached(key)? {
             return Ok(cached);
         }
 
+        let frames = self.frames(&resolved, cursor)?;
         let zone_name = self.read_settings()?.location.zone_name.clone();
         let built = month::moon_month(
             &self.engine,
-            &resolved.days,
+            &resolved.grid,
+            frames.as_deref(),
             &zone_name,
-            resolved.label,
-            resolved.system,
+            resolved.naming,
         )?;
 
         self.store(key, Cached::Moon(built.clone()))?;
@@ -203,19 +279,25 @@ impl Almanac {
         }
 
         let resolved = self.resolve(cursor)?;
-        let key = CacheKey::Graha(graha, resolved.system, resolved.days[0].date);
+        let key = CacheKey::Graha(
+            graha,
+            cursor.system,
+            resolved.first_day(),
+            cursor.first_weekday,
+        );
         if let Some(Cached::Graha(cached)) = self.cached(key)? {
             return Ok(*cached);
         }
 
+        let frames = self.frames(&resolved, cursor)?;
         let zone_name = self.read_settings()?.location.zone_name.clone();
         let built = month::graha_month(
             &self.engine,
             graha,
-            &resolved.days,
+            &resolved.grid,
+            frames.as_deref(),
             &zone_name,
-            resolved.label,
-            resolved.system,
+            resolved.naming,
         )?;
 
         self.store(key, Cached::Graha(Box::new(built.clone())))?;
@@ -269,10 +351,26 @@ impl Almanac {
         day.date_of(day.end_jd + 0.5)
     }
 
-    pub fn day_detail(&self, graha: Graha, date: DateKey) -> Result<DayDetail> {
+    /// Detail for one day.
+    ///
+    /// The month system is a parameter because it decides whether the day has a
+    /// panchanga at all: a Gregorian calendar names no tithi, so computing one
+    /// would be work for a field the view would not show.
+    pub fn day_detail(
+        &self,
+        graha: Graha,
+        date: DateKey,
+        system: MonthSystem,
+    ) -> Result<DayDetail> {
         let settings = self.read_settings()?;
         let day = CivilDay::new(date, &settings.zone)?;
-        month::day_detail(&self.engine, graha, &day, settings.location.observer)
+        month::day_detail(
+            &self.engine,
+            graha,
+            &day,
+            settings.location.observer,
+            system,
+        )
     }
 
     /// What the menu bar needs: the Moon's current phase, and where each enabled
@@ -365,8 +463,9 @@ fn shift_gregorian(year: i16, month: i8, offset: i32) -> (i16, i8) {
     )
 }
 
-/// `August 2026`, from the calendar rather than a hardcoded name table.
-fn gregorian_label(year: i16, month: i8) -> Result<String> {
+/// `August`. The year is joined on by the caller, which is also the layer that
+/// knows whether the year is Gregorian or Vikram Samvat.
+fn gregorian_month_name(year: i16, month: i8) -> Result<String> {
     const MONTHS: [&str; 12] = [
         "January",
         "February",
@@ -386,7 +485,7 @@ fn gregorian_label(year: i16, month: i8) -> Result<String> {
         month,
         day: 1,
     })?;
-    Ok(format!("{name} {year}"))
+    Ok((*name).to_string())
 }
 
 fn resolve_zone(name: &str) -> Result<TimeZone> {

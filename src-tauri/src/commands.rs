@@ -105,9 +105,14 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
 }
 
 #[tauri::command]
-pub async fn moon_month(app: AppHandle, anchor_unix_ms: i64, offset: i32) -> Result<MoonMonth> {
+pub async fn moon_month(
+    app: AppHandle,
+    anchor_unix_ms: i64,
+    offset: i32,
+    first_weekday: u8,
+) -> Result<MoonMonth> {
     blocking(app, move |state| {
-        let cursor = state.cursor(anchor_unix_ms, offset);
+        let cursor = state.cursor(anchor_unix_ms, offset, first_weekday);
         state.almanac.moon_month(cursor).map_err(AppError::from)
     })
     .await
@@ -119,9 +124,10 @@ pub async fn graha_month(
     graha: Graha,
     anchor_unix_ms: i64,
     offset: i32,
+    first_weekday: u8,
 ) -> Result<GrahaMonth> {
     blocking(app, move |state| {
-        let cursor = state.cursor(anchor_unix_ms, offset);
+        let cursor = state.cursor(anchor_unix_ms, offset, first_weekday);
         state
             .almanac
             .graha_month(graha, cursor)
@@ -140,9 +146,10 @@ pub async fn day_detail(
 ) -> Result<DayDetail> {
     blocking(app, move |state| {
         let date = DateKey::new(year, month, day).map_err(AppError::from)?;
+        let system = state.settings().calendar.month_system;
         state
             .almanac
-            .day_detail(graha, date)
+            .day_detail(graha, date, system)
             .map_err(AppError::from)
     })
     .await

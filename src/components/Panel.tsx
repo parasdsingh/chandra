@@ -123,11 +123,16 @@ export function Panel(props: Props): JSX.Element {
       try {
         const month =
           current.subject === "chandra"
-            ? ((await ipc.moonMonth(current.anchor, current.offset)) as MoonMonth)
+            ? ((await ipc.moonMonth(
+                current.anchor,
+                current.offset,
+                firstWeekday,
+              )) as MoonMonth)
             : ((await ipc.grahaMonth(
                 current.subject,
                 current.anchor,
                 current.offset,
+                firstWeekday,
               )) as GrahaMonth);
         remember(current.id, month);
       } catch (thrown) {

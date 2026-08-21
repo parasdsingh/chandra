@@ -135,6 +135,16 @@ impl CivilDay {
         })
     }
 
+    /// The civil day before this one, in the same zone.
+    pub fn previous(&self) -> Result<Self> {
+        Self::new(self.date_of(self.start_jd - 0.5)?, &self.zone)
+    }
+
+    /// The civil day after this one, in the same zone.
+    pub fn next(&self) -> Result<Self> {
+        Self::new(self.date_of(self.end_jd + 0.5)?, &self.zone)
+    }
+
     /// The civil date a Julian Day falls on in this zone.
     pub fn date_of(&self, jd: f64) -> Result<DateKey> {
         let unix_ms = (jd_to_unix_seconds(jd) * MILLIS_PER_SECOND).round() as i64;
@@ -161,6 +171,28 @@ pub fn days_in_month(year: i16, month: i8) -> Result<u8> {
     Ok(first.days_in_month() as u8)
 }
 
+/// The seven varas, indexed from Ravivara.
+///
+/// Transliterated without diacritics, matching the house style of the rashi and
+/// nakshatra names. Independent of the locale's first day of week: a vara is a
+/// named day, not a column.
+pub const VARA_NAMES: [&str; 7] = [
+    "Ravivara",
+    "Somavara",
+    "Mangalavara",
+    "Budhavara",
+    "Guruvara",
+    "Shukravara",
+    "Shanivara",
+];
+
+/// Cells in the month grid: six rows of seven, always.
+///
+/// Fixed so the panel never changes height. Six rows hold the worst case - a
+/// 31 day month whose first day sits in the last column, which needs 37 - with
+/// room to spare, and hold a 29 day lunar month without collapsing to five.
+pub const GRID_CELLS: usize = 42;
+
 /// Weekday of the first of the month as a zero-based offset from Monday, used to
 /// place the first cell in the grid.
 pub fn first_weekday_offset(year: i16, month: i8) -> Result<u8> {
@@ -170,6 +202,50 @@ pub fn first_weekday_offset(year: i16, month: i8) -> Result<u8> {
         day: 1,
     })?;
     Ok(first.weekday().to_monday_zero_offset() as u8)
+}
+
+/// Vara index for a date, 0 = Ravivara.
+pub fn vara(date: DateKey) -> Result<u8> {
+    let civil = date.to_civil()?;
+    // jiff counts from Monday; a vara counts from Sunday.
+    Ok((civil.weekday().to_monday_zero_offset() as u8 + 1) % 7)
+}
+
+/// The 42 civil days the grid draws for a month, each flagged as inside it or
+/// not.
+///
+/// Built here rather than in the front end because only this layer knows which
+/// civil days a lunar month contains - it runs between syzygies, not between
+/// dates - and because a front end that guesses the neighbouring dates ends up
+/// drawing cells it has no data for.
+pub fn grid_days(
+    first: DateKey,
+    last: DateKey,
+    first_weekday: u8,
+    zone: &TimeZone,
+) -> Result<Vec<(CivilDay, bool)>> {
+    let leading = (first_weekday_of(first)? + 7 - (first_weekday % 7)) % 7;
+
+    let mut start = CivilDay::new(first, zone)?;
+    for _ in 0..leading {
+        let previous = start.date_of(start.start_jd - 0.5)?;
+        start = CivilDay::new(previous, zone)?;
+    }
+
+    let mut cells = Vec::with_capacity(GRID_CELLS);
+    let mut day = start;
+    for _ in 0..GRID_CELLS {
+        let inside = day.date >= first && day.date <= last;
+        let next = day.date_of(day.end_jd + 0.5)?;
+        cells.push((day, inside));
+        day = CivilDay::new(next, zone)?;
+    }
+    Ok(cells)
+}
+
+/// Weekday of a date as a zero-based offset from Monday.
+fn first_weekday_of(date: DateKey) -> Result<u8> {
+    Ok(date.to_civil()?.weekday().to_monday_zero_offset() as u8)
 }
 
 #[cfg(test)]
@@ -265,5 +341,72 @@ mod tests {
         assert!(DateKey::new(2026, 13, 1).is_err());
         assert!(DateKey::new(2023, 2, 29).is_err());
         assert!(DateKey::new(2024, 2, 29).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod grid_tests {
+    use super::*;
+
+    fn zone() -> TimeZone {
+        TimeZone::get("Asia/Kolkata").expect("tz database")
+    }
+
+    #[test]
+    fn a_grid_is_always_forty_two_cells_whatever_the_month_holds() {
+        let cases = [
+            // A 31 day Gregorian month.
+            (
+                DateKey::new(2026, 8, 1).unwrap(),
+                DateKey::new(2026, 8, 31).unwrap(),
+            ),
+            // February.
+            (
+                DateKey::new(2026, 2, 1).unwrap(),
+                DateKey::new(2026, 2, 28).unwrap(),
+            ),
+            // Shravana 2026, a lunar month crossing a Gregorian boundary.
+            (
+                DateKey::new(2026, 8, 13).unwrap(),
+                DateKey::new(2026, 9, 11).unwrap(),
+            ),
+        ];
+
+        for (first, last) in cases {
+            for first_weekday in 0..7u8 {
+                let cells = grid_days(first, last, first_weekday, &zone()).expect("grid");
+                assert_eq!(cells.len(), GRID_CELLS, "{first:?} start {first_weekday}");
+
+                // Every cell sits one day after the last, with no gap or repeat.
+                for pair in cells.windows(2) {
+                    let advanced = pair[0].0.date_of(pair[0].0.end_jd + 0.5).unwrap();
+                    assert_eq!(advanced, pair[1].0.date, "consecutive days");
+                }
+
+                // The first cell falls in the grid's opening column.
+                let opening = first_weekday_of(cells[0].0.date).unwrap();
+                assert_eq!(
+                    opening,
+                    first_weekday % 7,
+                    "{first:?} start {first_weekday}"
+                );
+
+                // Every day of the month is present, and nothing else is inside.
+                let inside: Vec<_> = cells.iter().filter(|c| c.1).map(|c| c.0.date).collect();
+                assert_eq!(inside.first().copied(), Some(first));
+                assert_eq!(inside.last().copied(), Some(last));
+                assert!(inside.windows(2).all(|w| w[0] < w[1]));
+            }
+        }
+    }
+
+    #[test]
+    fn a_vara_is_named_from_sunday() {
+        // 21 August 2026 is a Friday.
+        assert_eq!(vara(DateKey::new(2026, 8, 21).unwrap()).unwrap(), 5);
+        assert_eq!(VARA_NAMES[5], "Shukravara");
+        // 23 August 2026 is a Sunday.
+        assert_eq!(vara(DateKey::new(2026, 8, 23).unwrap()).unwrap(), 0);
+        assert_eq!(VARA_NAMES[0], "Ravivara");
     }
 }

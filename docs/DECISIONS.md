@@ -25,6 +25,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-018](#d-018) | GitHub remote deferred; local VC for now | accepted |
 | [D-019](#d-019) | Every state the grid draws is named in the day view; combustion judged at local noon | accepted |
 | [D-020](#d-020) | One hue. Retrograde is written, not coloured; combustion never dims | accepted |
+| [D-021](#d-021) | Lunar mode names days by tithi; Vikram Samvat years; grid laid out by the back end | accepted |
 
 ---
 
@@ -244,3 +245,59 @@ never a dim.**
   distinguished from an ingress by shape, which was always the primary difference.
 - `--accent` remains the only hue, and still means today and nothing else.
 - Amends DESIGN.md §1.4, §4.1, §6.3, §11.3.
+
+### D-021
+**In a lunar month the cell is named by its tithi, the year is Vikram Samvat, and the 42 cells
+are laid out by the back end.**
+
+Reported: "in lunar calendar mode, dates are still gregorian, i expect the traditional days and
+dates". Designed in [docs/design/lunar-dates.md](design/lunar-dates.md), which carries the
+research, the wireframes and the rejected alternatives.
+
+- **The tithi is the label**, printed as panchangs print it: `S1`-`S14`, `P` for Purnima,
+  `K1`-`K14`, `A` for Amavasya. The Gregorian day becomes the annotation on the second line,
+  carrying its month only where the month changes (`1 SEP`).
+- The cell string is derived from **paksha plus number within the paksha**, never from the
+  astronomical 1-30 index. Amanta and purnimanta months count from opposite ends of that index,
+  so deriving from it is right in one system and wrong in the other.
+- **The Moon's phase glyph gives way in lunar mode**, and with it the Moon's combustion rule. A
+  tithi *is* elongation divided by twelve, stated more precisely than a 14px disc can; the Moon
+  is combust exactly around Amavasya, which the numeral already names. Both were duplicated ink
+  (DESIGN 1.3).
+- **The graha's symbol gives way too.** The same symbol on 42 cells identifies nothing the
+  header does not already say, and in lunar mode the second line is spoken for. Every state it
+  used to anchor - retrograde, combustion, ingress, station - is drawn on the cell and survives
+  the swap.
+- **Kshaya and vriddhi are drawn, never silent.** A tithi that holds no sunrise is skipped and
+  the numbers jump; one that holds two is repeated across two days. A jump carries a dot in the
+  cell's top left, a repeat carries a rule joining the pair along their bottom edge. An unmarked
+  jump would be a bug, so the mark is what makes it legible as a calendar rather than a fault.
+- **The year is Vikram Samvat**, chosen by the user over Gregorian and Shaka. The era begins at
+  Chaitra, so it runs 57 ahead of the Gregorian year for most of its length and 56 ahead after
+  1 January. Neither the Gregorian year alone nor the month name alone decides it: Pausha starts
+  in December in some years and in January in others.
+- **The grid is laid out by the back end**, which now returns exactly 42 cells with an
+  `in_month` flag. The front end cannot compute which civil days a lunar month contains - it
+  runs between syzygies, not between dates - and the version that guessed the neighbouring dates
+  drew cells it had no data for. The locale's opening weekday travels the other way, in the
+  request, because that is the one fact the back end cannot derive.
+- **Solar mode is unchanged**, and pays nothing: no tithi is computed for it at all. The user
+  chose to keep the Gregorian day view at the D-010 fields.
+- **The day view gains a Tithi block and a Sunrise row**, and the vara name on the date line.
+  Sunrise is there because it is the instant the tithi, the nakshatra and the rashi are all read
+  at: without it the number in the grid cannot be checked against anything. Yoga and karana stay
+  out - neither explains a number in the grid, and a karana is half a tithi and derivable from
+  the row above it.
+- Week start follows the system locale in both modes, chosen by the user over forcing Sunday.
+
+### D-022
+**The menu bar carries retrograde, and nothing else.**
+
+- Chosen by the user from: retrograde only, retrograde and combustion, or nothing.
+- Drawn as `℞` in the lower right corner, with the glyph shrunk to 16.5pt to free it. The same
+  notation the calendar cell uses, so one mark means one thing across both surfaces.
+- A template image varies only in alpha, so colour was never available there. That is what
+  settles it: a second state would have to be another shape in another corner of a 22 point
+  square, and the row of tray items would stop being scannable.
+- The mark is drawn rather than set in type: this crate rasterises without a font, and there is
+  no text shaping and no system font to ask.

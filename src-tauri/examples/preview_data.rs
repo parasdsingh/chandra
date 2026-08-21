@@ -36,6 +36,7 @@ fn main() {
         )) * 1000.0) as i64,
         offset: 0,
         system,
+        first_weekday: 0,
     };
 
     let grahas: Vec<_> = Graha::ALL
@@ -64,12 +65,22 @@ fn main() {
         "lunarMonth": almanac
             .moon_month(cursor(2026, 8, MonthSystem::Amanta))
             .expect("lunar month"),
-        "moonDay": almanac.day_detail(Graha::Chandra, date(20)).expect("moon day"),
+        "moonDay": almanac
+            .day_detail(Graha::Chandra, date(20), MonthSystem::Solar)
+            .expect("moon day"),
+        // The same day in a lunar month, which carries the panchanga block.
+        "lunarDay": almanac
+            .day_detail(Graha::Chandra, date(20), MonthSystem::Amanta)
+            .expect("lunar day"),
         // The Moon rises about 50 minutes later each day, so roughly one civil
         // day a month contains no moonrise at all. Found rather than hardcoded,
         // so the harness always has a real example of the degraded state.
         "moonDayNoRise": (1..=31)
-            .filter_map(|day| almanac.day_detail(Graha::Chandra, date(day)).ok())
+            .filter_map(|day| {
+                almanac
+                    .day_detail(Graha::Chandra, date(day), MonthSystem::Solar)
+                    .ok()
+            })
             .find(|detail| match detail {
                 chandra_almanac::month::DayDetail::Moon(moon) => moon.moonrise.is_none(),
                 _ => false,
@@ -84,6 +95,7 @@ fn main() {
             .day_detail(
                 Graha::Mangala,
                 chandra_almanac::time::DateKey::new(2025, 2, 24).expect("date"),
+                MonthSystem::Solar,
             )
             .expect("graha day"),
         // Before 1800, to exercise the reduced-precision note.
@@ -91,6 +103,7 @@ fn main() {
             .day_detail(
                 Graha::Chandra,
                 chandra_almanac::time::DateKey::new(1650, 8, 20).expect("date"),
+                MonthSystem::Solar,
             )
             .expect("moshier day"),
         "snapshot": almanac

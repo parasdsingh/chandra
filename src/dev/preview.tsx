@@ -29,7 +29,6 @@ import type {
   MoonMonth,
   Snapshot,
 } from "../ipc/types";
-import { buildGrid } from "../lib/calendar";
 import type { FormatContext } from "../lib/format";
 
 const data = fixture as unknown as {
@@ -38,6 +37,7 @@ const data = fixture as unknown as {
   moonMonth: MoonMonth;
   lunarMonth: MoonMonth;
   moonDay: Detail;
+  lunarDay: Detail;
   moonDayNoRise: Detail;
   grahaMonth: GrahaMonth;
   grahaDay: Detail;
@@ -131,19 +131,6 @@ export function Preview(): JSX.Element {
   // them is inert here.
   const [, setSection] = createSignal<SettingsSection>("root");
 
-  const solarGrid = buildGrid(
-    data.moonMonth.days.map((day) => day.date),
-    0,
-  );
-  const lunarGrid = buildGrid(
-    data.lunarMonth.days.map((day) => day.date),
-    0,
-  );
-  const grahaGrid = buildGrid(
-    data.grahaMonth.days.map((day) => day.date),
-    0,
-  );
-
   return (
     <div class="preview">
       <Case title="Moon · solar month">
@@ -152,14 +139,12 @@ export function Preview(): JSX.Element {
           <div class="grid-region">
             <WeekdayRow firstWeekday={0} />
             <MonthCells
-              grid={solarGrid}
               firstWeekday={0}
               month={data.moonMonth}
               kind="moon"
               selected={{ year: 2026, month: 8, day: 21 }}
               today={{ year: 2026, month: 8, day: 21 }}
               southern={false}
-              direction={0}
               onSelect={() => {}}
             />
           </div>
@@ -172,14 +157,12 @@ export function Preview(): JSX.Element {
           <div class="grid-region">
             <WeekdayRow firstWeekday={0} />
             <MonthCells
-              grid={lunarGrid}
               firstWeekday={0}
               month={data.lunarMonth}
               kind="moon"
               selected={null}
               today={{ year: 2026, month: 8, day: 21 }}
               southern={false}
-              direction={0}
               onSelect={() => {}}
             />
           </div>
@@ -206,6 +189,19 @@ export function Preview(): JSX.Element {
             grahaName="Chandra"
             context={context}
             isToday
+            error={undefined}
+          />
+        </div>
+      </Case>
+
+      <Case title="Moon · day view, lunar month">
+        <div class="region">
+          <DayDetail
+            detail={data.lunarDay}
+            events={[]}
+            grahaName="Chandra"
+            context={context}
+            isToday={false}
             error={undefined}
           />
         </div>
@@ -254,7 +250,6 @@ export function Preview(): JSX.Element {
           <div class="grid-region">
             <WeekdayRow firstWeekday={0} />
             <MonthCells
-              grid={grahaGrid}
               firstWeekday={0}
               month={data.grahaMonth}
               kind="graha"
@@ -262,7 +257,6 @@ export function Preview(): JSX.Element {
               selected={{ year: 2025, month: 2, day: 24 }}
               today={{ year: 2025, month: 2, day: 10 }}
               southern={false}
-              direction={0}
               onSelect={() => {}}
             />
           </div>
