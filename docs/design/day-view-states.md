@@ -474,10 +474,20 @@ Both draw. They are on different layers and different mark classes.
 | Mangala, Budha, Guru, Shukra, Shani | when the caption prints | when `retrograde` |
 | Rahu, Ketu | never — no orb (D-019) | **suppressed** — see open question 1 |
 
-- The nodes are retrograde on roughly 95% of days. A surface treatment that is true almost always
-  stops being a state and becomes the subject's identity; two of the nine panels would look
-  permanently different for no information. The `℞` chip and the `Motion` row still print, so
-  nothing is lost in words.
+- ~~The nodes are retrograde on roughly 95% of days. A surface treatment that is true almost always
+  stops being a state and becomes the subject's identity.~~ **Superseded: the nodes are not
+  suppressed, and the 95% was never measured.**
+
+  Measured over twenty years, daily: a **mean** node is retrograde on 100% of days,
+and a **true** node — Chandra's default — on **74.1%**, turning direct about
+twenty-five times a year for a little under four days at a time. The true node
+oscillates about the mean with a fortnightly term, and that oscillation outruns
+the mean retrograde rate for part of every half draconic month.
+
+  So the state changes, and often. The suppression was also a disagreement with the grid, which
+  never had one: a cell drew the bracket for Rahu and Ketu from the same flag while the day it
+  opened drew nothing. Under a mean node the rail is permanent, and that is truthful rather than
+  noisy — it is the model the user chose.
 - **Both calendars, by construction.** `.state-field` lives on `.region`, which is identical in
   solar and lunar mode. The day view differs between the two only by the Tithi block and the vara
   name (D-021 §7), neither of which touches the gutters.
@@ -798,7 +808,10 @@ worse than one that stays quiet.
 
 ## 9. Open questions
 
-1. **Rahu and Ketu.** The true nodes are retrograde on roughly 95% of days, so a rail on their
+1. ~~**Rahu and Ketu.**~~ **Closed: not suppressed.** The figure below was never measured and is
+   wrong — see §4.7. The original text follows.
+
+   The true nodes are retrograde on roughly 95% of days, so a rail on their
    panels would be the normal state rather than a state. This spec suppresses the rail for both
    and keeps the `℞` chip and the `Motion` row. The alternative is to draw it anyway for
    consistency across the nine, and accept that two panels look permanently marked. Suppression is

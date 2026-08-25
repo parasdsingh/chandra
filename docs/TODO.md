@@ -107,7 +107,13 @@ Shipped as **D-024**:
   in between, the opposite half on the day it turns back.
 - Ingress and station markers are no longer drawn at all. They are named in the
   day view's `Events` field, with their times.
-- Rahu and Ketu wear the retrograde mark permanently, and that is accepted.
+- ~~Rahu and Ketu wear the retrograde mark permanently, and that is accepted.~~
+  **Wrong, and never measured.** Only a *mean* node is permanently retrograde. A
+  *true* node — Chandra's default — is retrograde on 74.1% of days and turns
+  direct about twenty-five times a year for under four days at a time, so its
+  bracket opens and closes fortnightly like any other graha's. The grid was
+  right to treat them like every other subject; it was the day view that
+  wrongly excluded them.
 - The Moon's combustion is not suppressed in the grid, and shows in the day view
   like every other subject.
 
@@ -150,7 +156,10 @@ given §7:
   at both ends. Dotted for the reason the cell's ring is: the motion is broken,
   so the line is. Suppressed for Rahu and Ketu, which are retrograde on roughly
   95% of days — a mark that is true almost always is the subject's identity, not
-  its state.
+  its state. **Both halves of that were wrong and the exclusion is gone.** A
+  mean node is retrograde on 100% of days and a true node — the default — on
+  74.1%, turning direct about twenty-five times a year for under four days at a
+  time. It was also a disagreement with the grid, which never excluded them.
 
 Both are fixed to the panel rather than scrolled with the content: they are
 properties of the day, not of any field in it.

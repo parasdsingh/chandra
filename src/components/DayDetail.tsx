@@ -91,16 +91,26 @@ function isCombust(detail: Detail | undefined): boolean {
   );
 }
 
-/** Retrograde, excluding the nodes.
+/** Retrograde. No subject is excluded.
  *
- * Rahu and Ketu are retrograde on roughly 95% of days, so a rail on their
- * panels would be their identity rather than a state - two of the nine panels
- * permanently different for no information. The `Motion` field still prints,
- * so nothing is lost in words. */
+ * Rahu and Ketu were, on the grounds that they are retrograde on roughly 95% of
+ * days and a mark that is true almost always is the subject's identity rather
+ * than its state. Both halves of that were wrong.
+ *
+ * Measured over twenty years: a *mean* node is retrograde on 100% of days, and
+ * a *true* node - which is what Chandra uses by default - on 74.1%, turning
+ * direct about twenty-five times a year for a little under four days at a time.
+ * The true node oscillates about the mean with a fortnightly term, and that
+ * oscillation outruns the mean retrograde rate for part of every half draconic
+ * month. So the state does change, and often.
+ *
+ * The exclusion was also a disagreement with the grid, which never had one: a
+ * cell drew the bracket for Rahu and Ketu from the same flag while the day it
+ * opened drew nothing. Under a mean node the rail is permanent, and that is
+ * truthful rather than noisy - it is the model the user chose. */
 function hasRetrogradeRail(detail: Detail | undefined): boolean {
   if (detail?.kind !== "graha") return false;
-  const graha = detail as GrahaDay;
-  return graha.retrograde && graha.graha !== "rahu" && graha.graha !== "ketu";
+  return (detail as GrahaDay).retrograde;
 }
 
 export function DayDetail(props: Props): JSX.Element {

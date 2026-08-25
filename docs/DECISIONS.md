@@ -424,3 +424,40 @@ that.
 - The phase name appears in solar mode only; in a lunar month the tithi says the same thing
   more precisely.
 - Amends D-010's field list and D-021's Sunrise row. Amends DESIGN.md §5.6, §6.4.
+
+## D-026 — The nodes are not a special case for retrograde motion
+
+**Decision.** Rahu and Ketu draw the retrograde bracket in the grid and the retrograde rail in
+the day view on exactly the same condition as every other graha: `retrograde`, and nothing else.
+
+**Why.** The day view used to suppress the rail for them, on the reasoning that the nodes are
+retrograde on roughly 95% of days and a mark that is true almost always is the subject's identity
+rather than its state. That figure was written from memory and is wrong.
+
+Measured over twenty years, sampled daily:
+
+| Node type | Retrograde | Direct spells |
+|---|---|---|
+| Mean | 100.0% of days | none in 20 years |
+| True (the default) | 74.1% | 503 in 20 years — about 25 a year, averaging 3.8 days |
+
+The true node oscillates about the mean with a fortnightly term whose rate of change exceeds the
+mean retrograde rate of 0.0529°/day for part of every half draconic month, so it genuinely turns
+direct — roughly as often as a fortnight comes round. Only the mean node, which is a uniform
+fiction, never turns.
+
+Two things follow:
+
+- The state changes often enough to be worth drawing. Twenty-five spells a year is not identity.
+- The exclusion was a **disagreement between the grid and the day it opens**, which is the one
+  thing this project keeps ruling out. `retroPhase` never excluded the nodes, so a cell drew the
+  bracket for Rahu and Ketu while the day behind it drew nothing.
+
+Under a mean node the rail is permanent, and that is the right outcome rather than a defect: the
+user has chosen a model in which the nodes never turn, and drawing that is truthful.
+
+**Supersedes.** The Rahu/Ketu clauses of D-024 and of `docs/design/day-view-states.md` §4.7.
+
+**Method note.** The 95% was never measured, and nothing in the code could have contradicted it.
+The lesson is the one at the top of `AUDIT.md` in another form: a number written into a comment to
+justify a behaviour is a claim, and a claim with no test is a guess.
