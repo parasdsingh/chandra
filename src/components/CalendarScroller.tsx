@@ -84,7 +84,7 @@ const DRAG_RELEASE_MS = 50;
 const SETTLE_MIN_MS = 140;
 const SETTLE_MAX_MS = 300;
 
-/** Reduced motion still moves - it just arrives. Matches `--d-month`. */
+/** Reduced motion still moves - it just arrives sooner. */
 const SETTLE_REDUCED_MS = 80;
 
 interface Props {
@@ -100,6 +100,16 @@ interface Props {
   onSelect: (date: DateKey) => void;
   /** Called once the strip has settled onto a neighbouring month. */
   onCommit: (delta: number) => void;
+  /**
+   * What the panel is drawn at.
+   *
+   * The strip is composed at 1.0 and the whole panel is scaled by a transform,
+   * so a pointer moves `scale` screen pixels for every composed pixel the strip
+   * should travel. Pointer and wheel deltas arrive in screen pixels and are
+   * divided back before they are used, or at the largest size the calendar
+   * slides a third further than the finger that pushed it.
+   */
+  scale: number;
   /**
    * Which month now fills most of the window, before it has been committed.
    *
@@ -284,7 +294,7 @@ export function CalendarScroller(props: Props): JSX.Element {
     event.preventDefault();
     stopAnimation();
 
-    move(-event.deltaY);
+    move(-event.deltaY / props.scale);
     record();
 
     window.clearTimeout(wheelTimer);
@@ -307,7 +317,7 @@ export function CalendarScroller(props: Props): JSX.Element {
 
   function onPointerMove(event: PointerEvent) {
     if (!dragging) return;
-    const step = event.clientY - dragFrom;
+    const step = (event.clientY - dragFrom) / props.scale;
     dragFrom = event.clientY;
     dragTravel += step;
     if (Math.abs(dragTravel) > 3) moved = true;

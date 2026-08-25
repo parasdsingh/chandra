@@ -40,15 +40,6 @@ interface Props {
   onSelect: (date: DateKey) => void;
 }
 
-function eventsFor(month: GrahaMonth, date: DateKey): TransitEvent[] {
-  return month.events.filter(
-    (event) =>
-      event.date.year === date.year &&
-      event.date.month === date.month &&
-      event.date.day === date.day,
-  );
-}
-
 export function WeekdayRow(props: { firstWeekday: number }): JSX.Element {
   return (
     <div class="weekdays" aria-hidden="true">
@@ -129,13 +120,9 @@ export function MonthCells(props: Props): JSX.Element {
                           {...common}
                           kind="graha"
                           data={cell as GrahaCell}
-                          events={eventsFor(props.month as GrahaMonth, cell.date)}
                           info={props.info}
                           retro={retroPhase(cells, index)}
-                          label={grahaCellLabel(
-                            cell as GrahaCell,
-                            eventsFor(props.month as GrahaMonth, cell.date),
-                          )}
+                          label={grahaCellLabel(cell as GrahaCell)}
                         />
                       }
                     >
@@ -237,20 +224,13 @@ function moonCellLabel(cell: MoonCell): string {
   return parts.join(", ");
 }
 
-function grahaCellLabel(cell: GrahaCell, events: TransitEvent[]): string {
+function grahaCellLabel(cell: GrahaCell): string {
   const parts = [spokenDate(cell.date)];
   if (cell.tithi) parts.push(spokenTithi(cell.tithi));
   if (cell.retrograde) parts.push("retrograde");
   // Both are read at the day's reference instant, so the label says so rather
   // than claiming the state held from midnight to midnight.
-  if (cell.combust) parts.push("combust at sunrise");
-  if (events.length > 0) {
-    parts.push(
-      `${events.length} ${events.length === 1 ? "event" : "events"}: ${events
-        .map(describeEvent)
-        .join(", ")}`,
-    );
-  }
+  if (cell.combust) parts.push("combust at noon");
   if (!cell.in_month) parts.push("outside this month");
   return parts.join(", ");
 }

@@ -190,7 +190,6 @@ export function Preview(): JSX.Element {
           <DayDetail
             detail={data.moonDay}
             events={[]}
-            grahaName="Chandra"
             context={context}
             isToday
             error={undefined}
@@ -203,7 +202,6 @@ export function Preview(): JSX.Element {
           <DayDetail
             detail={data.lunarDay}
             events={[]}
-            grahaName="Chandra"
             context={context}
             isToday={false}
             error={undefined}
@@ -216,7 +214,6 @@ export function Preview(): JSX.Element {
           <DayDetail
             detail={data.moonDayNoRise}
             events={[]}
-            grahaName="Chandra"
             context={context}
             isToday={false}
             error={undefined}
@@ -229,7 +226,6 @@ export function Preview(): JSX.Element {
           <DayDetail
             detail={data.moshierDay}
             events={[]}
-            grahaName="Chandra"
             context={context}
             isToday={false}
             error={undefined}
@@ -274,7 +270,6 @@ export function Preview(): JSX.Element {
           <DayDetail
             detail={data.grahaDay}
             events={data.grahaMonth.events.filter((event) => event.date.day === 24)}
-            grahaName="Mangala"
             context={context}
             isToday={false}
             error={undefined}
@@ -287,7 +282,6 @@ export function Preview(): JSX.Element {
           <DayDetail
             detail={undefined}
             events={[]}
-            grahaName="Chandra"
             context={context}
             isToday={false}
             error={{

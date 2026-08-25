@@ -447,7 +447,7 @@ function Astrology(props: SectionProps): JSX.Element {
   const settings = () => props.boot.settings;
 
   return (
-    <div class="settings__section settings__section--scroll">
+    <div class="settings__section">
       <p class="settings__group">Ayanamsa</p>
       <ChoiceGroup label="Ayanamsa">
         <For each={props.boot.ayanamsas}>
@@ -501,7 +501,7 @@ function MenuBar(props: SectionProps): JSX.Element {
   }
 
   return (
-    <div class="settings__section settings__section--scroll">
+    <div class="settings__section">
       <For each={props.boot.grahas}>
         {(graha) => {
           const permanent = graha.key === "chandra";

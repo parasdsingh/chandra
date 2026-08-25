@@ -263,9 +263,11 @@
   font-weight: 600;
 }
 
-/* Today carries three marks, so it survives a grayscale rendering and stays
-   distinct from the selection fill: a ring, an accent numeral, and a dot under
-   the phase glyph. */
+/* Today carries two marks, so it survives a grayscale rendering and stays
+   distinct from the selection fill: a ring and an accent numeral. The Moon adds
+   a third by tinting its own disc outline, which is a bonus where there is a
+   disc to tint rather than a rule - a graha has no outline to take it, and the
+   Moon loses it at full where the outline is not drawn. */
 .day-cell.is-today::after {
   content: "";
   position: absolute;
@@ -402,7 +404,10 @@
 .day-cell__retro-ring {
   position: absolute;
   left: 50%;
-  top: 31px;
+  /* The glyph's centre: 4 padding + 16 numeral + 2 gap + half of a 14px line.
+     Derived rather than eyeballed, because two pixels out is the difference
+     between a ring around a symbol and a ring resting on it. */
+  top: 29px;
   margin: -10px 0 0 -10px;
   z-index: 1;
 }
@@ -420,27 +425,7 @@
   opacity: 0.45;
 }
 
-/* An ingress or a station: one mark in the corner. A row of markers would have
-   to displace the glyph, and most days carry no event at all. */
-.day-cell__event {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--marker);
-}
-
-/* A station is the same kind of thing as an ingress - one instant - so it takes
-   the same slot and the same ink, and differs in shape alone. */
-.day-cell__event.is-station {
-  border-radius: 0;
-  transform: rotate(45deg);
-}
-
-/* Combustion is the day burning at its foot, the same wash the day view uses so
-   one state has one appearance on both surfaces.
+/* Combustion is the day burning at its foot.
 
    A field rather than a mark: it lies behind everything, costs no room in a cell
    that has none, and a run of combust days reads as one warm stretch instead of
@@ -457,9 +442,9 @@
   z-index: 0;
   background: radial-gradient(
     130% 62% at 50% 112%,
-    rgba(226, 96, 58, 0.5) 0%,
-    rgba(226, 96, 58, 0.2) 42%,
-    rgba(226, 96, 58, 0) 72%
+    color-mix(in srgb, var(--glare) 50%, transparent) 0%,
+    color-mix(in srgb, var(--glare) 20%, transparent) 42%,
+    color-mix(in srgb, var(--glare) 0%, transparent) 72%
   );
 }
 
@@ -468,6 +453,12 @@
    of the two. */
 .day-cell.is-outside .day-cell__combust {
   opacity: 0.45;
+}
+
+/* `Adhika` qualifies the month name; it is not part of it. Set apart so the pair
+   does not read as a thirteenth month name of its own. */
+.header__qualifier {
+  color: var(--text-secondary);
 }
 
 /* ---------- detail ---------- */

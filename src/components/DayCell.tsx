@@ -22,7 +22,6 @@ import type {
   GrahaCell,
   GrahaInfo,
   MoonCell,
-  TransitEvent,
 } from "../ipc/types";
 import { GrahaGlyph } from "./GrahaGlyph";
 import { PhaseGlyph } from "./PhaseGlyph";
@@ -55,7 +54,6 @@ export type RetroPhase = "begins" | "within" | "ends";
 interface GrahaProps extends CommonProps {
   kind: "graha";
   data: GrahaCell;
-  events: TransitEvent[];
   info: GrahaInfo | undefined;
   retro: RetroPhase | null;
 }
@@ -94,7 +92,6 @@ export function DayCell(props: Props): JSX.Element {
 
   const classes = () => ({
     "day-cell": true,
-    "is-lunar": tithi() !== null,
     "is-outside": !inMonth(),
     "is-selected": props.selected,
     "is-today": props.today,

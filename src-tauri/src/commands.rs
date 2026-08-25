@@ -69,7 +69,14 @@ pub struct GrahaInfo {
 #[tauri::command]
 pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Bootstrap> {
     Ok(Bootstrap {
-        settings: state.settings(),
+        // Clamped here, so the number the page scales itself by and the one the
+        // window is sized by are the same number. Serialised raw, a hand-edited
+        // scale of 4 gave a transform of 4 inside a window built at 1.4.
+        settings: {
+            let mut settings = state.settings();
+            settings.appearance.scale = settings.appearance.clamped();
+            settings
+        },
         location: state.location(),
         subject: panel::subject_or_default(&app),
         subjects: state.tray_subjects(),

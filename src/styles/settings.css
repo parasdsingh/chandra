@@ -107,7 +107,7 @@
 }
 
 .settings__choice.is-selected svg {
-  color: var(--accent);
+  color: var(--text-primary);
 }
 
 .settings__choice:focus-visible {
@@ -284,8 +284,8 @@
 }
 
 .settings__toggle.is-on .settings__switch {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
 }
 
 .settings__toggle.is-on .settings__switch::after {

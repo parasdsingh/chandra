@@ -44,7 +44,6 @@ import { describeEvent } from "./MonthGrid";
 interface Props {
   detail: Detail | undefined;
   events: TransitEvent[];
-  grahaName: string;
   context: FormatContext;
   isToday: boolean;
   error: { code: string; message: string } | undefined;
@@ -82,7 +81,6 @@ function Body(props: Props): JSX.Element {
           <Subject
             detail={detail()}
             events={props.events}
-            grahaName={props.grahaName}
             context={props.context}
           />
 
@@ -136,7 +134,6 @@ function Field(props: {
 function Subject(props: {
   detail: Detail;
   events: TransitEvent[];
-  grahaName: string;
   context: FormatContext;
 }): JSX.Element {
   const moon = () => (props.detail.kind === "moon" ? (props.detail as MoonDay) : null);

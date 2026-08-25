@@ -600,6 +600,7 @@ export function Panel(props: Props): JSX.Element {
                       onSelect={openDay}
                       onCommit={step}
                       onVisibleChange={setVisibleDelta}
+              scale={props.boot.settings.appearance.scale}
                     />
                   )}
                 </Show>
@@ -618,7 +619,6 @@ export function Panel(props: Props): JSX.Element {
             <DayDetail
               detail={detail()}
               events={selectedEvents()}
-              grahaName={grahaInfo()?.name ?? ""}
               context={{ timeZone: timeZone() }}
               isToday={sameDate(selected(), today())}
               error={error()}

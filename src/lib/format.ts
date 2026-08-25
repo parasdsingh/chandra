@@ -30,7 +30,7 @@ export function formatTime(moment: Moment, context: FormatContext): string {
 }
 
 /** `19 Aug`, used to qualify a boundary that falls outside the selected day. */
-export function formatDayMonth(moment: Moment, context: FormatContext): string {
+function formatDayMonth(moment: Moment, context: FormatContext): string {
   return new Intl.DateTimeFormat(undefined, {
     timeZone: context.timeZone,
     day: "numeric",
@@ -75,44 +75,6 @@ export function formatWeekday(date: DateKey): string {
   })
     .format(value)
     .toUpperCase();
-}
-
-/**
- * `THURSDAY 20 AUGUST 2026`, the full date on one line.
- *
- * Takes no zone: the value is already a calendar date, resolved in the
- * observer's zone by the backend. Formatting it at UTC noon keeps it from
- * shifting back across the date line during presentation.
- */
-export function formatFullDate(date: DateKey): string {
-  const value = new Date(Date.UTC(date.year, date.month - 1, date.day, 12));
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone: "UTC",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
-    .format(value)
-    .toUpperCase()
-    .replace(/,/g, "");
-}
-
-export function formatMonthYear(year: number, month: number): string {
-  const value = new Date(Date.UTC(year, month - 1, 1, 12));
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone: "UTC",
-    month: "long",
-    year: "numeric",
-  }).format(value);
-}
-
-export function formatMonthShort(month: number): string {
-  const value = new Date(Date.UTC(2000, month - 1, 1, 12));
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone: "UTC",
-    month: "short",
-  }).format(value);
 }
 
 const PHASE_LABELS: Record<PhaseKey, string> = {

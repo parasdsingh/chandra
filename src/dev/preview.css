@@ -26,7 +26,7 @@
   font: var(--type-caption);
   letter-spacing: var(--track-micro);
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .preview .panel-frame {
@@ -50,14 +50,7 @@
   gap: 6px;
   min-width: 56px;
   font: var(--type-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 /* The settings window is 520 x 420; the harness shows it at that exact size. */
-.preview__settings {
-  width: 520px;
-  height: 420px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-panel);
-  overflow: hidden;
-}

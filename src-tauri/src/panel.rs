@@ -46,7 +46,10 @@ pub fn apply_scale(app: &AppHandle, scale: f64) {
         PANEL_WIDTH * scale,
         PANEL_HEIGHT * scale,
     ));
-    apply_material(&window);
+    // The material's corner is re-cut to match. The panel's own radius is a CSS
+    // length and scales with the transform, so leaving the material at the
+    // composed 12pt showed its corner through the panel's rounder one.
+    apply_material_with_radius(&window, PANEL_RADIUS * scale);
 }
 
 /// The panel's drawn width, which is what placement has to centre.
@@ -113,6 +116,17 @@ pub fn has_material(app: &AppHandle) -> bool {
 /// a thin scrim over this, so the blur is what shows through.
 #[cfg(target_os = "macos")]
 fn apply_material(window: &WebviewWindow) -> bool {
+    apply_material_with_radius(window, PANEL_RADIUS)
+}
+
+/// No vibrancy outside macOS, so the panel always paints its own ground.
+#[cfg(not(target_os = "macos"))]
+fn apply_material(_window: &WebviewWindow) -> bool {
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn apply_material_with_radius(window: &WebviewWindow, radius: f64) -> bool {
     use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
 
     // Popover is the material the system uses for exactly this kind of window.
@@ -122,7 +136,7 @@ fn apply_material(window: &WebviewWindow) -> bool {
         window,
         NSVisualEffectMaterial::Popover,
         Some(NSVisualEffectState::Active),
-        Some(PANEL_RADIUS),
+        Some(radius),
     ) {
         Ok(()) => true,
         Err(error) => {
@@ -134,9 +148,8 @@ fn apply_material(window: &WebviewWindow) -> bool {
     }
 }
 
-/// No vibrancy outside macOS, so the panel always paints its own ground.
 #[cfg(not(target_os = "macos"))]
-fn apply_material(_window: &WebviewWindow) -> bool {
+fn apply_material_with_radius(_window: &WebviewWindow, _radius: f64) -> bool {
     false
 }
 
