@@ -27,9 +27,11 @@ pass against the old code is not finished.**
 The second pass in `AUDIT.md` — a fact about one thing printed beside a heading
 about another — closed ten and left five standing:
 
-- **W-03** A Moshier month draws 42 cells with no precision note. The note is
-  gated on the day payload, so scrolling to 1750 renders a whole grid silently
-  from the analytic fallback. D-006 promises otherwise.
+- ~~**W-03** A Moshier month draws 42 cells with no precision note.~~ Fixed: the
+  grid carries it too, and both notes were reworded. They said "Moshier
+  ephemeris", which is the name of a piece of arithmetic and tells a reader
+  nothing; they now name the range and the magnitude, so the note reads as a
+  fact rather than a warning.
 - **W-04** Clock times carry no zone, and the zone need not be the machine's.
 - **W-06** `Ephemeris unavailable.` is shown for failures with no ephemeris in
   them, and is the fallback for any unknown code.

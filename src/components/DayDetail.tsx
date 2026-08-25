@@ -108,8 +108,14 @@ function Body(props: Props): JSX.Element {
           />
 
           <Show when={detail().source === "moshier"}>
+            {/* Named for what it means, not for the theory that produced it:
+                "Moshier ephemeris" is the name of a piece of arithmetic and
+                tells a reader nothing. The magnitude is given so it reads as a
+                fact rather than a warning - a second is nothing against times
+                printed to the minute, and a reader who is not told that has to
+                assume the worst. */}
             <p class="detail__provenance">
-              Moshier ephemeris — reduced precision outside 1800–2399
+              Outside 1800–2399. Times here are approximate, by about a second.
             </p>
           </Show>
         </>

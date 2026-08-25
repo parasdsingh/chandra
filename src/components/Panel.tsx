@@ -39,7 +39,11 @@ import { localeFirstWeekday } from "../lib/format";
 import { CalendarScroller } from "./CalendarScroller";
 import { DayDetail, ErrorBlock } from "./DayDetail";
 import { Header } from "./Header";
-import { SECTION_TITLES, SettingsView, type SettingsSection } from "./SettingsView";
+import {
+  SECTION_TITLES,
+  SettingsView,
+  type SettingsSection,
+} from "./SettingsView";
 
 type View = "calendar" | "day" | "settings";
 
@@ -59,7 +63,9 @@ export function Panel(props: Props): JSX.Element {
    * left open overnight ringing yesterday.
    */
   const [subject, setSubject] = createSignal<GrahaKey>(props.boot.subject);
-  const [today, setToday] = createSignal<DateKey>(todayIn(props.boot.location.zone));
+  const [today, setToday] = createSignal<DateKey>(
+    todayIn(props.boot.location.zone),
+  );
 
   // Navigation is by anchor instant plus offset, because a lunar month has no
   // year-and-number to step through.
@@ -192,7 +198,9 @@ export function Panel(props: Props): JSX.Element {
     }));
 
     createResource(key, async (current) => {
-      if (months.has(address(current.context, current.anchor, current.offset))) {
+      if (
+        months.has(address(current.context, current.anchor, current.offset))
+      ) {
         return true;
       }
       try {
@@ -540,7 +548,8 @@ export function Panel(props: Props): JSX.Element {
       const panchanga = detail()?.panchanga;
       if (!panchanga) return "";
       const span =
-        panchanga.tithis.find((tithi) => tithi.prevailing) ?? panchanga.tithis[0];
+        panchanga.tithis.find((tithi) => tithi.prevailing) ??
+        panchanga.tithis[0];
       if (!span) return "";
       return `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}`;
     }
@@ -595,26 +604,40 @@ export function Panel(props: Props): JSX.Element {
             <Show
               when={error()}
               fallback={
-                // Keyed on the open counter: a fresh scroller per open.
-                <Show when={opened()} keyed>
-                  {(_generation) => (
-                    <CalendarScroller
-                      firstWeekday={firstWeekday}
-                      previous={monthAt(-1)}
-                      current={monthAt(0)}
-                      next={monthAt(1)}
-                      kind={subject() === "chandra" ? "moon" : "graha"}
-                      info={grahaInfo()}
-                      selected={selected()}
-                      today={today()}
-                      southern={props.boot.location.latitude < 0}
-                      onSelect={openDay}
-                      onCommit={step}
-                      onVisibleChange={setVisibleDelta}
-              scale={props.boot.settings.appearance.scale}
-                    />
-                  )}
-                </Show>
+                <>
+                  {/* Keyed on the open counter: a fresh scroller per open. */}
+                  <Show when={opened()} keyed>
+                    {(_generation) => (
+                      <CalendarScroller
+                        firstWeekday={firstWeekday}
+                        previous={monthAt(-1)}
+                        current={monthAt(0)}
+                        next={monthAt(1)}
+                        kind={subject() === "chandra" ? "moon" : "graha"}
+                        info={grahaInfo()}
+                        selected={selected()}
+                        today={today()}
+                        southern={props.boot.location.latitude < 0}
+                        onSelect={openDay}
+                        onCommit={step}
+                        onVisibleChange={setVisibleDelta}
+                        scale={props.boot.settings.appearance.scale}
+                      />
+                    )}
+                  </Show>
+
+                  {/* The grid says it too. The note used to be gated on the day
+                    payload, so scrolling past 1800 drew 42 cells of numerals
+                    from the analytic fallback in silence and only said so if a
+                    day was opened - which is the reading D-006 exists to
+                    prevent being passed off as exact. */}
+                  <Show when={monthAt(visibleDelta())?.source === "moshier"}>
+                    <p class="detail__provenance">
+                      Outside 1800–2399. Times here are approximate, by about a
+                      second.
+                    </p>
+                  </Show>
+                </>
               }
             >
               {/* The month in the window is the one that failed - the grid has
@@ -652,7 +675,6 @@ export function Panel(props: Props): JSX.Element {
             />
           </Show>
         </div>
-
       </div>
     </div>
   );
