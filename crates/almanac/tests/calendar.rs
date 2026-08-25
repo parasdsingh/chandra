@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
+use chandra_almanac::day::DayOptions;
 use chandra_almanac::lunar::MonthSystem as System;
 use chandra_almanac::month::{DayDetail, GrahaCell, GrahaMonth, MoonCell, MoonMonth};
 use chandra_almanac::time::DateKey;
@@ -40,6 +41,19 @@ fn almanac() -> MutexGuard<'static, Almanac> {
         })
         .lock()
         .expect("almanac lock poisoned by an earlier failure")
+}
+
+/// Every optional limb on.
+///
+/// Tests ask for all of them: a limb that is off is not computed, so a test
+/// running with the shipped defaults would assert against an empty list and pass
+/// whatever the calculation did.
+fn limbs() -> DayOptions {
+    DayOptions {
+        yogas: true,
+        karanas: true,
+        muhurtas: true,
+    }
 }
 
 /// A solar-month cursor pointing at local noon on the first of a month.
@@ -178,7 +192,7 @@ fn nakshatra_entry_and_exit_land_on_exact_boundaries() {
         .day_detail(
             Graha::Chandra,
             DateKey::new(2026, 8, 20).unwrap(),
-            System::Solar,
+            limbs(),
         )
         .expect("detail");
     let DayDetail::Moon(moon) = detail else {
@@ -218,7 +232,7 @@ fn a_span_boundary_is_the_instant_the_longitude_crosses_it() {
         .day_detail(
             Graha::Chandra,
             DateKey::new(2026, 8, 20).unwrap(),
-            System::Solar,
+            limbs(),
         )
         .expect("detail");
     let DayDetail::Moon(moon) = detail else {
@@ -262,7 +276,7 @@ fn moonrise_and_moonset_stay_inside_the_day_they_are_reported_for() {
             .day_detail(
                 Graha::Chandra,
                 DateKey::new(2026, 8, day).unwrap(),
-                System::Solar,
+                limbs(),
             )
             .expect("detail")
         else {
@@ -312,7 +326,7 @@ fn a_daylight_saving_day_reports_every_moonrise_exactly_once() {
                 .day_detail(
                     Graha::Chandra,
                     DateKey::new(2026, month, day).unwrap(),
-                    System::Solar,
+                    limbs(),
                 )
                 .expect("detail")
             else {
@@ -452,7 +466,7 @@ fn changing_location_changes_rise_times() {
 
     let date = DateKey::new(2026, 8, 20).unwrap();
     let DayDetail::Moon(here) = almanac
-        .day_detail(Graha::Chandra, date, System::Solar)
+        .day_detail(Graha::Chandra, date, limbs())
         .expect("detail")
     else {
         panic!("moon detail");
@@ -465,7 +479,7 @@ fn changing_location_changes_rise_times() {
         })
         .expect("relocate");
     let DayDetail::Moon(sydney) = almanac
-        .day_detail(Graha::Chandra, date, System::Solar)
+        .day_detail(Graha::Chandra, date, limbs())
         .expect("detail")
     else {
         panic!("moon detail");
@@ -661,7 +675,7 @@ fn report_timings() {
         .day_detail(
             Graha::Chandra,
             DateKey::new(2033, 7, 15).unwrap(),
-            System::Amanta,
+            limbs(),
         )
         .expect("detail");
     line("lunar moon day detail", t.elapsed());
@@ -677,7 +691,7 @@ fn report_timings() {
         .day_detail(
             Graha::Chandra,
             DateKey::new(2033, 7, 15).unwrap(),
-            System::Solar,
+            limbs(),
         )
         .expect("detail");
     line("moon day detail", t.elapsed());
@@ -687,7 +701,7 @@ fn report_timings() {
         .day_detail(
             Graha::Shani,
             DateKey::new(2033, 7, 15).unwrap(),
-            System::Solar,
+            limbs(),
         )
         .expect("detail");
     line("Shani day detail (slowest body)", t.elapsed());
@@ -896,7 +910,7 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
 
     for cell in inside(&month) {
         let DayDetail::Moon(day) = almanac
-            .day_detail(Graha::Chandra, cell.date, System::Solar)
+            .day_detail(Graha::Chandra, cell.date, limbs())
             .expect("moon detail")
         else {
             panic!("moon detail");
@@ -929,7 +943,7 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
             .expect("graha month");
         for cell in inside_graha(&month) {
             let DayDetail::Graha(day) = almanac
-                .day_detail(graha, cell.date, System::Solar)
+                .day_detail(graha, cell.date, limbs())
                 .expect("detail")
             else {
                 panic!("graha detail");
@@ -946,7 +960,7 @@ fn the_combustion_mark_and_the_day_it_opens_agree() {
     // lose. They carry no orb, so the day view omits the block entirely.
     for graha in [Graha::Surya, Graha::Rahu, Graha::Ketu] {
         let DayDetail::Graha(day) = almanac
-            .day_detail(graha, DateKey::new(2026, 8, 14).unwrap(), System::Solar)
+            .day_detail(graha, DateKey::new(2026, 8, 14).unwrap(), limbs())
             .expect("detail")
         else {
             panic!("graha detail");
@@ -1157,12 +1171,12 @@ fn the_cell_and_the_day_it_opens_name_the_same_tithi() {
         for cell in inside(&month) {
             let tithi = cell.tithi.as_ref().expect("tithi");
             let DayDetail::Moon(day) = almanac
-                .day_detail(Graha::Chandra, cell.date, System::Amanta)
+                .day_detail(Graha::Chandra, cell.date, limbs())
                 .expect("detail")
             else {
                 panic!("moon detail");
             };
-            let panchanga = day.panchanga.expect("a lunar day carries a panchanga");
+            let panchanga = day.panchanga;
             let prevailing = panchanga
                 .tithis
                 .iter()
@@ -1197,18 +1211,31 @@ fn the_cell_and_the_day_it_opens_name_the_same_tithi() {
         }
     }
 
-    // Solar mode carries no panchanga at all: it is absent, not empty.
+    // A day carries its panchanga whichever calendar is in force. It used to be
+    // absent outside a lunar month, on the reasoning that a solar grid states no
+    // tithi and so has no number to explain - but that was about 42 cells each
+    // costing a sunrise, and a day costs one. Yoga, karana and the muhurtas are
+    // facts about a civil day, not about which calendar names its month.
     let DayDetail::Moon(day) = almanac
         .day_detail(
             Graha::Chandra,
             DateKey::new(2026, 8, 20).unwrap(),
-            System::Solar,
+            limbs(),
         )
         .expect("detail")
     else {
         panic!("moon detail");
     };
-    assert!(day.panchanga.is_none());
+    assert!(
+        !day.panchanga.tithis.is_empty(),
+        "a day names its tithi in both calendars"
+    );
+    assert!(!day.panchanga.yogas.is_empty(), "and its yoga");
+    assert!(!day.panchanga.karanas.is_empty(), "and its karanas");
+    assert_eq!(
+        day.panchanga.vara_name, "Guruvara",
+        "20 August 2026 is a Thursday"
+    );
 }
 
 /// A day's own longitude and its own prevailing span must name one division.
@@ -1237,7 +1264,7 @@ fn a_graha_day_and_its_prevailing_span_name_the_same_division() {
             {
                 let date = DateKey::new(2024, month, day as i8).expect("date");
                 let DayDetail::Graha(detail) = almanac
-                    .day_detail(graha, date, System::Solar)
+                    .day_detail(graha, date, limbs())
                     .expect("detail")
                 else {
                     panic!("graha detail");
@@ -1427,14 +1454,14 @@ fn a_polar_night_reports_no_sunrise_count_rather_than_none_at_all() {
         .day_detail(
             Graha::Chandra,
             DateKey::new(2026, 1, 5).unwrap(),
-            System::Amanta,
+            limbs(),
         )
         .expect("detail")
     else {
         panic!("moon detail");
     };
 
-    let panchanga = day.panchanga.expect("a lunar day carries a panchanga");
+    let panchanga = day.panchanga;
     assert!(panchanga.sunrise.is_none(), "the Sun does not rise here");
     for span in &panchanga.tithis {
         assert_eq!(
@@ -1459,12 +1486,12 @@ fn a_polar_night_reports_no_sunrise_count_rather_than_none_at_all() {
 
         for cell in inside(&month) {
             let DayDetail::Moon(day) = almanac
-                .day_detail(Graha::Chandra, cell.date, System::Amanta)
+                .day_detail(Graha::Chandra, cell.date, limbs())
                 .expect("detail")
             else {
                 panic!("moon detail");
             };
-            for span in &day.panchanga.expect("panchanga").tithis {
+            for span in &day.panchanga.tithis {
                 match span.sunrises {
                     Some(0) => kshaya += 1,
                     Some(_) => counted += 1,

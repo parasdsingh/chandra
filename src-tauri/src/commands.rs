@@ -184,10 +184,13 @@ pub async fn day_detail(
 ) -> Result<DayDetail> {
     blocking(app, move |state| {
         let date = DateKey::new(year, month, day).map_err(AppError::from)?;
-        let system = state.settings().calendar.month_system;
+        // Read here rather than sent by the front end: which limbs are on is a
+        // property of the configuration, not of the request, so a day cannot be
+        // asked for with a set of limbs the settings pane does not agree with.
+        let options = state.settings().panchanga.into();
         state
             .almanac
-            .day_detail(graha, date, system)
+            .day_detail(graha, date, options)
             .map_err(AppError::from)
     })
     .await

@@ -117,12 +117,89 @@ export interface TithiSpan {
   source: Source;
 }
 
-/** The panchanga limbs a lunar calendar needs. Absent in solar mode. */
+export interface YogaSpan {
+  /** 1 to 27. */
+  index: number;
+  name: string;
+  entry: Moment | null;
+  exit: Moment | null;
+  prevailing: boolean;
+  source: Source;
+}
+
+export interface KaranaSpan {
+  /** 1 to 60, counted from the start of the lunar month. */
+  index: number;
+  name: string;
+  /** One of the four that occur once a month, rather than one of the seven
+   * that repeat. Carried so the front end need not know the four by heart. */
+  fixed: boolean;
+  entry: Moment | null;
+  exit: Moment | null;
+  prevailing: boolean;
+  source: Source;
+}
+
+/** Which half of the day-and-night a window divides. */
+export type MuhurtaHalf = "day" | "night";
+
+export interface Muhurta {
+  name: string;
+  half: MuhurtaHalf;
+  start: Moment;
+  end: Moment;
+  /** True for every window except Abhijit and Brahma Muhurta. */
+  inauspicious: boolean;
+}
+
+/**
+ * The limbs of a civil day. Present in both calendars.
+ *
+ * `yogas`, `karanas` and `muhurtas` are empty when the corresponding setting is
+ * off - which is indistinguishable from "none today", and deliberately so: the
+ * row is absent either way. `muhurtas` is also empty where the Sun does not rise
+ * and set, because a window defined as a fraction of daylight has no meaning on
+ * a day with none.
+ */
 export interface DayPanchanga {
   tithis: TithiSpan[];
+  yogas: YogaSpan[];
+  karanas: KaranaSpan[];
+  muhurtas: Muhurta[];
   sunrise: Moment | null;
+  sunset: Moment | null;
   reference: TithiReference;
   vara_name: string;
+}
+
+/** A graha's relationship to the rashi it occupies. */
+export type Dignity = "exalted" | "debilitated" | "own_sign";
+
+/**
+ * Two grahas within a degree of each other.
+ *
+ * No winner is reported: which graha wins a graha yuddha is decided differently
+ * by different authorities, so naming one would be asserting an interpretation.
+ */
+export interface War {
+  with: GrahaKey;
+  /** Angular separation in degrees, always positive. */
+  separation: number;
+}
+
+/** How a graha stands among the nine, at the day's reference instant. */
+export interface Standing {
+  /** `null` for Rahu and Ketu, which have no agreed dignity table, and for a
+   * graha standing in a rashi it has no relationship to. */
+  dignity: Dignity | null;
+  /** The lord of the nakshatra it occupies - whose ground it stands on. */
+  nakshatra_lord: GrahaKey;
+  /** Grahas this one casts a full drishti on. */
+  aspects: GrahaKey[];
+  /** Grahas casting a full drishti on this one. */
+  aspected_by: GrahaKey[];
+  /** `null` unless this graha is one of the five that can be at war, and is. */
+  war: War | null;
 }
 
 export interface MoonCell {
@@ -230,7 +307,8 @@ export interface MoonDay {
   moonrise: Moment | null;
   moonset: Moment | null;
   combustion: Combustion;
-  panchanga: DayPanchanga | null;
+  panchanga: DayPanchanga;
+  standing: Standing;
   nakshatras: NakshatraSpan[];
   rashis: RashiSpan[];
   source: Source;
@@ -248,7 +326,8 @@ export interface GrahaDay {
   rise: Moment | null;
   set: Moment | null;
   combustion: Combustion;
-  panchanga: DayPanchanga | null;
+  panchanga: DayPanchanga;
+  standing: Standing;
   nakshatras: NakshatraSpan[];
   rashis: RashiSpan[];
   source: Source;
@@ -302,6 +381,16 @@ export interface Settings {
   };
   calendar: {
     month_system: MonthSystem;
+  };
+  /**
+   * The optional limbs of the day view. Only the three that cost something have
+   * a switch; dignity, drishti, planetary war and the nakshatra lord are always
+   * on because they cost one positions call between them.
+   */
+  panchanga: {
+    yogas: boolean;
+    karanas: boolean;
+    muhurtas: boolean;
   };
   tray: {
     subjects: GrahaKey[];

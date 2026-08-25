@@ -7,10 +7,9 @@
 use chandra_ephemeris::{Engine, Graha, Observer, Source};
 use serde::{Deserialize, Serialize};
 
-use crate::day::{graha_day, moon_day, GrahaDay, MoonDay};
+use crate::day::{graha_day, moon_day, DayOptions, GrahaDay, MoonDay};
 use crate::error::Result;
 use crate::events::{combustion_at, combustion_from, events_in_month, Event};
-use crate::lunar::MonthSystem;
 use crate::phase::{self, PhaseName};
 use crate::time::{days_in_month, CivilDay, DateKey};
 use crate::tithi::{self, CellTithi, SkippedTithi, Tithi, Vriddhi};
@@ -336,15 +335,15 @@ pub fn day_detail(
     graha: Graha,
     day: &CivilDay,
     observer: Observer,
-    system: MonthSystem,
+    options: DayOptions,
 ) -> Result<DayDetail> {
     if graha == Graha::Chandra {
         Ok(DayDetail::Moon(Box::new(moon_day(
-            engine, day, observer, system,
+            engine, day, observer, options,
         )?)))
     } else {
         Ok(DayDetail::Graha(Box::new(graha_day(
-            engine, graha, day, observer, system,
+            engine, graha, day, observer, options,
         )?)))
     }
 }

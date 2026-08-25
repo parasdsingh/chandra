@@ -15,7 +15,10 @@ use serde::{Deserialize, Serialize};
 use crate::cache::Lru;
 use crate::error::{Error, Result};
 use crate::lunar::{self, LunarMonth, MonthSystem};
-use crate::month::{self, DayDetail, GrahaMonth, IndexedMonth, MonthIndex, MonthLabel, MoonMonth};
+use crate::day::DayOptions;
+use crate::month::{
+    self, DayDetail, GrahaMonth, IndexedMonth, MonthIndex, MonthLabel, MoonMonth,
+};
 use crate::phase::{self, PhaseName};
 use crate::time::{self, CivilDay, DateKey};
 use crate::tithi::CellTithi;
@@ -541,11 +544,17 @@ impl Almanac {
     /// The month system is a parameter because it decides whether the day has a
     /// panchanga at all: a Gregorian calendar names no tithi, so computing one
     /// would be work for a field the view would not show.
+    /// A day, with whichever optional limbs the caller asked for.
+    ///
+    /// The month system is not a parameter any more. It used to decide whether
+    /// the day carried a panchanga at all; it now carries one in both calendars,
+    /// because yoga, karana and the muhurtas are facts about a civil day rather
+    /// than about which calendar names the month it sits in.
     pub fn day_detail(
         &self,
         graha: Graha,
         date: DateKey,
-        system: MonthSystem,
+        options: DayOptions,
     ) -> Result<DayDetail> {
         let settings = self.read_settings()?;
         let day = CivilDay::new(date, &settings.zone)?;
@@ -554,7 +563,7 @@ impl Almanac {
             graha,
             &day,
             settings.location.observer,
-            system,
+            options,
         )
     }
 

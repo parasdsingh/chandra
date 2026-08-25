@@ -11,6 +11,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use chandra_almanac::day::DayOptions;
 use chandra_almanac::lunar::MonthSystem;
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, SiderealConfig};
 use serde::{Deserialize, Serialize};
@@ -18,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -26,8 +27,35 @@ pub struct Settings {
     pub location: LocationSetting,
     pub sidereal: SiderealSetting,
     pub calendar: CalendarSetting,
+    pub panchanga: PanchangaSetting,
     pub tray: TraySetting,
     pub appearance: AppearanceSetting,
+}
+
+/// Which optional limbs the day view computes and shows.
+///
+/// Only the three that cost something are here. Dignity, drishti, planetary war
+/// and the nakshatra lord have no switch: they cost one positions call between
+/// them, and a switch for a field that is free is a decision asked of the user
+/// for nothing.
+///
+/// All off by default. The day view is readable as it stands, and these are for
+/// someone who came looking for them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct PanchangaSetting {
+    pub yogas: bool,
+    pub karanas: bool,
+    pub muhurtas: bool,
+}
+
+impl From<PanchangaSetting> for DayOptions {
+    fn from(setting: PanchangaSetting) -> Self {
+        DayOptions {
+            yogas: setting.yogas,
+            karanas: setting.karanas,
+            muhurtas: setting.muhurtas,
+        }
+    }
 }
 
 /// How large the whole panel is drawn.
@@ -149,6 +177,7 @@ impl Default for Settings {
             calendar: CalendarSetting {
                 month_system: MonthSystem::Solar,
             },
+            panchanga: PanchangaSetting::default(),
             tray: TraySetting {
                 // Only the moon, which is permanent and not listed here.
                 subjects: Vec::new(),
@@ -292,6 +321,26 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
             .insert("appearance".into(), serde_json::json!({ "scale": 1.0 }));
         value["schema_version"] = serde_json::Value::from(3u32);
         version = 3;
+    }
+
+    // 3 -> 4. The day view gained yoga, karana and the muhurtas, each behind a
+    // switch. A file written before them means the state they were in, which is
+    // off: none of the three existed to be switched on.
+    //
+    // Inserted rather than left to serde's default, so a document that has been
+    // through the migration is complete on disk. A missing block that only ever
+    // resolved to a default would be indistinguishable from one a future step
+    // needs to read, and this is the file those steps are written against.
+    if version == 3 {
+        value
+            .as_object_mut()
+            .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
+            .insert(
+                "panchanga".into(),
+                serde_json::json!({ "yogas": false, "karanas": false, "muhurtas": false }),
+            );
+        value["schema_version"] = serde_json::Value::from(4u32);
+        version = 4;
     }
 
     match version {

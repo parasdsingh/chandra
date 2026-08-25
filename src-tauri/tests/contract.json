@@ -42,8 +42,44 @@
       }
     ],
     "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "exit": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "fixed": "boolean",
+          "index": "integer",
+          "name": "string",
+          "prevailing": "boolean",
+          "source": "string"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "half": "string",
+          "inauspicious": "boolean",
+          "name": "string",
+          "start": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          }
+        }
+      ],
       "reference": "string",
       "sunrise": {
+        "day_offset": "integer",
+        "unix_ms": "integer"
+      },
+      "sunset": {
         "day_offset": "integer",
         "unix_ms": "integer"
       },
@@ -66,7 +102,23 @@
           "sunrises": "integer"
         }
       ],
-      "vara_name": "string"
+      "vara_name": "string",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "exit": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "index": "integer",
+          "name": "string",
+          "prevailing": "boolean",
+          "source": "string"
+        }
+      ]
     },
     "rashis": [
       {
@@ -94,7 +146,21 @@
       "unix_ms": "integer"
     },
     "source": "string",
-    "speed": "number"
+    "speed": "number",
+    "standing": {
+      "aspected_by": [
+        "string"
+      ],
+      "aspects": [
+        "string"
+      ],
+      "dignity": "null",
+      "nakshatra_lord": "string",
+      "war": {
+        "separation": "number",
+        "with": "string"
+      }
+    }
   },
   "GrahaMonth": {
     "adhika": "boolean",
@@ -187,8 +253,44 @@
       }
     ],
     "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "exit": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "fixed": "boolean",
+          "index": "integer",
+          "name": "string",
+          "prevailing": "boolean",
+          "source": "string"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "half": "string",
+          "inauspicious": "boolean",
+          "name": "string",
+          "start": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          }
+        }
+      ],
       "reference": "string",
       "sunrise": {
+        "day_offset": "integer",
+        "unix_ms": "integer"
+      },
+      "sunset": {
         "day_offset": "integer",
         "unix_ms": "integer"
       },
@@ -211,7 +313,23 @@
           "sunrises": "integer"
         }
       ],
-      "vara_name": "string"
+      "vara_name": "string",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "exit": {
+            "day_offset": "integer",
+            "unix_ms": "integer"
+          },
+          "index": "integer",
+          "name": "string",
+          "prevailing": "boolean",
+          "source": "string"
+        }
+      ]
     },
     "phase": "string",
     "rashis": [
@@ -230,7 +348,18 @@
         "western": "string"
       }
     ],
-    "source": "string"
+    "source": "string",
+    "standing": {
+      "aspected_by": [
+        "string"
+      ],
+      "aspects": [
+        "string"
+      ],
+      "dignity": "string",
+      "nakshatra_lord": "string",
+      "war": "null"
+    }
   },
   "MoonMonth": {
     "adhika": "boolean",
@@ -290,6 +419,11 @@
         "longitude": "number",
         "zone": "string"
       }
+    },
+    "panchanga": {
+      "karanas": "boolean",
+      "muhurtas": "boolean",
+      "yogas": "boolean"
     },
     "schema_version": "integer",
     "sidereal": {

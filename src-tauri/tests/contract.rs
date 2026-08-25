@@ -85,20 +85,43 @@ fn merge(a: Value, b: Value) -> Value {
     }
 }
 
+/// Every optional limb on.
+///
+/// The fixture records what the front end may receive, so it has to be built
+/// from days that carry everything. A fixture built with the shipped defaults
+/// would record yoga, karana and the muhurtas as empty lists and let the two
+/// sides drift apart on their shape unnoticed.
+fn limbs() -> chandra_almanac::day::DayOptions {
+    chandra_almanac::day::DayOptions {
+        yogas: true,
+        karanas: true,
+        muhurtas: true,
+    }
+}
+
 /// Shape of a day detail merged across a month, so every optional field is
 /// represented by a day on which it is present.
 ///
-/// Both month systems are sampled: the panchanga block exists only in a lunar
-/// month, and a fixture built from solar days alone would record it as absent
-/// and let the two sides drift apart unnoticed.
+/// A whole month rather than one day: kshaya and vriddhi occur about once a
+/// month each, and a day that carries neither records their fields as absent.
+///
+/// The month system is no longer a parameter. A day carries its panchanga in
+/// both calendars now, so there is nothing about a day's shape that varies with
+/// it.
+///
+/// January 2024 is sampled alongside August 2026 because Mangala and Budha are
+/// inside one degree of each other on the 26th to the 28th. A planetary war is
+/// rare enough that a single month almost never holds one, and a fixture built
+/// without one records `war` as null - which would let `War`'s own fields change
+/// without this test noticing.
 fn merged_day_shape(almanac: &Almanac, graha: Graha) -> Value {
-    [MonthSystem::Solar, MonthSystem::Amanta]
+    [(2026, 8), (2024, 1)]
         .into_iter()
-        .flat_map(|system| {
+        .flat_map(|(year, month)| {
             (1..=28)
-                .filter_map(|day| chandra_almanac::time::DateKey::new(2026, 8, day).ok())
-                .filter_map(move |date| almanac.day_detail(graha, date, system).ok())
+                .filter_map(move |day| chandra_almanac::time::DateKey::new(year, month, day).ok())
         })
+        .filter_map(|date| almanac.day_detail(graha, date, limbs()).ok())
         .map(|detail| shape(&serde_json::to_value(detail).unwrap()))
         .reduce(merge)
         .expect("a month yields at least one day")

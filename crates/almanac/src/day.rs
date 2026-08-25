@@ -5,12 +5,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 use crate::events::{combustion_at, Combustion};
-use crate::lunar::MonthSystem;
+use crate::muhurta::{self, Muhurta};
+use crate::panchanga::{self as panchanga_limbs, KaranaSpan, YogaSpan};
+use crate::standing::{self, Standing};
 use crate::phase::{self, PhaseName};
 use crate::spans::{divisions_in_day, Division, Span};
 use crate::time::{self, CivilDay, DateKey, Moment};
 use crate::tithi::{self, Reference, TithiSpan};
 use crate::zodiac::{degrees_in_rashi, pada, Nakshatra, Rashi};
+
+/// Which of the optional limbs to compute.
+///
+/// A limb switched off is not computed rather than computed and hidden. Yoga and
+/// karana each cost a boundary search, and the muhurtas cost the following day's
+/// sunrise; none of that should be spent to fill a field nothing draws.
+///
+/// The always-on fields - dignity, drishti, planetary war, the nakshatra lord -
+/// have no flag. They cost one positions call between them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DayOptions {
+    pub yogas: bool,
+    pub karanas: bool,
+    pub muhurtas: bool,
+}
 
 /// The panchanga limbs a lunar calendar needs to explain the day it drew.
 ///
@@ -19,14 +36,25 @@ use crate::zodiac::{degrees_in_rashi, pada, Nakshatra, Rashi};
 /// with its true boundaries, and `sunrise` is the instant it was taken at, so
 /// the reading can be audited rather than trusted.
 ///
-/// Yoga and karana are still absent (`docs/DECISIONS.md` D-010). Neither appears
-/// in the grid, so neither has a number to explain; a karana is in any case half
-/// a tithi and derivable from the row above it.
+/// Yoga, karana and the muhurtas are here now, each behind its own setting. The
+/// three lists are empty when the setting is off, because "off" and "none today"
+/// are the same thing to a reader - the row is absent either way - and a `Vec`
+/// cannot be `Some(vec![])` by mistake.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DayPanchanga {
     /// Every tithi touching the civil day, in order.
     pub tithis: Vec<TithiSpan>,
+    /// Every yoga touching it. Empty unless the setting is on.
+    pub yogas: Vec<YogaSpan>,
+    /// Every karana touching it - two on most days, sometimes three. Empty
+    /// unless the setting is on.
+    pub karanas: Vec<KaranaSpan>,
+    /// The named windows of the day, in the order they begin. Empty unless the
+    /// setting is on, and empty where the Sun does not rise and set.
+    pub muhurtas: Vec<Muhurta>,
     pub sunrise: Option<Moment>,
+    /// Sunset. `None` where the Sun does not set, like `sunrise`.
+    pub sunset: Option<Moment>,
     pub reference: Reference,
     pub vara_name: String,
 }
@@ -58,8 +86,10 @@ pub struct MoonDay {
     /// How far from the Sun, and whether that puts the Moon inside its rays.
     /// Judged at local noon, the same instant the month grid marks.
     pub combustion: Combustion,
-    /// Present only in a lunar month.
-    pub panchanga: Option<DayPanchanga>,
+    /// The limbs of the civil day. Present in both calendars.
+    pub panchanga: DayPanchanga,
+    /// How the Moon stands among the nine, at the day's reference instant.
+    pub standing: Standing,
     pub nakshatras: Vec<NakshatraSpan>,
     pub rashis: Vec<RashiSpan>,
     pub source: Source,
@@ -106,7 +136,9 @@ pub struct GrahaDay {
     pub combustion: Combustion,
     /// The same lunar day the Moon's view shows. A day is named the same
     /// whichever subject is being read on it.
-    pub panchanga: Option<DayPanchanga>,
+    pub panchanga: DayPanchanga,
+    /// How this graha stands among the nine, at the day's reference instant.
+    pub standing: Standing,
     pub nakshatras: Vec<NakshatraSpan>,
     pub rashis: Vec<RashiSpan>,
     pub source: Source,
@@ -141,23 +173,21 @@ pub(crate) fn sunrise_of(
         .rise_set(day.start_jd, day.end_jd, Graha::Surya, observer)?
         .rise)
 }
-
-/// The day's panchanga, in a lunar month.
+/// The panchanga limbs of a civil day.
 ///
-/// The spans are counted against the sunrises of this day and its neighbours,
-/// because a tithi routinely begins the day before and ends the day after, and
-/// whether it holds none, one or two of them is what makes it a kshaya, an
-/// ordinary tithi, or a vriddhi.
+/// Present in both calendars now, where it used to be lunar-only. D-010 made it
+/// optional because a solar grid states no tithi and so has no number to
+/// explain - but that reasoning was about 42 cells each costing a sunrise, and
+/// it does not carry to one opened day, which costs one. Yoga, karana and the
+/// muhurtas are facts about a civil day whichever calendar names the month it
+/// sits in, and a solar day view that could not say when Rahu Kaal is would be
+/// missing them for a reason that has nothing to do with them.
 fn panchanga(
     engine: &Engine,
     day: &CivilDay,
     observer: Observer,
-    system: MonthSystem,
-) -> Result<Option<DayPanchanga>> {
-    if !system.is_lunar() {
-        return Ok(None);
-    }
-
+    options: DayOptions,
+) -> Result<DayPanchanga> {
     let sunrise = sunrise_of(engine, day, observer)?;
     let reference = sunrise.unwrap_or_else(|| day.noon_jd());
 
@@ -170,23 +200,43 @@ fn panchanga(
     }
 
     let vara = time::vara(day.date)?;
-    Ok(Some(DayPanchanga {
+    let sunset = engine
+        .rise_set(day.start_jd, day.end_jd, Graha::Surya, observer)?
+        .set;
+
+    Ok(DayPanchanga {
         tithis: tithi::spans_in_day(engine, day, reference, &sunrises)?,
+        yogas: if options.yogas {
+            panchanga_limbs::yogas_in_day(engine, day, reference)?
+        } else {
+            Vec::new()
+        },
+        karanas: if options.karanas {
+            panchanga_limbs::karanas_in_day(engine, day, reference)?
+        } else {
+            Vec::new()
+        },
+        muhurtas: if options.muhurtas {
+            muhurta::muhurtas_in_day(engine, day, observer, vara)?
+        } else {
+            Vec::new()
+        },
         sunrise: sunrise.map(|jd| day.moment(jd)).transpose()?,
+        sunset: sunset.map(|jd| day.moment(jd)).transpose()?,
         reference: if sunrise.is_some() {
             Reference::Sunrise
         } else {
             Reference::LocalNoon
         },
         vara_name: time::VARA_NAMES[vara as usize].to_string(),
-    }))
+    })
 }
 
 pub fn moon_day(
     engine: &Engine,
     day: &CivilDay,
     observer: Observer,
-    system: MonthSystem,
+    options: DayOptions,
 ) -> Result<MoonDay> {
     let reference = reference_instant(engine, day, observer)?;
 
@@ -202,7 +252,7 @@ pub fn moon_day(
     let rise_set = engine.rise_set(day.start_jd, day.end_jd, Graha::Chandra, observer)?;
     let (nakshatras, nakshatra_source) = nakshatra_spans(engine, Graha::Chandra, day, reference)?;
     let (rashis, rashi_source) = rashi_spans(engine, Graha::Chandra, day, reference)?;
-    let panchanga = panchanga(engine, day, observer, system)?;
+    let panchanga = panchanga(engine, day, observer, options)?;
 
     Ok(MoonDay {
         date: day.date,
@@ -219,9 +269,10 @@ pub fn moon_day(
                 Some(nakshatra_source),
                 Some(rashi_source),
             ],
-            panchanga.as_ref(),
+            &panchanga,
         ),
         panchanga,
+        standing: standing::at(engine, Graha::Chandra, reference)?,
         nakshatras,
         rashis,
     })
@@ -239,13 +290,14 @@ pub fn moon_day(
 /// whose provenance could be reported - and an absent part contributes nothing
 /// rather than a default. Folding in a `Swieph` that stands for "no reading"
 /// would let a missing answer strengthen the day's claim about itself.
-fn day_source(parts: [Option<Source>; 4], panchanga: Option<&DayPanchanga>) -> Source {
+fn day_source(parts: [Option<Source>; 4], panchanga: &DayPanchanga) -> Source {
     Source::weakest(
-        parts.into_iter().flatten().chain(
-            panchanga
-                .into_iter()
-                .flat_map(|p| p.tithis.iter().map(|span| span.source)),
-        ),
+        parts
+            .into_iter()
+            .flatten()
+            .chain(panchanga.tithis.iter().map(|span| span.source))
+            .chain(panchanga.yogas.iter().map(|span| span.source))
+            .chain(panchanga.karanas.iter().map(|span| span.source)),
     )
 }
 
@@ -254,14 +306,14 @@ pub fn graha_day(
     graha: Graha,
     day: &CivilDay,
     observer: Observer,
-    system: MonthSystem,
+    options: DayOptions,
 ) -> Result<GrahaDay> {
     let reference = reference_instant(engine, day, observer)?;
     let position = engine.position(reference, graha)?;
     let rise_set = engine.rise_set(day.start_jd, day.end_jd, graha, observer)?;
     let (nakshatras, nakshatra_source) = nakshatra_spans(engine, graha, day, reference)?;
     let (rashis, rashi_source) = rashi_spans(engine, graha, day, reference)?;
-    let panchanga = panchanga(engine, day, observer, system)?;
+    let panchanga = panchanga(engine, day, observer, options)?;
 
     Ok(GrahaDay {
         date: day.date,
@@ -280,9 +332,10 @@ pub fn graha_day(
                 Some(nakshatra_source),
                 Some(rashi_source),
             ],
-            panchanga.as_ref(),
+            &panchanga,
         ),
         panchanga,
+        standing: standing::at(engine, graha, reference)?,
         nakshatras,
         rashis,
     })

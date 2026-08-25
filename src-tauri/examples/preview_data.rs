@@ -8,10 +8,24 @@
 
 use std::path::PathBuf;
 
+use chandra_almanac::day::DayOptions;
 use chandra_almanac::lunar::MonthSystem;
 use chandra_almanac::{Almanac, Location, MonthCursor};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig};
 use serde_json::json;
+
+/// Every optional limb on.
+///
+/// The harness is what the panel's layout is inspected against, and a pane that
+/// is only ever rendered with its optional rows absent is a pane whose full
+/// height nobody has looked at.
+fn limbs() -> DayOptions {
+    DayOptions {
+        yogas: true,
+        karanas: true,
+        muhurtas: true,
+    }
+}
 
 fn main() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/ephe");
@@ -66,11 +80,11 @@ fn main() {
             .moon_month(cursor(2026, 8, MonthSystem::Amanta))
             .expect("lunar month"),
         "moonDay": almanac
-            .day_detail(Graha::Chandra, date(20), MonthSystem::Solar)
+            .day_detail(Graha::Chandra, date(20), limbs())
             .expect("moon day"),
         // The same day in a lunar month, which carries the panchanga block.
         "lunarDay": almanac
-            .day_detail(Graha::Chandra, date(20), MonthSystem::Amanta)
+            .day_detail(Graha::Chandra, date(20), limbs())
             .expect("lunar day"),
         // The Moon rises about 50 minutes later each day, so roughly one civil
         // day a month contains no moonrise at all. Found rather than hardcoded,
@@ -78,7 +92,7 @@ fn main() {
         "moonDayNoRise": (1..=31)
             .filter_map(|day| {
                 almanac
-                    .day_detail(Graha::Chandra, date(day), MonthSystem::Solar)
+                    .day_detail(Graha::Chandra, date(day), limbs())
                     .ok()
             })
             .find(|detail| match detail {
@@ -95,21 +109,21 @@ fn main() {
             .day_detail(
                 Graha::Mangala,
                 chandra_almanac::time::DateKey::new(2025, 2, 24).expect("date"),
-                MonthSystem::Solar,
+                limbs(),
             )
             .expect("graha day"),
         // A graha in a lunar month: the one view shape the harness did not cover.
         // Shani is retrograde on this date, so it carries the tithi block, the
         // panchanga and the retrograde state at once.
         "lunarGrahaDay": almanac
-            .day_detail(Graha::Shani, date(21), MonthSystem::Amanta)
+            .day_detail(Graha::Shani, date(21), limbs())
             .expect("lunar graha day"),
         // Before 1800, to exercise the reduced-precision note.
         "moshierDay": almanac
             .day_detail(
                 Graha::Chandra,
                 chandra_almanac::time::DateKey::new(1650, 8, 20).expect("date"),
-                MonthSystem::Solar,
+                limbs(),
             )
             .expect("moshier day"),
         "snapshot": almanac

@@ -63,6 +63,7 @@ const boot: Bootstrap = {
     },
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta" },
+    panchanga: { yogas: true, karanas: true, muhurtas: true },
     tray: { subjects: ["mangala", "shani"], colour_mode: false },
   appearance: { scale: 1 },
   },

@@ -45,7 +45,9 @@ pub enum Half {
 /// A named window of a day.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Muhurta {
-    pub name: &'static str,
+    /// Owned rather than borrowed: a day is cached, and the cache round-trips
+    /// through `Deserialize`, which cannot produce a `&'static str`.
+    pub name: String,
     pub half: Half,
     pub start: Moment,
     pub end: Moment,
@@ -192,7 +194,7 @@ pub fn muhurtas_in_day(
     for (name, half, index, parts, auspicious) in windows {
         let (start, end) = horizon.part(half, index, parts);
         muhurtas.push(Muhurta {
-            name,
+            name: name.to_string(),
             half,
             start: day.moment(start)?,
             end: day.moment(end)?,
