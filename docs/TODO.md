@@ -173,25 +173,55 @@ picker its own button would have cost a slot the header does not have.
 
 ---
 
-## 7. Panchanga and jyotisha fields — queued
+## 7. Panchanga and jyotisha fields — done
 
-Always on: planetary war, drishti, exaltation/debilitation/own sign, and the
-nakshatra lord — "in whose nakshatra it sits". Toggleable in settings: yogas,
-karanas, muhurtas.
+Designed in `docs/design/panchanga.md`, then built. The day view is two panes,
+split on what the fields are about rather than on how many there are:
 
-| Tier | Work |
+| DAY — the civil day | POSITION — the subject |
 |---|---|
-| Free | Dignity is a lookup. The nakshatra lord is already computed and already on the payload |
-| Cheap | Yoga (Sun + Moon ÷ 13°20′), karana (half a tithi), drishti, planetary war (two grahas inside 1°) |
-| Real | Muhurtas — Rahu Kaal, Yamaganda, Gulika, Abhijit, Brahma Muhurta, Durmuhurtam. All divide day and night into parts, so all need **sunset**, which is computed nowhere yet |
+| Tithi | Rashi |
+| Yoga | Nakshatra |
+| Karana | Nakshatra lord |
+| Daylight | Motion |
+| Muhurtas | Dignity |
+| | Drishti |
+| | Planetary war |
+| | Rise and set, Combust, Events |
 
-This roughly doubles what a day holds, on the surface D-025 has just made
-readable. It probably has to split — a *day* pane and a *position* pane. That
-decision comes before the design.
+Day is identical on all nine panels, because a tithi does not depend on which
+graha is read against it. Position is a property of the subject, and nothing in
+it is the same for two subjects.
+
+Yogas, karanas and muhurtas are toggles in **Settings › Panchanga**, all off by
+default. A limb that is off is not computed rather than computed and hidden.
+Dignity, drishti, planetary war and the nakshatra lord have no toggle: they cost
+one positions call between them.
+
+Notes worth keeping:
+
+- `angles.rs` is one routine for tithi, karana and yoga. All three are divisions
+  of a Sun-Moon angle that only ever increases, so there is no retrograde case
+  and a boundary is crossed exactly once. `tithi.rs` was refactored onto it.
+- The **Durmuhurtam table is cited, not remembered.** Two of the values I would
+  have written from memory were wrong. It corroborates itself against a fact
+  from a different source: Abhijit is the 8th day muhurta and is held not to
+  apply on a Wednesday, and Wednesday's Durmuhurtam is the 8th day muhurta.
+- **No winner is reported for a planetary war**, and Rahu and Ketu get no
+  dignity. Both are disputed between authorities, and printing one reading would
+  be the app asserting an interpretation.
+- **Moolatrikona is not included.** Its degree ranges differ between
+  authorities, and it was not among the states asked for.
+- The Moon's nakshatra is the panchanga's fifth limb and is deliberately not in
+  the Day pane: the payload carries the *subject's* nakshatra, so a Nakshatra
+  row there would be true only when the subject happened to be the Moon.
+- `DayPanchanga` stopped being optional, and `Almanac::day_detail` stopped
+  taking a month system. Schema 4 migrates a settings file written before the
+  toggles existed.
 
 | | |
 |---|---|
-| Status | queued, needs the split decided first |
+| Status | done |
 
 ---
 

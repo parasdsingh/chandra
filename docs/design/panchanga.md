@@ -5,7 +5,7 @@ the nakshatra lord. That roughly doubles what a day holds, on a surface D-025
 has just made readable, so this document settles the shape before any of it is
 built.
 
-Status: **approved. Being built.**
+Status: **built.** What shipped differs from this document in three places, each noted where it applies.
 
 ---
 
@@ -30,13 +30,22 @@ Decided. The day view carries a segmented control under the title.
 | DAY | POSITION |
 |---|---|
 | Tithi | Rashi |
-| Nakshatra | Nakshatra lord |
-| Yoga | Motion |
-| Karana | Combust |
-| Vara | Dignity |
-| Sunrise, sunset | Drishti |
-| Muhurtas | Planetary war |
+| Yoga | Nakshatra |
+| Karana | Nakshatra lord |
+| Daylight | Motion |
+| Muhurtas | Dignity |
+| | Combust |
+| | Drishti |
+| | Planetary war |
 | | Rise and set |
+
+**Changed from the table above.** Nakshatra moved to Position. It is the
+panchanga's fifth limb, but the payload carries the *subject's* nakshatra - on a
+Mangala day, Mangala's - so a Nakshatra row under Day would have been true only
+when the subject happened to be the Moon.
+
+**Vara is not a row.** It is already in the line under the header, beside the
+weekday, and a day has one.
 
 The split is on **what the fields are about**, not on how many there are:
 
@@ -144,8 +153,17 @@ called it.
 | Yamaganda | day in 8 parts, part chosen by vara |
 | Gulika | day in 8 parts, part chosen by vara |
 | Abhijit | the 8th of 15 equal parts of the day |
-| Brahma Muhurta | the 14th of 15 equal parts of the night |
+| Brahma Muhurta | the 14th of 15 equal parts of the night **before this day's sunrise** |
 | Durmuhurtam | day in 15 parts, one or two chosen by vara — table in §7 |
+
+**Changed from the line above.** A civil day touches two nights, and the rules do
+not agree on which they mean. Brahma Muhurta ends shortly before dawn, so
+today's is the one in this morning's small hours - which is what a published
+panchanga prints, and the only reading of use to someone planning to be awake
+for it. Taken from the night after sunset it printed at the foot of the day's
+list at 03:45 the *following* morning, which reads as a sorting fault. Tuesday's
+second Durmuhurtam stays on the night after, because its source states it as an
+offset after sunset.
 
 Where the Sun does not rise or set, the muhurtas are absent rather than computed
 against a substitute instant. A window defined as a fraction of daylight has no
@@ -154,8 +172,12 @@ say why.
 
 ### 4.4 Dignity
 
-A lookup on the rashi the graha occupies: exaltation, debilitation, moolatrikona
-and own sign, from the standard table. Read at the day's reference instant, like
+A lookup on the rashi the graha occupies: exaltation, debilitation and own sign.
+
+**Changed from the line above: moolatrikona is not included.** Its degree ranges
+differ between authorities, so unlike exaltation and own sign it cannot be stated
+without choosing one - which would be this app asserting an interpretation. It
+was also not among the states asked for. Read at the day's reference instant, like
 everything else in the Position pane.
 
 ### 4.5 Drishti
