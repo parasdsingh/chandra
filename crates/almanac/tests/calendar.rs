@@ -1479,3 +1479,110 @@ fn a_polar_night_reports_no_sunrise_count_rather_than_none_at_all() {
         "a year of lunar months contains a tithi no day is named after"
     );
 }
+
+/// The jump overlay's index, which is the pointer route to a year.
+///
+/// A Vikram Samvat year holds twelve months or thirteen, and which it is
+/// depends on whether a lunation fitted inside one solar rashi. The index walks
+/// out from the month in hand until the year changes rather than counting to
+/// twelve, and these are the two facts that walk has to get right.
+#[test]
+fn a_lunar_year_holds_the_months_it_actually_holds() {
+    let almanac = almanac();
+
+    // VS 2083 contains Adhika Jyeshtha: thirteen months, and the intercalary
+    // one sits before the month whose name it repeats.
+    let cursor = MonthCursor {
+        system: System::Amanta,
+        ..solar(2026, 8)
+    };
+    let index = almanac.month_index(cursor).expect("index");
+
+    assert_eq!(index.year, "VS 2083");
+    assert_eq!(
+        index.months.len(),
+        13,
+        "an intercalary year has thirteen months, and all thirteen must be reachable"
+    );
+
+    let adhika = index
+        .months
+        .iter()
+        .position(|month| month.adhika)
+        .expect("VS 2083 has an adhika masa");
+    assert_eq!(
+        index.months[adhika].name, "Adhika Jyeshtha",
+        "the display name carries the qualifier"
+    );
+    assert_eq!(
+        index.months[adhika + 1].name,
+        "Jyeshtha",
+        "an adhika masa precedes the month whose name it repeats"
+    );
+
+    // Every offset resolves to the month it claims, against the same anchor.
+    for month in &index.months {
+        let at = MonthCursor {
+            offset: month.offset,
+            ..cursor
+        };
+        let resolved = almanac.moon_month(at).expect("month at the listed offset");
+        assert_eq!(
+            resolved.label,
+            format!("{} {}", month.name, index.year),
+            "offset {} did not land on {}",
+            month.offset,
+            month.name
+        );
+    }
+
+    // Paging lands in the neighbouring years, whatever their length.
+    let before = almanac
+        .month_index(MonthCursor {
+            offset: index.previous_year,
+            ..cursor
+        })
+        .expect("previous year");
+    assert_eq!(before.year, "VS 2082");
+
+    let after = almanac
+        .month_index(MonthCursor {
+            offset: index.next_year,
+            ..cursor
+        })
+        .expect("next year");
+    assert_eq!(after.year, "VS 2084");
+    assert_eq!(after.months.len(), 12, "an ordinary year has twelve");
+}
+
+/// A Gregorian year is twelve months and needs no search, but the offsets still
+/// have to be right: the index is applied by setting the cursor to them.
+#[test]
+fn a_solar_year_indexes_january_to_december() {
+    let almanac = almanac();
+
+    // Cursor on August, so the January offset is negative and December's
+    // positive - the case that a naive `offset + n` would get wrong.
+    let index = almanac.month_index(solar(2026, 8)).expect("index");
+
+    assert_eq!(index.year, "2026");
+    assert_eq!(index.months.len(), 12);
+    assert_eq!(index.months[0].name, "January");
+    assert_eq!(index.months[11].name, "December");
+    assert!(
+        index.months.iter().all(|month| !month.adhika),
+        "a Gregorian year has no intercalary month"
+    );
+
+    for month in &index.months {
+        let at = MonthCursor {
+            offset: month.offset,
+            ..solar(2026, 8)
+        };
+        let resolved = almanac.moon_month(at).expect("month at the listed offset");
+        assert_eq!(resolved.label, format!("{} 2026", month.name));
+    }
+
+    assert_eq!(index.previous_year, index.months[0].offset - 1);
+    assert_eq!(index.next_year, index.months[11].offset + 1);
+}

@@ -13,6 +13,7 @@ import type {
   DayDetail,
   GrahaKey,
   GrahaMonth,
+  MonthIndex,
   MoonMonth,
   Resolved,
   Settings,
@@ -46,6 +47,19 @@ export const grahaMonth = (
     offset,
     firstWeekday,
   });
+
+/**
+ * The months of the year the cursor lands in, with the offset that reaches each.
+ *
+ * Fetched when the jump overlay opens rather than with the month, because
+ * enumerating a lunar year costs up to fourteen syzygy searches and the overlay
+ * is opened deliberately.
+ */
+export const monthIndex = (
+  anchorUnixMs: number,
+  offset: number,
+  firstWeekday: number,
+) => invoke<MonthIndex>("month_index", { anchorUnixMs, offset, firstWeekday });
 
 export const dayDetail = (
   graha: GrahaKey,

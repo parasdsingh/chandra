@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::cache::Lru;
 use crate::error::{Error, Result};
 use crate::lunar::{self, LunarMonth, MonthSystem};
-use crate::month::{self, DayDetail, GrahaMonth, MonthLabel, MoonMonth};
+use crate::month::{self, DayDetail, GrahaMonth, IndexedMonth, MonthIndex, MonthLabel, MoonMonth};
 use crate::phase::{self, PhaseName};
 use crate::time::{self, CivilDay, DateKey};
 use crate::tithi::CellTithi;
@@ -281,6 +281,144 @@ impl Almanac {
 
         self.store(key, Cached::Frames(built.clone()), generation)?;
         Ok(Some(built))
+    }
+
+    /// The months of the year the cursor lands in, with the offset that reaches
+    /// each one.
+    ///
+    /// The pointer route to a year. A wheel moves one month per notch, so
+    /// without this the only way to 2140 is the keyboard, and the precision note
+    /// the panel prints outside 1800-2399 is a promise that going there is
+    /// possible.
+    ///
+    /// Offsets are against the cursor's own anchor, so the caller applies one by
+    /// setting its offset to the value returned - no arithmetic on its side, and
+    /// no assumption that a year holds twelve months. It does not, in lunar
+    /// mode, twice a decade.
+    pub fn month_index(&self, cursor: MonthCursor) -> Result<MonthIndex> {
+        let settings = self.settings_snapshot()?;
+        let jd = chandra_ephemeris::unix_seconds_to_jd(cursor.anchor_unix_ms as f64 / 1000.0);
+
+        if cursor.system == MonthSystem::Solar {
+            let anchor_day = time::date_at(jd, &settings.zone)?;
+            let (year, month_number) =
+                shift_gregorian(anchor_day.year, anchor_day.month, cursor.offset);
+
+            // The offset that shows January of this year, and every month is a
+            // step from there. A Gregorian year is twelve months by definition,
+            // so this needs no search.
+            let january = cursor.offset - (month_number as i32 - 1);
+            let months = (1..=12)
+                .map(|number| {
+                    Ok(IndexedMonth {
+                        name: gregorian_month_name(year, number)?,
+                        offset: january + (number as i32 - 1),
+                        adhika: false,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            return Ok(MonthIndex {
+                year: year.to_string(),
+                previous_year: january - 1,
+                next_year: january + 12,
+                months,
+            });
+        }
+
+        let containing = lunar::month_containing(
+            &self.engine,
+            jd,
+            cursor.system,
+            settings.location.observer,
+            &settings.zone,
+        )?;
+        let here = if cursor.offset == 0 {
+            containing.clone()
+        } else {
+            lunar::shift(
+                &self.engine,
+                &containing,
+                cursor.offset,
+                cursor.system,
+                settings.location.observer,
+                &settings.zone,
+            )?
+        };
+        let year = here.vikram_year;
+
+        // Walked rather than counted. A Vikram Samvat year holds twelve months
+        // or thirteen, and which it is depends on whether a lunation fitted
+        // inside one solar rashi - a fact only the ephemeris has. Walking out
+        // from the month in hand until the year changes asks it directly, and
+        // gets the adhika masa in its right position for free.
+        //
+        // The bound is a guard, not a count: a year cannot hold fifteen months,
+        // so a walk that reaches fifteen is a bug and stops rather than spins.
+        const GUARD: i32 = 15;
+        let mut months: Vec<IndexedMonth> = Vec::with_capacity(13);
+        let mut first_offset = cursor.offset;
+
+        for step in 0..GUARD {
+            let offset = cursor.offset - step;
+            let month = self.lunar_at(&containing, offset, cursor, &settings)?;
+            if month.vikram_year != year {
+                break;
+            }
+            first_offset = offset;
+            months.push(IndexedMonth {
+                name: month.display_name(),
+                offset,
+                adhika: month.adhika,
+            });
+        }
+        months.reverse();
+
+        for step in 1..GUARD {
+            let offset = cursor.offset + step;
+            let month = self.lunar_at(&containing, offset, cursor, &settings)?;
+            if month.vikram_year != year {
+                break;
+            }
+            months.push(IndexedMonth {
+                name: month.display_name(),
+                offset,
+                adhika: month.adhika,
+            });
+        }
+
+        let last_offset = months
+            .last()
+            .map(|month| month.offset)
+            .unwrap_or(cursor.offset);
+
+        Ok(MonthIndex {
+            year: format!("VS {year}"),
+            previous_year: first_offset - 1,
+            next_year: last_offset + 1,
+            months,
+        })
+    }
+
+    /// The lunar month `offset` steps from the cursor's anchor.
+    fn lunar_at(
+        &self,
+        containing: &lunar::LunarMonth,
+        offset: i32,
+        cursor: MonthCursor,
+        settings: &Settings,
+    ) -> Result<lunar::LunarMonth> {
+        if offset == 0 {
+            return Ok(containing.clone());
+        }
+        lunar::shift(
+            &self.engine,
+            containing,
+            offset,
+            cursor.system,
+            settings.location.observer,
+            &settings.zone,
+        )
     }
 
     pub fn moon_month(&self, cursor: MonthCursor) -> Result<MoonMonth> {

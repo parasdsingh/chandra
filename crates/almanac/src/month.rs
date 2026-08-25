@@ -361,3 +361,34 @@ fn elongation(engine: &Engine, jd: f64) -> Result<f64> {
     let bodies = engine.positions(jd, &[Graha::Chandra, Graha::Surya])?;
     Ok((bodies[0].longitude - bodies[1].longitude).rem_euclid(360.0))
 }
+
+/// The months of one year, and where each sits relative to a cursor.
+///
+/// Built for the jump overlay, which is the pointer route to a year: the
+/// keyboard has `⇧Page Up` and `⇧Page Down`, and a wheel that moves one month
+/// per notch is not a way to reach 2140.
+///
+/// The year is whichever year contains the month the cursor names. In solar
+/// mode that is the Gregorian year and there are always twelve; in lunar mode
+/// it is the Vikram Samvat year and there are twelve or thirteen, because an
+/// adhika masa is a month of the year like any other and has to be reachable.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MonthIndex {
+    /// How the year is named in the header: `VS 2083`, or `2026`.
+    pub year: String,
+    pub months: Vec<IndexedMonth>,
+    /// Cursor offsets that land in the year before this one and the year after,
+    /// so paging does not have to guess how many months a year holds.
+    pub previous_year: i32,
+    pub next_year: i32,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct IndexedMonth {
+    /// The month's own name, without the year: the year is above the grid.
+    pub name: String,
+    /// The cursor offset that shows this month, against the same anchor the
+    /// index was built for. The caller sets its offset to this and is there.
+    pub offset: i32,
+    pub adhika: bool,
+}

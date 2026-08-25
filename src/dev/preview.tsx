@@ -123,6 +123,8 @@ function moonHeader(title: string) {
       view="calendar"
       onBack={() => {}}
       onSettings={() => {}}
+        jumping={false}
+        onJump={() => {}}
     />
   );
 }
@@ -185,6 +187,8 @@ export function Preview(): JSX.Element {
           view="day"
           onBack={() => {}}
           onSettings={() => {}}
+        jumping={false}
+        onJump={() => {}}
         />
         <div class="region">
           <DayDetail
@@ -246,6 +250,8 @@ export function Preview(): JSX.Element {
           view="calendar"
           onBack={() => {}}
           onSettings={() => {}}
+        jumping={false}
+        onJump={() => {}}
         />
         <div class="region">
           <div class="grid-region">
@@ -308,6 +314,8 @@ export function Preview(): JSX.Element {
               view="settings"
               onBack={() => {}}
               onSettings={() => {}}
+        jumping={false}
+        onJump={() => {}}
             />
             <div class="region">
               <SettingsView

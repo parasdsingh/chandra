@@ -108,6 +108,31 @@
   overflow: hidden;
 }
 
+/* The title is the picker's control in the calendar. It is not drawn as a
+   button: a chrome-less title that responds to a hover is the pattern a date
+   picker uses everywhere, and a bordered control here would compete with the
+   two icons flanking it for a header that has room for one emphasis. */
+.header__label--button {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  cursor: default;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+/* A ground, not an underline. The underline was tried and removed everywhere
+   else in the panel; bringing one back for the header alone would make it the
+   only underlined thing on screen and read as a link. */
+.header__label--button:hover,
+.header__label--button.is-open {
+  background: var(--surface-hover);
+  border-radius: var(--r-button);
+  box-shadow: 0 0 0 4px var(--surface-hover);
+}
+
 .header__icon {
   width: 24px;
   height: 24px;
@@ -647,4 +672,112 @@
 .detail > *:not(.detail__glare):not(.detail__rail) {
   position: relative;
   z-index: 1;
+}
+
+/* ---------- the month and year picker ---------- */
+
+.jump-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  /* Nearly opaque. At 72% the grid behind stayed fully legible and its
+     numerals ran through the month names, which are the thing being read. The
+     panel is already translucent over the desktop, so a scrim that only dims
+     is a scrim over something that was never solid. */
+  background: color-mix(in srgb, var(--ground) 96%, transparent);
+  /* Not centred: the picker hangs from the title that opened it, so the eye
+     does not have to find where the thing it clicked went. */
+  padding: var(--s-3) var(--s-5) var(--s-5);
+  animation: jump-in var(--d-detail-in) var(--ease-standard);
+}
+
+@keyframes jump-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.jump {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  height: 100%;
+}
+
+.jump__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.jump__year {
+  font: var(--type-title);
+  letter-spacing: var(--track-title);
+  color: var(--text-primary);
+  /* The two arrows sit at the ends of the row whatever the year is called:
+     `VS 2083` and `2026` are different widths, and a year that shifted the
+     arrows as it changed would make them a moving target to press twice. */
+  flex: 1;
+  text-align: center;
+}
+
+.jump__step {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-button);
+  background: none;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.jump__step:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* Three columns, because thirteen months is four rows of three plus one and
+   twelve is four clean rows - and a lunar year is one or the other. Four
+   columns fitted twelve exactly and left an adhika masa hanging alone. */
+.jump__months {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+  align-content: start;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.jump__month {
+  min-height: 32px;
+  padding: var(--s-2) var(--s-1);
+  border: 0;
+  border-radius: var(--r-cell);
+  background: none;
+  color: var(--text-primary);
+  font: var(--type-body);
+  line-height: 1.15;
+  text-align: center;
+  cursor: default;
+  /* `Margashirsha` is thirteen characters in a 90px column. Wrapping is what
+     the two-line minimum height is for; truncating would make three of the
+     twelve unreadable, and they are the names being chosen between. */
+  overflow-wrap: anywhere;
+}
+
+.jump__month:hover {
+  background: var(--surface-hover);
+}
+
+/* The month behind the picker. A ground rather than the accent: gold means
+   today and nothing else (D-023), and the month in view is not today. */
+.jump__month.is-current {
+  background: var(--surface-selected);
+}
+
+.jump__qualifier {
+  color: var(--text-secondary);
 }

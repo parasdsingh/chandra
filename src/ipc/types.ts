@@ -385,3 +385,27 @@ export function isAppError(value: unknown): value is AppError {
     typeof (value as AppError).code === "string"
   );
 }
+
+/**
+ * The months of one year, and the cursor offset that reaches each.
+ *
+ * A year is twelve months in solar mode and twelve or thirteen in lunar mode,
+ * so the list is what the back end found rather than a shape the front end
+ * assumes. `previous_year` and `next_year` are offsets that land in the
+ * neighbouring years, for the same reason: paging must not have to know how
+ * many months it is stepping over.
+ */
+export interface MonthIndex {
+  /** `VS 2083`, or `2026`. */
+  year: string;
+  months: IndexedMonth[];
+  previous_year: number;
+  next_year: number;
+}
+
+export interface IndexedMonth {
+  /** The month's own name. The year is above the grid, not in every cell. */
+  name: string;
+  offset: number;
+  adhika: boolean;
+}

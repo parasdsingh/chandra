@@ -37,6 +37,7 @@ import { isAppError } from "../ipc/types";
 import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
 import { localeFirstWeekday } from "../lib/format";
 import { CalendarScroller } from "./CalendarScroller";
+import { MonthJump } from "./MonthJump";
 import { DayDetail, ErrorBlock } from "./DayDetail";
 import { Header } from "./Header";
 import {
@@ -76,6 +77,9 @@ export function Panel(props: Props): JSX.Element {
   const [view, setView] = createSignal<View>("calendar");
   const [section, setSection] = createSignal<SettingsSection>("root");
   const [selected, setSelected] = createSignal<DateKey | null>(null);
+  // Not a `view`: the header stays, because the header's title is the control
+  // that opened this and has to keep saying so.
+  const [jumping, setJumping] = createSignal(false);
   const [error, setError] = createSignal<{ code: string; message: string }>();
 
   const firstWeekday = localeFirstWeekday();
@@ -451,13 +455,21 @@ export function Panel(props: Props): JSX.Element {
 
     if (event.key === "Escape") {
       event.preventDefault();
-      if (view() !== "calendar") back();
+      // Innermost first. The picker is over the calendar, so Escape dismisses
+      // it before it reaches the selection underneath - otherwise one press
+      // cleared a ring the user could not see and left the picker open.
+      if (jumping()) setJumping(false);
+      else if (view() !== "calendar") back();
       else if (selected()) setSelected(null);
       else void ipc.closePanel();
       return;
     }
 
     if (view() !== "calendar") return;
+    // The picker has the keyboard while it is open: an arrow that moved the
+    // selection behind it would move a ring nobody can see, and Enter would
+    // open a day from the month being navigated away from.
+    if (jumping()) return;
 
     const handlers: Record<string, () => void> = {
       ArrowLeft: () => moveSelection(-1),
@@ -588,10 +600,13 @@ export function Panel(props: Props): JSX.Element {
           onBack={back}
           onSettings={() =>
             batch(() => {
+              setJumping(false);
               setView("settings");
               setSection("root");
             })
           }
+          jumping={jumping()}
+          onJump={() => setJumping((open) => !open)}
         />
 
         <div class="region">
@@ -672,6 +687,31 @@ export function Panel(props: Props): JSX.Element {
               section={section()}
               onOpen={setSection}
               apply={(next) => void applySettings(next)}
+            />
+          </Show>
+
+          {/* Over the region, not in place of a view: what the strip is showing
+              is the thing being changed, so it stays behind the picker rather
+              than being replaced by it. Keyed on the cursor, so an overlay
+              reopened after a jump starts on the year it landed in. */}
+          <Show when={jumping() && view() === "calendar"}>
+            <MonthJump
+              anchor={anchor()}
+              offset={offset()}
+              firstWeekday={firstWeekday}
+              context={context()}
+              onJump={(target) =>
+                batch(() => {
+                  setJumping(false);
+                  // Absolute, not a step: the offsets the index returns are
+                  // against the anchor it was built for, which is this one.
+                  setOffset(target);
+                  // The selection belonged to the month being left. Kept, it
+                  // would put the ring on a date the new month may not hold.
+                  setSelected(null);
+                })
+              }
+              onClose={() => setJumping(false)}
             />
           </Show>
         </div>

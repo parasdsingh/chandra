@@ -144,18 +144,32 @@ rail; the shape it described needed a rim the panel does not have.
 
 ---
 
-## 6. Year navigation — queued
+## 6. Year navigation — done
 
 Keeping the Moshier precision note creates an obligation: if a reading can be
 degraded by navigating far enough, getting there must not be tedious.
 
-`⇧Page Up` / `⇧Page Down` step a year and are bound. There is no pointer route:
-the wheel and the drag move the strip one month at a time, and there is no
-picker to jump with.
+Shipped as a jump overlay, chosen over shift-scroll because a gesture nothing
+draws is not a route anyone finds. The header title is the control — it is
+already the only thing on screen that names where the strip is, and giving the
+picker its own button would have cost a slot the header does not have.
+
+- `‹ VS 2083 ›` over a grid of that year's months; a month jumps the strip.
+- The months come from the back end (`Almanac::month_index`), not counted in the
+  front end. A Vikram Samvat year holds twelve or thirteen, and which depends on
+  whether a lunation fitted inside one solar rashi. Twelve cells laid out on
+  faith would put the adhika masa in the wrong place, or lose it.
+- Paging uses offsets the index reports, never `± 12`, for the same reason.
+- Its own IPC command: enumerating a lunar year costs up to fourteen syzygy
+  searches, and every month view would have paid that for a panel rarely opened.
+- Escape closes the picker before it reaches the selection underneath, and the
+  arrow keys do not move a ring nobody can see.
+
+`⇧Page Up` / `⇧Page Down` still step a year.
 
 | | |
 |---|---|
-| Status | queued, unspecified |
+| Status | done |
 
 ---
 

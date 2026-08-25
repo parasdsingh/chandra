@@ -51,6 +51,7 @@ pub fn run() {
             commands::bootstrap,
             commands::moon_month,
             commands::graha_month,
+            commands::month_index,
             commands::day_detail,
             commands::snapshot,
             commands::update_settings,

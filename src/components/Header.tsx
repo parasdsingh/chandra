@@ -29,6 +29,10 @@ interface Props {
   view: "calendar" | "day" | "settings";
   onBack: () => void;
   onSettings: () => void;
+  /** Opens the month and year picker. Only the calendar has one to open. */
+  onJump: () => void;
+  /** Whether the picker is already open, so the title can say so. */
+  jumping: boolean;
 }
 
 export function Header(props: Props): JSX.Element {
@@ -45,7 +49,7 @@ export function Header(props: Props): JSX.Element {
   const full = () =>
     isCalendar() ? `${props.subjectName} · ${props.title}` : label();
 
-  let labelElement: HTMLDivElement | undefined;
+  let labelElement: HTMLElement | undefined;
   const [level, setLevel] = createSignal(0);
 
   // Ladder. The subject name is the last thing dropped, not the first: it is
@@ -118,17 +122,38 @@ export function Header(props: Props): JSX.Element {
           apart is what stops `Adhika Shravana` from reading as a thirteenth
           month name of its own. Split from the fitted string rather than passed
           separately, so the measuring ladder above still sees one label. */}
-      <div class="header__label" ref={labelElement} aria-label={full()}>
-        <Show when={props.adhika ? qualifier(fitted()) : null} fallback={fitted()}>
-          {(split) => (
-            <>
-              {split().before}
-              <span class="header__qualifier">Adhika </span>
-              {split().after}
-            </>
-          )}
-        </Show>
-      </div>
+      {/* A button in the calendar and nothing but text elsewhere. The month
+          name is the one thing on screen that already names where the strip is,
+          so it is where a reader looks to change it - and giving the picker its
+          own control would have cost a slot the header does not have.
+
+          Two tags rather than one with a `disabled` attribute: a disabled
+          button is announced as dimmed, and a settings section title is not a
+          control that has been switched off. */}
+      <Show
+        when={isCalendar()}
+        fallback={
+          <div
+            class="header__label"
+            ref={(element) => (labelElement = element)}
+            aria-label={full()}
+          >
+            <Label adhika={props.adhika} text={fitted()} />
+          </div>
+        }
+      >
+        <button
+          type="button"
+          class="header__label header__label--button"
+          classList={{ "is-open": props.jumping }}
+          ref={(element) => (labelElement = element)}
+          aria-label={`${full()}. Jump to a month`}
+          aria-expanded={props.jumping}
+          onClick={props.onJump}
+        >
+          <Label adhika={props.adhika} text={fitted()} />
+        </button>
+      </Show>
 
       <Show when={props.view !== "settings"}>
         <button
@@ -151,6 +176,24 @@ export function Header(props: Props): JSX.Element {
  * have set the qualifier apart on any month whose name happened to contain it.
  */
 const QUALIFIER = "Adhika ";
+
+/** The fitted label, with `Adhika` set apart where the month is intercalary.
+ *
+ * Split from the fitted string rather than passed separately, so the measuring
+ * ladder above still sees one label. */
+function Label(props: { adhika: boolean; text: string }): JSX.Element {
+  return (
+    <Show when={props.adhika ? qualifier(props.text) : null} fallback={props.text}>
+      {(split) => (
+        <>
+          {split().before}
+          <span class="header__qualifier">Adhika </span>
+          {split().after}
+        </>
+      )}
+    </Show>
+  );
+}
 
 function qualifier(label: string): { before: string; after: string } | null {
   const at = label.indexOf(QUALIFIER);

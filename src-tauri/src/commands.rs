@@ -5,7 +5,7 @@
 //! blocking Tauri's async runtime on it would stall every other command.
 
 use chandra_almanac::lunar::MonthSystem;
-use chandra_almanac::month::{DayDetail, GrahaMonth, MoonMonth};
+use chandra_almanac::month::{DayDetail, GrahaMonth, MonthIndex, MoonMonth};
 use chandra_almanac::time::DateKey;
 use chandra_almanac::Snapshot;
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType};
@@ -150,6 +150,26 @@ pub async fn graha_month(
             .almanac
             .graha_month(graha, cursor)
             .map_err(AppError::from)
+    })
+    .await
+}
+
+/// The months of the year a cursor lands in, for the jump overlay.
+///
+/// Its own command rather than a field on `moon_month`: the overlay is opened
+/// deliberately and rarely, and a lunar year costs up to fourteen syzygy
+/// searches to enumerate. Every month view would have paid that for a panel
+/// almost nobody opens.
+#[tauri::command]
+pub async fn month_index(
+    app: AppHandle,
+    anchor_unix_ms: i64,
+    offset: i32,
+    first_weekday: u8,
+) -> Result<MonthIndex> {
+    blocking(app, move |state| {
+        let cursor = state.cursor(anchor_unix_ms, offset, first_weekday);
+        state.almanac.month_index(cursor).map_err(AppError::from)
     })
     .await
 }
