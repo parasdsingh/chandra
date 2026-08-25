@@ -339,13 +339,17 @@
 /* The other calendar's date, in the corner. It is an anchor to the world the
    user lives in, not what the cell is about, so it does not take the line that
    carries the glyph. */
-/* Top right, not top left: against the left edge it sat hard up against the
-   tithi and the two numbers read as one. The corner it moved into was the
-   ingress marker's, which the calendar no longer draws. */
+/* Bottom right, clear of everything.
+
+   It has been in both top corners and collided in each: the numeral is centred
+   and grows with the tithi, so `S12` and `K14` reach far enough across that a
+   date in either upper corner touches them. Here it sits in the side margin the
+   glyph never uses, below the numeral entirely, and outside the retrograde
+   ring. */
 .day-cell__gregorian {
   position: absolute;
-  top: 3px;
-  right: 4px;
+  bottom: 2px;
+  right: 3px;
   font: 600 9px / 1 var(--font-stack);
   letter-spacing: 0.3px;
   color: var(--text-secondary);
@@ -357,12 +361,15 @@
 }
 
 /* A tithi that began and ended between two sunrises: the grid's numbers jump at
-   this cell. Set on the numeral like a footnote mark rather than in a corner:
-   the top right carries the other calendar's date. */
+   this cell.
+
+   Top left, where nothing else is. Set against the numeral it read as an ingress
+   dot - which is what used to occupy that corner - so a mark meaning "the
+   calendar skipped a day" was taken for one meaning "the graha changed sign". */
 .day-cell__kshaya {
   position: absolute;
-  top: -1px;
-  right: -5px;
+  top: 4px;
+  left: 4px;
   width: 3px;
   height: 3px;
   border-radius: 50%;

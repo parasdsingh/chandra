@@ -79,13 +79,6 @@ export function tithiLabel(tithi: CellTithi): { prefix: string; value: string } 
   };
 }
 
-/** Three-letter month, uppercased, for the cell that opens a Gregorian month. */
-function monthAbbreviation(month: number): string {
-  return new Intl.DateTimeFormat(undefined, { timeZone: "UTC", month: "short" })
-    .format(new Date(Date.UTC(2000, month - 1, 1, 12)))
-    .toUpperCase();
-}
-
 export function DayCell(props: Props): JSX.Element {
   const date = () => props.data.date;
   const inMonth = () => props.data.in_month;
@@ -105,8 +98,10 @@ export function DayCell(props: Props): JSX.Element {
    * cell would be the same three letters 30 times; printing it nowhere would
    * leave a lunar month that runs 13 Aug to 11 Sep with no visible seam.
    */
-  const gregorian = () =>
-    date().day === 1 ? `1 ${monthAbbreviation(date().month)}` : String(date().day);
+  // The day alone. `1 SEP` needed 22px and the corner has 11: beside the glyph
+  // there is only the side margin. Which Gregorian month a lunar month runs
+  // into is in the day view, and in the run of numbers itself.
+  const gregorian = () => String(date().day);
 
   return (
     <div
@@ -129,18 +124,17 @@ export function DayCell(props: Props): JSX.Element {
               {(prefix) => <span class="day-cell__paksha">{prefix()}</span>}
             </Show>
             {tithiLabel(lunar()).value}
-            {/* A tithi that began and ended inside this day is one the grid
-                never names, so the numbers jump here. Marked like a footnote,
-                on the numeral that jumps, rather than in the top-right corner,
-                which carries the other calendar's date. */}
-            <Show when={lunar().kshaya.length > 0}>
-              <span class="day-cell__kshaya" />
-            </Show>
           </span>
         )}
       </Show>
 
-      {/* The other calendar's date. In the corner, where it can be read without
+      {/* A tithi that began and ended inside this day is one the grid never
+          names, so the numbers jump here. In the corner nothing else uses. */}
+      <Show when={(tithi()?.kshaya.length ?? 0) > 0}>
+        <span class="day-cell__kshaya" />
+      </Show>
+
+      {/* The other calendar's date, in the corner, where it can be read without
           taking the line that says what the day is about. */}
       <Show when={tithi()}>
         <span class="day-cell__gregorian">{gregorian()}</span>
