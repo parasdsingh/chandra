@@ -258,6 +258,11 @@ pub async fn request_device_location(app: &AppHandle) {
             .ok()
             .and_then(|result| result.ok());
 
+    // Whatever the answer, the wait is over and nothing more will be read from
+    // the manager. A request that timed out would otherwise hold it and its
+    // delegate until the next one replaced them.
+    let _ = handle.run_on_main_thread(crate::location::release);
+
     if let Some(Outcome::Located {
         latitude,
         longitude,

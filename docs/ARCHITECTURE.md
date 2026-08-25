@@ -23,7 +23,7 @@ Rationale for every choice below is in [DECISIONS.md](DECISIONS.md); measured ev
       ---------------------------------------------
                      |
       +--------------+---------------+
-      |        src-tauri (shell)     |   tray, windows, commands, settings, autostart
+      |        src-tauri (shell)     |   tray, windows, commands, settings
       +--------------+---------------+
                      |
       +--------------+---------------+
@@ -242,18 +242,26 @@ invalidates wholesale inside the same critical section that reconfigures the eng
 
 ## 7. Settings
 
-- Stored via `tauri-plugin-store` at
-  `~/Library/Application Support/<bundle-id>/settings.json`.
-- Typed in Rust, carries `schema_version`, migrated by explicit numbered functions.
+- Read and written by `settings.rs` itself at
+  `~/Library/Application Support/<bundle-id>/settings.json`. No store plugin: settings only
+  ever cross the boundary through commands, so a plugin would add a second unguarded write
+  path to the same file.
+- Typed in Rust, carries `schema_version`, migrated by explicit numbered steps.
   No serde defaults papering over missing fields.
 
 ```
-schema_version, launch_at_login, time_format,
-location { mode: auto|manual, manual?: {lat, lon, tz, label} },
+schema_version,
+location { mode: automatic|manual,
+           place?: {label, zone, lat, lon, elevation},
+           elevation?: metres, applied on top of whichever step resolved },
 sidereal { ayanamsa, node_type },
-tray { subjects: [Graha], colour_mode: bool },
-appearance { theme }
+calendar { month_system: solar|amanta|purnimanta },
+tray { subjects: [Graha], colour_mode: bool }
 ```
+
+`launch_at_login` and `time_format` were defined here and never wired to anything - no UI
+could set either, and nothing called the autostart plugin - so both are gone rather than
+left as switches with no handle.
 
 ---
 
@@ -310,7 +318,6 @@ make lint       cargo fmt --check, cargo clippy -D warnings, eslint, tsc --noEmi
 ```
 
 - Ad-hoc signature (`codesign -s -`) so first launch is right-click-Open, not a hard block.
-- Launch at login via `tauri-plugin-autostart`.
 - Tray items are built in Rust only; `tauri.conf.json` declares none, to avoid the duplicate
   tray icon bug (R-05).
 - CI on push: fmt, clippy, workspace tests — Ubuntu.

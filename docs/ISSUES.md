@@ -30,7 +30,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-021 | feat | Graha events: ingress, station, combustion | M3 | open |
 | I-022 | feat | Graha panel content | M3 | open |
 | I-023 | chore | Accessibility and contrast audit | M4 | open |
-| I-024 | chore | `make install`, ad-hoc signing, autostart | M4 | open |
+| I-024 | chore | `make install`, ad-hoc signing | M4 | open |
 | I-025 | chore | Release workflow, DMG on tag | M4 | open |
 | I-027 | bug | White ring around the panel | M2 | done |
 | I-028 | bug | Week started on Tuesday in every locale | M2 | done |

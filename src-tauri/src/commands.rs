@@ -174,10 +174,10 @@ pub async fn snapshot(app: AppHandle, unix_ms: i64) -> Result<Snapshot> {
 
 #[tauri::command]
 pub async fn update_settings(app: AppHandle, settings: Settings) -> Result<Bootstrap> {
-    let applied = {
-        let state = app.state::<AppState>();
-        state.apply(settings)?
-    };
+    // Off the async runtime like every other command: `apply` takes the engine
+    // mutex and writes and renames a file, and the module's own contract is that
+    // none of that happens on the runtime's threads.
+    let applied = blocking(app.clone(), move |state| state.apply(settings)).await?;
 
     // Status items are AppKit objects: creating, removing or redrawing one off
     // the main thread crashes the process. Commands run on the async runtime,

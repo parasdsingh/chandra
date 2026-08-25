@@ -7,24 +7,25 @@
  * clock.
  */
 
-import type { DateKey, Moment, PhaseKey, TimeFormat } from "../ipc/types";
+import type { DateKey, Moment, PhaseKey } from "../ipc/types";
 
 export interface FormatContext {
   timeZone: string;
-  timeFormat: TimeFormat;
 }
 
-function hourCycle(format: TimeFormat): boolean | undefined {
-  // `undefined` lets Intl follow the locale, which is what "system" means.
-  return format === "system" ? undefined : format === "hour12";
-}
-
+/**
+ * A clock time, in the zone of the view rather than of the machine.
+ *
+ * The 12 or 24 hour choice is the locale's. A `time_format` setting existed in
+ * the schema and was read here, but nothing could ever set it, so every time was
+ * formatted at the locale default anyway; it is gone rather than left as a
+ * switch with no handle.
+ */
 export function formatTime(moment: Moment, context: FormatContext): string {
   return new Intl.DateTimeFormat(undefined, {
     timeZone: context.timeZone,
     hour: "2-digit",
     minute: "2-digit",
-    hour12: hourCycle(context.timeFormat),
   }).format(new Date(moment.unix_ms));
 }
 

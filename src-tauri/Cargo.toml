@@ -30,7 +30,6 @@ tauri = { version = "2", features = [
     # fully opaque (D-011).
     "macos-private-api",
 ] }
-tauri-plugin-autostart = "2"
 
 serde = { workspace = true }
 serde_json = { workspace = true }

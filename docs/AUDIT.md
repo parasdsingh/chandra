@@ -375,6 +375,18 @@ converse: the written place makes `resolve_offline` report
 `Provenance::CoreLocation`, so a timezone-derived location is relabelled "from
 this Mac", and the button that would clear it is hidden in automatic mode.
 
+**fixed, and the headline was wrong.** `resolve_offline` consults `place` in both
+modes - the manual branch is checked first, then an unconditional one - so the
+typed elevation did reach every rise and set, and `a_cached_automatic_place_is_reused`
+already asserted as much. The converse A noted is the real defect and it is the
+one fixed: elevation is now `location.elevation`, applied on top of whichever
+step of the chain answered, so setting it no longer fabricates a place that then
+reports itself as having come from the device. That is a schema change, so
+`SCHEMA_VERSION` is 2 and `migrate` has its first real step;
+`a_version_one_document_migrates_without_changing_what_it_meant` holds a version
+1 file to the observer it used to resolve to. `Use my timezone` is offered
+whenever a stored place is standing in for the chain, not only in manual mode.
+
 ### F-19 `today` and `anchor` do not follow a location change — A+B
 `src/components/Panel.tsx:61,65`
 
@@ -484,26 +496,50 @@ Defined, persisted, in the IPC contract, plugin registered, never called. No UI.
 be denied anyway. ARCHITECTURE §10 claims the feature exists.
 Either wire it end to end or remove it and correct the doc.
 
+**removed**, with the doc corrected. Nothing ever called the plugin and no UI
+could set the flag, so wiring it would have been adding a feature under cover of
+an audit. The field, the `tauri-plugin-autostart` dependency and its registration
+are gone; ARCHITECTURE §7 and §10 say so.
+
 ### F-25 `time_format` has no UI — A+B
 Read at `Panel.tsx:464`, never settable. Every time is formatted at the locale
 default forever. Wire it or remove it.
+
+**removed.** The same judgement as F-24: it was read but never settable, so
+every time was already formatted at the locale default. Adding a three-way
+picker to the Calendar pane would be new design, not a fix. `TimeFormat`,
+`hourCycle` and `FormatContext.timeFormat` go with it; `formatTime` says in one
+line that the locale decides.
 
 ### F-26 City search has no debounce, no ordering guard, no catch — B
 `src/components/SettingsView.tsx:180`
 One `invoke` per keystroke; a rejection becomes an unhandled promise rejection
 and the pane then reports "No city matches …", a data statement for a failure.
 
+**fixed** — one search per 180 ms pause, a per-effect guard so only the newest
+answer is taken, and a `catch` that says "City search is unavailable." rather
+than reporting a failure to ask as a fact about the data.
+
 ### F-27 `IN_FLIGHT` retains the CLLocationManager after the timeout — B
 `src-tauri/src/location.rs:237`
+
+**fixed** — `location::release` clears the slot, called on the main thread as
+soon as the caller stops waiting, so an unanswered authorisation prompt no longer
+holds a `CLLocationManager` for the life of the process.
 
 ### F-28 `update_settings` does filesystem IO on the async runtime — B
 `src-tauri/src/commands.rs:181`. The module doc claims every command moves its
 work to a blocking thread; `state.apply` takes the engine mutex and does
 `fs::write` + `fs::rename` inline.
 
+**fixed** — `state.apply` runs through `blocking`, like every other command.
+
 ### F-29 Shift+PageUp / PageDown silently step one month — B
 `src/components/Panel.tsx:331` filters meta/ctrl/alt but not shift. DESIGN
 specifies ±1 year.
+
+**fixed** — `event.shiftKey` selects ±12 months, which is the year DESIGN 10.1
+specifies.
 
 ---
 

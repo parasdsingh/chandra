@@ -53,6 +53,18 @@ impl Resolved {
 /// no network, so the app is usable in its first frame. A CoreLocation answer,
 /// if one ever arrives, refines it afterwards.
 pub fn resolve_offline(settings: &Settings) -> Resolved {
+    let mut resolved = resolve_place(settings);
+
+    // The user's own correction, on top of whichever step answered. No step
+    // supplies one: `zone.tab` has no elevation column and CoreLocation's
+    // vertical fix is poor, which is why the setting exists at all.
+    if let Some(elevation) = settings.location.elevation {
+        resolved.elevation = elevation;
+    }
+    resolved
+}
+
+fn resolve_place(settings: &Settings) -> Resolved {
     if settings.location.mode == LocationMode::Manual {
         if let Some(place) = &settings.location.place {
             return from_place(place, Provenance::Manual);
@@ -130,7 +142,7 @@ pub enum Outcome {
 }
 
 #[cfg(target_os = "macos")]
-pub use platform::request;
+pub use platform::{release, request};
 
 #[cfg(target_os = "macos")]
 mod platform {
@@ -286,6 +298,20 @@ mod platform {
             *slot.borrow_mut() = Some((manager, delegate));
         });
     }
+
+    /// Releases whatever a finished request left alive.
+    ///
+    /// Must be called on the main thread, once the caller has stopped waiting.
+    /// The pair is held for the duration of a request because CoreLocation keeps
+    /// only a weak reference to its delegate and a dropped manager stops
+    /// updating; held past it, an unanswered authorisation prompt kept a
+    /// `CLLocationManager` and its delegate alive until the next request came,
+    /// which for a user who never answers is for the life of the process.
+    pub fn release() {
+        IN_FLIGHT.with(|slot| {
+            *slot.borrow_mut() = None;
+        });
+    }
 }
 
 /// Location services exist only on macOS in this build. Every other platform
@@ -294,6 +320,10 @@ mod platform {
 pub fn request(mut on_result: impl FnMut(Outcome) + 'static) {
     on_result(Outcome::Unavailable);
 }
+
+/// Nothing is ever held alive off macOS, so there is nothing to release.
+#[cfg(not(target_os = "macos"))]
+pub fn release() {}
 
 #[cfg(test)]
 mod tests {
@@ -305,6 +335,7 @@ mod tests {
             location: LocationSetting {
                 mode: LocationMode::Manual,
                 place: Some(place),
+                elevation: None,
             },
             ..Settings::default()
         }
@@ -344,7 +375,11 @@ mod tests {
         // has no location and cannot open.
         for mode in [LocationMode::Automatic, LocationMode::Manual] {
             let settings = Settings {
-                location: LocationSetting { mode, place: None },
+                location: LocationSetting {
+                    mode,
+                    place: None,
+                    elevation: None,
+                },
                 ..Settings::default()
             };
             let resolved = resolve_offline(&settings);
@@ -358,12 +393,43 @@ mod tests {
             location: LocationSetting {
                 mode: LocationMode::Automatic,
                 place: Some(bengaluru()),
+                elevation: None,
             },
             ..Settings::default()
         };
         let resolved = resolve_offline(&settings);
         assert_eq!(resolved.provenance, Provenance::CoreLocation);
         assert_eq!(resolved.latitude, 12.9716);
+    }
+
+    /// Setting an elevation must not turn the answer into a different one.
+    ///
+    /// It used to be stored by writing a whole place around it, which in
+    /// automatic mode made a timezone-derived location report itself as
+    /// `CoreLocation` - "from this Mac" - for a location the Mac never gave.
+    #[test]
+    fn an_elevation_correction_does_not_change_where_the_location_came_from() {
+        let settings = Settings {
+            location: LocationSetting {
+                mode: LocationMode::Automatic,
+                place: None,
+                elevation: Some(920.0),
+            },
+            ..Settings::default()
+        };
+        let resolved = resolve_offline(&settings);
+
+        assert_eq!(resolved.elevation, 920.0);
+        assert_eq!(
+            resolved.provenance,
+            Provenance::TimeZone,
+            "the timezone still answered; only its elevation was corrected"
+        );
+
+        let uncorrected = resolve_offline(&Settings::default());
+        assert_eq!(resolved.zone, uncorrected.zone);
+        assert_eq!(resolved.latitude, uncorrected.latitude);
+        assert_eq!(resolved.longitude, uncorrected.longitude);
     }
 
     #[test]

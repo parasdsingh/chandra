@@ -291,8 +291,8 @@
     "calendar": {
       "month_system": "string"
     },
-    "launch_at_login": "boolean",
     "location": {
+      "elevation": "number",
       "mode": "string",
       "place": {
         "elevation": "number",
@@ -307,7 +307,6 @@
       "ayanamsa": "string",
       "node_type": "string"
     },
-    "time_format": "string",
     "tray": {
       "colour_mode": "boolean",
       "subjects": [

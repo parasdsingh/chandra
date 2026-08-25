@@ -20,7 +20,6 @@ pub use settings::Settings as PublicSettings;
 use std::time::Duration;
 
 use tauri::{Manager, RunEvent, WindowEvent};
-use tauri_plugin_autostart::MacosLauncher;
 
 use crate::state::AppState;
 
@@ -32,10 +31,6 @@ const MIDNIGHT_SLACK: Duration = Duration::from_secs(5);
 
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            None,
-        ))
         .manage(panel::CurrentSubject::default())
         .manage(panel::PanelMaterial::default())
         .invoke_handler(tauri::generate_handler![

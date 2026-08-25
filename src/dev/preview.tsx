@@ -45,16 +45,11 @@ const data = fixture as unknown as {
   snapshot: Snapshot;
 };
 
-const context: FormatContext = {
-  timeZone: data.timeZone,
-  timeFormat: "hour24",
-};
+const context: FormatContext = { timeZone: data.timeZone };
 
 const boot: Bootstrap = {
   settings: {
-    schema_version: 1,
-    launch_at_login: false,
-    time_format: "hour24",
+    schema_version: 2,
     location: {
       mode: "manual",
       place: {
@@ -64,6 +59,7 @@ const boot: Bootstrap = {
         longitude: 77.5946,
         elevation: 920,
       },
+      elevation: null,
     },
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta" },

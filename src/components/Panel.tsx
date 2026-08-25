@@ -457,8 +457,10 @@ export function Panel(props: Props): JSX.Element {
       ArrowRight: () => moveSelection(1),
       ArrowUp: () => moveSelection(-7),
       ArrowDown: () => moveSelection(7),
-      PageUp: () => step(-1),
-      PageDown: () => step(1),
+      // A year with shift, as DESIGN 10.1 specifies. Shift was not filtered out
+      // above and was not read either, so it stepped one month in silence.
+      PageUp: () => step(event.shiftKey ? -12 : -1),
+      PageDown: () => step(event.shiftKey ? 12 : 1),
       Home: () => selectEdge("first"),
       End: () => selectEdge("last"),
       Enter: () => openDay(selected() ?? today()),
@@ -608,10 +610,7 @@ export function Panel(props: Props): JSX.Element {
               detail={detail()}
               events={selectedEvents()}
               grahaName={grahaInfo()?.name ?? ""}
-              context={{
-                timeZone: timeZone(),
-                timeFormat: props.boot.settings.time_format,
-              }}
+              context={{ timeZone: timeZone() }}
               isToday={sameDate(selected(), today())}
               error={error()}
             />

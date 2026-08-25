@@ -18,13 +18,11 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
     pub schema_version: u32,
-    pub launch_at_login: bool,
-    pub time_format: TimeFormat,
     pub location: LocationSetting,
     pub sidereal: SiderealSetting,
     pub calendar: CalendarSetting,
@@ -38,21 +36,21 @@ pub struct CalendarSetting {
     pub month_system: MonthSystem,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TimeFormat {
-    /// Follow the operating system's 12 or 24 hour preference.
-    System,
-    Hour12,
-    Hour24,
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LocationSetting {
     pub mode: LocationMode,
     /// Present when `mode` is `Manual`, and also kept as the last known
     /// automatic result so a failed resolution does not lose the previous one.
     pub place: Option<PlaceSetting>,
+    /// Metres above sea level, applied on top of whichever step of the chain
+    /// resolved the location.
+    ///
+    /// Its own field rather than part of `place`, because it is the one observer
+    /// property no step of the chain supplies: `zone.tab` carries no elevation at
+    /// all and CoreLocation's vertical fix is poor. Editing it used to mean
+    /// writing a whole fabricated place, which then reported itself as having
+    /// come from the device.
+    pub elevation: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -102,11 +100,10 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             schema_version: SCHEMA_VERSION,
-            launch_at_login: false,
-            time_format: TimeFormat::System,
             location: LocationSetting {
                 mode: LocationMode::Automatic,
                 place: None,
+                elevation: None,
             },
             sidereal: SiderealSetting {
                 ayanamsa: Ayanamsa::Lahiri,
@@ -132,8 +129,6 @@ impl Settings {
     #[doc(hidden)]
     pub fn sample() -> Self {
         Self {
-            launch_at_login: true,
-            time_format: TimeFormat::Hour24,
             location: LocationSetting {
                 mode: LocationMode::Manual,
                 place: Some(PlaceSetting {
@@ -143,6 +138,7 @@ impl Settings {
                     longitude: 77.5946,
                     elevation: 920.0,
                 }),
+                elevation: Some(940.0),
             },
             calendar: CalendarSetting {
                 month_system: MonthSystem::Amanta,
@@ -213,8 +209,28 @@ impl Settings {
 /// Each step is written explicitly. There is deliberately no "unknown version,
 /// use defaults" branch: that path is how a downgrade silently erases settings a
 /// newer build wrote.
-fn migrate(value: serde_json::Value, from: u32) -> Result<serde_json::Value> {
-    match from {
+fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value> {
+    let mut version = from;
+
+    // 1 -> 2. Elevation became the observer's own correction rather than part of
+    // the place, so it can be set without inventing a location that then
+    // reported itself as having come from the device. `null` keeps the elevation
+    // of whatever the chain resolves, which is what a version 1 file meant.
+    //
+    // `launch_at_login` and `time_format` were removed in the same step and need
+    // no clause: neither was ever settable, and serde ignores a field that is no
+    // longer declared.
+    if version == 1 {
+        value
+            .get_mut("location")
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| AppError::Settings("settings schema 1 has no location block".into()))?
+            .insert("elevation".into(), serde_json::Value::Null);
+        value["schema_version"] = serde_json::Value::from(2u32);
+        version = 2;
+    }
+
+    match version {
         SCHEMA_VERSION => Ok(value),
         newer if newer > SCHEMA_VERSION => Err(AppError::Settings(format!(
             "settings were written by a newer version of Chandra (schema {newer}, this build \
@@ -253,7 +269,6 @@ mod tests {
         let dir = temp_dir("roundtrip");
         let mut settings = Settings::default();
         settings.tray.subjects = vec![Graha::Mangala, Graha::Shani];
-        settings.time_format = TimeFormat::Hour24;
         settings.location = LocationSetting {
             mode: LocationMode::Manual,
             place: Some(PlaceSetting {
@@ -263,6 +278,7 @@ mod tests {
                 longitude: 77.5946,
                 elevation: 920.0,
             }),
+            elevation: Some(940.0),
         };
 
         settings.save(&dir).expect("save");
@@ -298,11 +314,61 @@ mod tests {
         let dir = temp_dir("partial");
         fs::write(
             Settings::path(&dir),
-            serde_json::json!({ "schema_version": SCHEMA_VERSION, "launch_at_login": true })
+            serde_json::json!({ "schema_version": SCHEMA_VERSION, "tray": { "subjects": [] } })
                 .to_string(),
         )
         .expect("write");
         assert!(Settings::load(&dir).is_err());
+    }
+
+    /// A version 1 file must survive, with the meaning it had.
+    ///
+    /// Version 1 carried the elevation inside the place; version 2 carries a
+    /// correction beside it. `null` is what "no correction" is, so a document
+    /// written by the previous build resolves to exactly the same observer.
+    #[test]
+    fn a_version_one_document_migrates_without_changing_what_it_meant() {
+        let dir = temp_dir("migrate");
+        fs::write(
+            Settings::path(&dir),
+            serde_json::json!({
+                "schema_version": 1,
+                "launch_at_login": true,
+                "time_format": "hour24",
+                "location": {
+                    "mode": "manual",
+                    "place": {
+                        "label": "Bengaluru",
+                        "zone": "Asia/Kolkata",
+                        "latitude": 12.9716,
+                        "longitude": 77.5946,
+                        "elevation": 920.0
+                    }
+                },
+                "sidereal": { "ayanamsa": "raman", "node_type": "mean" },
+                "calendar": { "month_system": "amanta" },
+                "tray": { "subjects": ["mangala"], "colour_mode": true }
+            })
+            .to_string(),
+        )
+        .expect("write");
+
+        let settings = Settings::load(&dir).expect("migrates");
+        assert_eq!(settings.schema_version, SCHEMA_VERSION);
+        assert_eq!(settings.location.elevation, None, "no correction was set");
+        assert_eq!(
+            settings.location.place.as_ref().map(|p| p.elevation),
+            Some(920.0),
+            "the place keeps the elevation it was written with"
+        );
+        assert_eq!(settings.sidereal.ayanamsa, Ayanamsa::Raman);
+        assert_eq!(settings.sidereal.node_type, NodeType::Mean);
+        assert_eq!(settings.tray.subjects, vec![Graha::Mangala]);
+        assert!(settings.tray.colour_mode);
+
+        // Saved back at the current version, and stable from there.
+        settings.save(&dir).expect("save");
+        assert_eq!(Settings::load(&dir).expect("reload"), settings);
     }
 
     #[test]

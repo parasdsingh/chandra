@@ -282,7 +282,6 @@ export interface Snapshot {
   source: Source;
 }
 
-export type TimeFormat = "system" | "hour12" | "hour24";
 export type LocationMode = "automatic" | "manual";
 export type Provenance = "manual" | "core_location" | "time_zone";
 
@@ -296,11 +295,14 @@ export interface PlaceSetting {
 
 export interface Settings {
   schema_version: number;
-  launch_at_login: boolean;
-  time_format: TimeFormat;
   location: {
     mode: LocationMode;
     place: PlaceSetting | null;
+    /**
+     * Metres above sea level, applied on top of whichever step of the chain
+     * resolved the location. `null` leaves that step's own elevation alone.
+     */
+    elevation: number | null;
   };
   sidereal: {
     ayanamsa: string;

@@ -12,7 +12,7 @@
  */
 
 import type { JSX } from "solid-js";
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { batch, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 
 import * as ipc from "../ipc";
 import type {
@@ -171,32 +171,75 @@ function Calendar(props: SectionProps): JSX.Element {
   );
 }
 
+/** Quiet time after the last keystroke before a search is sent. */
+const SEARCH_SETTLE_MS = 180;
+
 function Location(props: SectionProps): JSX.Element {
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<City[]>([]);
+  const [searchFailed, setSearchFailed] = createSignal(false);
   const [locating, setLocating] = createSignal(false);
   const settings = () => props.boot.settings;
 
+  /**
+   * One search per pause, and only the newest answer counts.
+   *
+   * A search per keystroke put several in flight at once, and a slower earlier
+   * one landing last replaced the list with matches for a prefix the user had
+   * already typed past. A rejection became an unhandled promise rejection and
+   * left the pane saying no city matched, which is a statement about the data
+   * for what was actually a failure to ask.
+   */
   createEffect(() => {
-    const text = query();
-    if (text.trim().length < 2) {
-      setResults([]);
+    const text = query().trim();
+    if (text.length < 2) {
+      batch(() => {
+        setResults([]);
+        setSearchFailed(false);
+      });
       return;
     }
-    void ipc.searchCities(text, 6).then(setResults);
+
+    let current = true;
+    const timer = window.setTimeout(() => {
+      void ipc
+        .searchCities(text, 6)
+        .then((cities) => {
+          if (!current) return;
+          batch(() => {
+            setResults(cities);
+            setSearchFailed(false);
+          });
+        })
+        .catch(() => {
+          if (!current) return;
+          batch(() => {
+            setResults([]);
+            setSearchFailed(true);
+          });
+        });
+    }, SEARCH_SETTLE_MS);
+
+    onCleanup(() => {
+      current = false;
+      window.clearTimeout(timer);
+    });
   });
 
   function choose(city: City) {
     props.apply({
       ...settings(),
       location: {
+        ...settings().location,
         mode: "manual",
         place: {
           label: city.city,
           zone: city.zone,
           latitude: city.latitude,
           longitude: city.longitude,
-          elevation: settings().location.place?.elevation ?? 0,
+          // The table carries no elevation. The user's own correction lives
+          // beside the place and still applies, so it is not copied here.
+          elevation: 0,
         },
       },
     });
@@ -228,7 +271,11 @@ function Location(props: SectionProps): JSX.Element {
         <Show
           when={results().length > 0}
           fallback={
-            <p class="settings__empty">No city matches “{query().trim()}”.</p>
+            <p class="settings__empty">
+              {searchFailed()
+                ? "City search is unavailable."
+                : `No city matches \u201c${query().trim()}\u201d.`}
+            </p>
           }
         >
           <ul class="settings__results">
@@ -255,21 +302,14 @@ function Location(props: SectionProps): JSX.Element {
             step="10"
             value={props.boot.location.elevation}
             onChange={(event) => {
-              const place = settings().location.place;
-              const elevation = Number(event.currentTarget.value);
+              // The observer's own correction, not part of the place. Writing a
+              // whole place around it made a timezone-derived location report
+              // itself as having come from this Mac.
               props.apply({
                 ...settings(),
                 location: {
-                  mode: settings().location.mode,
-                  place: place
-                    ? { ...place, elevation }
-                    : {
-                        label: props.boot.location.label,
-                        zone: props.boot.location.zone,
-                        latitude: props.boot.location.latitude,
-                        longitude: props.boot.location.longitude,
-                        elevation,
-                      },
+                  ...settings().location,
+                  elevation: Number(event.currentTarget.value),
                 },
               });
             }}
@@ -307,7 +347,11 @@ function Location(props: SectionProps): JSX.Element {
               onClick={() =>
                 props.apply({
                   ...settings(),
-                  location: { mode: "automatic", place: null },
+                  location: {
+                    ...settings().location,
+                    mode: "automatic",
+                    place: null,
+                  },
                 })
               }
             >
