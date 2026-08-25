@@ -76,6 +76,14 @@
   margin-top: 0;
 }
 
+/* A radiogroup around a set of choices. The element exists to carry the role, so
+   it inherits the section's own column and gap and changes nothing on screen. */
+.settings__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
 /* A single choice, marked rather than switched: a radio row cannot be half-set. */
 .settings__choice {
   display: flex;

@@ -30,11 +30,4 @@ impl Observer {
     pub(crate) fn as_se_geopos(&self) -> [f64; 3] {
         [self.longitude, self.latitude, self.elevation]
     }
-
-    /// True when the latitude is high enough that a body may stay above or below
-    /// the horizon for a whole day, so a missing rise or set is expected rather
-    /// than a failure.
-    pub fn is_polar(&self) -> bool {
-        self.latitude.abs() > 60.0
-    }
 }

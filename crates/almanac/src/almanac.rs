@@ -191,7 +191,7 @@ impl Almanac {
         let jd = chandra_ephemeris::unix_seconds_to_jd(cursor.anchor_unix_ms as f64 / 1000.0);
 
         if cursor.system == MonthSystem::Solar {
-            let anchor_day = CivilDay::new(DateKey::new(1, 1, 1)?, &settings.zone)?.date_of(jd)?;
+            let anchor_day = time::date_at(jd, &settings.zone)?;
             let (year, month_number) =
                 shift_gregorian(anchor_day.year, anchor_day.month, cursor.offset);
             let days = month::month_days(year, month_number, &settings.zone)?;
@@ -208,9 +208,6 @@ impl Almanac {
                     label: format!("{name} {year}"),
                     name,
                     adhika: false,
-                    kshaya_masa_name: None,
-                    era_year: None,
-                    system: cursor.system,
                 },
             });
         }
@@ -240,9 +237,6 @@ impl Almanac {
                 label: format!("{} {}", month.display_name(), month.vikram_year),
                 name: month.name.to_string(),
                 adhika: month.adhika,
-                kshaya_masa_name: month.kshaya_masa_name.map(str::to_string),
-                era_year: Some(month.vikram_year),
-                system: cursor.system,
             },
             grid: time::grid_days(
                 month.first_day,
@@ -304,7 +298,6 @@ impl Almanac {
             &self.engine,
             &resolved.grid,
             frames.as_deref(),
-            &settings.location.zone_name,
             resolved.naming,
         )?;
 
@@ -341,7 +334,6 @@ impl Almanac {
             graha,
             &resolved.grid,
             frames.as_deref(),
-            &settings.location.zone_name,
             resolved.naming,
         )?;
 
@@ -379,8 +371,14 @@ impl Almanac {
         )
     }
 
-    /// Sankrantis between two instants, for callers checking the intercalary
-    /// rule directly.
+    /// Sankrantis between two instants.
+    ///
+    /// Nothing in the running app asks: the intercalary rule is decided inside
+    /// `lunar::build`, from the same two Sun positions it needs anyway. This
+    /// exists so `an_intercalary_month_contains_no_sankranti` can state the rule
+    /// in its own terms rather than re-running the comparison the detection
+    /// uses, which would assert only that the code agrees with itself.
+    #[doc(hidden)]
     pub fn sankrantis_between(
         &self,
         from: f64,
@@ -508,10 +506,18 @@ pub struct SnapshotGraha {
 }
 
 /// Gregorian month arithmetic that carries across year boundaries.
+///
+/// Counted in `i64` and clamped, so an offset near the limits of `i32` cannot
+/// overflow: it used to panic in a debug build and wrap to a nonsense year in a
+/// release one. A clamped year is outside what the calendar can express, so
+/// `DateKey::new` refuses it, which is the honest outcome for an impossible
+/// request.
 fn shift_gregorian(year: i16, month: i8, offset: i32) -> (i16, i8) {
-    let zero_based = year as i32 * 12 + (month as i32 - 1) + offset;
+    let zero_based = year as i64 * 12 + (month as i64 - 1) + offset as i64;
     (
-        zero_based.div_euclid(12) as i16,
+        zero_based
+            .div_euclid(12)
+            .clamp(i16::MIN as i64, i16::MAX as i64) as i16,
         (zero_based.rem_euclid(12) + 1) as i8,
     )
 }

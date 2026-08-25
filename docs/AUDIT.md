@@ -551,8 +551,11 @@ defect gets written.
 - **F-30** Dead code: `month::days_between`, `time::first_weekday_offset`,
   `commands::ayanamsa_degrees` + its IPC wrapper, `Observer::is_polar`,
   `Almanac::sankrantis_between` (tests only).
-  **partly fixed** — `ayanamsa_degrees`, its IPC wrapper and `Almanac::ayanamsa`
-  (its only caller) are gone. The rest is in the next pass.
+  **fixed** — all removed except `sankrantis_between`, which is kept and marked
+  `#[doc(hidden)]`: it is what lets the intercalary test state the rule in its
+  own terms instead of re-running the comparison the detection uses, which would
+  assert only that the code agrees with itself. Same treatment `Settings::sample`
+  already had.
 - **F-31** `MoonDay.source` chains `Source::Swieph` per nakshatra, a constant, so
   the aggregation is a no-op that reads as if it accounts for span provenance.
   `spans.rs:150` computes a real per-span source that `NakshatraSpan` /
@@ -560,22 +563,44 @@ defect gets written.
   `Swieph` — full precision claimed from no evidence.
 - **F-32** `MoonCell.principal` is documented as "the grid marks these"; nothing
   draws it. Draw it or drop the field.
+  **dropped.** `phase` already carries it exactly: `intermediate_phase` never
+  returns a principal name, so a principal name appears only on the day that
+  phase occurs. Drawing it was not available - the cell is being redesigned in
+  parallel - and a redundant boolean with a comment that lies is the worse of
+  the two things to leave.
 - **F-33** Two routes to combustion in one layer: `moon_month` calls
   `combustion_at`, `graha_month` calls `combustion_from`. They agree today.
+  **fixed** — `combustion_from` takes the whole `Position` rather than a
+  longitude and a separate retrograde flag, so a caller cannot pair a longitude
+  from one instant with a direction of travel from another; `combustion_at` is
+  that with the fetch in front of it, and `graha_month` now takes both bodies in
+  one call at the instant D-019 names.
 - **F-34** `GrahaCell.rashi` / `.nakshatra` are read at local noon while the day
   view reads them at sunrise, which D-019 specifies. Never consumed by the front
   end, and computed for all 42 cells regardless.
+  **fixed** — both removed. Nothing drew them and they could name a different
+  nakshatra from the day they opened.
 - **F-35** Payload fields never read: `time_zone`, `era_year`, `adhika`,
   `kshaya_masa_name`, `system`. `Header.tsx:130` re-parses "Adhika " back out of
   `label` instead of using the field that carries it.
+  **fixed** — `adhika` is now read: the header takes it and splits the qualifier
+  only for a month that has one, rather than for any month whose name contains
+  the word. `time_zone`, `era_year`, `kshaya_masa_name` and `system` are removed;
+  the label already carries the era year and the kshaya pair, and the front end
+  formats every timestamp against the observer's zone from the bootstrap.
 - **F-36** `formatDegrees` pads degrees to three characters for a value that is
   0–29, so every longitude prints a leading zero. The docstring's example cannot
   occur.
+  **fixed** — padded to two, with an example that can occur.
 - **F-37** `formatSeparation` / `spokenSeparation` duplicate the same
   degrees-and-carry arithmetic.
+  **fixed** — one `degreesAndMinutes` applies the carry; the two formatters
+  print it. The spoken form also stops saying "0 minutes".
 - **F-38** `Panel.step()` and the scroller's `onCommit` handler are the same
   one-line mutation written twice.
+  **fixed** — `onCommit={step}`.
 - **F-39** `if (!key) return undefined` in the detail resource is unreachable.
+  **fixed** — removed. A resource with a falsy source never calls its fetcher.
 - **F-40** Three near-copies of "sunrise, or noon": `lunar.rs:227` takes it
   unfiltered while `month.rs:203` and `day.rs:120` both filter to the day.
   **fixed** — `day::sunrise_of` and `day::reference_instant` are the only copies;
@@ -584,10 +609,19 @@ defect gets written.
 - **F-41** A `CivilDay` for year 1 CE is constructed purely to reach `date_of`,
   in two places; `lunar.rs:307` builds the same `CivilDay` twice in one
   expression.
+  **fixed** — `time::date_at(jd, zone)` is the question asked directly, and
+  `CivilDay::date_of` defers to it. The doubled construction is one binding.
 - **F-42** `is_waxing` is read at day start, `illumination` at local noon. They
   disagree on principal new/full days. A comment is probably the right fix.
+  **fixed by comment** — day start is right for `is_waxing`, because the phase
+  name is decided there and the two have to agree or the glyph would point one
+  way while the words said the other. Stated on both `MoonDay` and `MoonCell`,
+  with why the disagreement is invisible.
 - **F-43** `DayDetail.tsx:309` says tithis are "prevailing one first". They are
   not sorted.
+  **fixed by comment** — time order is what the boundaries in the captions are
+  for, so the comment is corrected rather than the order. The prevailing one is
+  marked by weight, not position.
 - **F-44** `glyphs.rs` says the retrograde stroke is "heavier than a glyph's
   because it is drawn at roughly a third of the size". It is drawn at 61% and
   renders lighter. `render.rs`'s inset comment describes a box that is not the
@@ -603,6 +637,11 @@ defect gets written.
   `construct`. It duplicates `a_second_engine_is_refused`, and the `is_dir()`
   check it was meant to cover has no coverage — an existing but empty directory
   passes and downgrades every result to Moshier.
+  **fixed, both halves.** `construct` asks the data files for a date they must be
+  able to serve and refuses the directory if the flags come back Moshier, so an
+  empty directory is `EphemerisDataUnusable` rather than a silent downgrade. The
+  guards moved to `tests/construction.rs`, its own process, where they can reach
+  `construct` at all; the empty-directory assertion fails against the old check.
 - **F-47** `<For each={months()}>` allocates three fresh objects per read and
   keys by reference, so every commit disposes and rebuilds 126 cells mid-gesture.
   `<Index>` is the right primitive. Same pattern in `DayDetail`.
@@ -613,8 +652,13 @@ defect gets written.
   of the tab order, by the same `active` flag F-12 needed.
 - **F-49** `role="radio"` on a boolean toggle, and no `role="radiogroup"` around
   the `Choice` groups.
+  **fixed** — a `ChoiceGroup` carries `role="radiogroup"` around each set, and
+  the colour-mode row is a `Toggle` with `role="switch"`. Identical markup and
+  classes, so nothing moves on screen.
 - **F-50** `an_unknown_zone_falls_back_to_greenwich` builds a `Resolved` locally
   and asserts nothing about `from_time_zone`.
+  **fixed** — `for_zone` is the part that does not read the machine's clock, so
+  the test asserts both branches of it.
 - **F-51** Doc drift, all of it: ARCHITECTURE §3.3's IPC table matches none of
   the ten registered commands; the ts-rs claim is contradicted by
   `contract.rs`; §5's cache key names fields that do not exist; §7 lists
@@ -627,6 +671,8 @@ defect gets written.
   the Home/End and focus rules do not match the code.
 - **F-52** `shift_gregorian` overflows on a huge offset — debug panic, release
   wrap to a nonsense year. Not reachable through the UI.
+  **fixed** — counted in `i64` and the year clamped, so an impossible request
+  reaches `DateKey::new` and is refused as an invalid date.
 - **F-53** `geo::distance_km` can produce NaN for antipodal points and
   `nearest_place` then silently skips the entry; degenerate inputs return
   confident wrong answers rather than `None`.

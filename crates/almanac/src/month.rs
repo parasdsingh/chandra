@@ -14,7 +14,6 @@ use crate::lunar::MonthSystem;
 use crate::phase::{self, PhaseName};
 use crate::time::{days_in_month, CivilDay, DateKey};
 use crate::tithi::{self, CellTithi, SkippedTithi, Tithi, Vriddhi};
-use crate::zodiac::{Nakshatra, Rashi};
 
 /// A month of moon phases.
 ///
@@ -29,19 +28,13 @@ pub struct MoonMonth {
     /// The month's own name, without the `Adhika` prefix and without the year,
     /// so the header can set the qualifier apart from the name it qualifies.
     pub name: String,
-    /// Intercalary: the Sun crossed no rashi boundary inside the month.
+    /// Intercalary: the Sun crossed no rashi boundary inside the month. The
+    /// header sets the `Adhika` qualifier apart from the name it qualifies, and
+    /// reads this rather than searching the label for the word.
     pub adhika: bool,
-    /// The second name of a kshaya masa, where the Sun crossed two.
-    pub kshaya_masa_name: Option<String>,
-    /// Vikram Samvat year. `None` in solar mode, which counts Gregorian years.
-    pub era_year: Option<i16>,
-    pub system: MonthSystem,
     /// An instant inside this month, used to navigate to its neighbours. A lunar
     /// month has no year-and-number to step through, so the cursor is a time.
     pub anchor_unix_ms: i64,
-    /// IANA zone name. The front end formats every timestamp against this rather
-    /// than against the machine's own zone.
-    pub time_zone: String,
     /// The 42 cells the grid draws, in reading order, each flagged as inside the
     /// month or not. Laid out here rather than in the front end: only this layer
     /// knows which civil days a lunar month contains, and a front end that
@@ -63,10 +56,14 @@ pub struct MoonCell {
     pub tithi: Option<CellTithi>,
     /// Illuminated fraction at local noon, 0.0 to 1.0.
     pub illumination: f64,
+    /// Whether the lit fraction is growing, read at the day's *start*, which is
+    /// where `phase` is decided. See `day::MoonDay::is_waxing`.
     pub is_waxing: bool,
+    /// The phase. A principal name appears only on the day that phase actually
+    /// occurs, because `intermediate_phase` never returns one - so the boolean
+    /// that used to sit beside this said nothing it does not, and nothing drew
+    /// it.
     pub phase: PhaseName,
-    /// True when a principal phase falls on this day. The grid marks these.
-    pub principal: bool,
     /// Within the Sun's rays: the Moon's orb is 12 degrees, so this covers the
     /// days either side of new moon when it cannot be seen.
     pub combust: bool,
@@ -79,11 +76,7 @@ pub struct GrahaMonth {
     pub label: String,
     pub name: String,
     pub adhika: bool,
-    pub kshaya_masa_name: Option<String>,
-    pub era_year: Option<i16>,
-    pub system: MonthSystem,
     pub anchor_unix_ms: i64,
-    pub time_zone: String,
     pub days: Vec<GrahaCell>,
     pub events: Vec<Event>,
     pub source: Source,
@@ -96,9 +89,14 @@ pub struct GrahaCell {
     /// The same lunar day the Moon's calendar shows. A day is named the same
     /// whichever subject is being plotted on it.
     pub tithi: Option<CellTithi>,
+    /// Sidereal longitude at local noon, the instant the cell's combustion is
+    /// judged at.
+    ///
+    /// The rashi and the nakshatra were here too and are not any more. Nothing
+    /// drew them, and they were read at noon while the day the cell opens reads
+    /// its divisions at sunrise, which D-019 requires - so the two could name
+    /// different nakshatras for one day, and 42 cells paid for the pair anyway.
     pub longitude: f64,
-    pub rashi: Rashi,
-    pub nakshatra: Nakshatra,
     pub retrograde: bool,
     pub speed: f64,
     /// Within the Sun's rays at this day's reference instant.
@@ -113,29 +111,6 @@ pub fn month_days(year: i16, month: i8, zone: &jiff::tz::TimeZone) -> Result<Vec
         .collect()
 }
 
-/// The civil days from `first` to `last` inclusive, for a lunar month.
-pub fn days_between(
-    first: DateKey,
-    last: DateKey,
-    zone: &jiff::tz::TimeZone,
-) -> Result<Vec<CivilDay>> {
-    let mut days = Vec::new();
-    let mut date = first;
-
-    // A lunar month is 29 or 30 civil days; the bound guards against a malformed
-    // range turning into an unbounded loop.
-    for _ in 0..40 {
-        let day = CivilDay::new(date, zone)?;
-        let reached_end = date == last;
-        date = day.date_of(day.end_jd + 0.5)?;
-        days.push(day);
-        if reached_end {
-            break;
-        }
-    }
-    Ok(days)
-}
-
 /// What a month is called, and how it is qualified.
 ///
 /// Passed as one value because these six travel together from the resolver to
@@ -146,9 +121,6 @@ pub struct MonthLabel {
     pub label: String,
     pub name: String,
     pub adhika: bool,
-    pub kshaya_masa_name: Option<String>,
-    pub era_year: Option<i16>,
-    pub system: MonthSystem,
 }
 
 /// The lunar day for each of the 42 grid cells.
@@ -250,7 +222,6 @@ pub fn moon_month(
     engine: &Engine,
     grid: &[(CivilDay, bool)],
     frames: Option<&[CellTithi]>,
-    zone_name: &str,
     naming: MonthLabel,
 ) -> Result<MoonMonth> {
     let mut cells = Vec::with_capacity(grid.len());
@@ -277,7 +248,6 @@ pub fn moon_month(
             illumination: illumination.fraction,
             is_waxing: phase::is_waxing(elongation_start),
             phase: principal.unwrap_or_else(|| phase::intermediate_phase(elongation_start)),
-            principal: principal.is_some(),
             combust: combustion.combust,
         });
         sources.push(illumination.source);
@@ -288,11 +258,7 @@ pub fn moon_month(
         label: naming.label,
         name: naming.name,
         adhika: naming.adhika,
-        kshaya_masa_name: naming.kshaya_masa_name,
-        era_year: naming.era_year,
-        system: naming.system,
         anchor_unix_ms: anchor(grid),
-        time_zone: zone_name.to_string(),
         days: cells,
         source: Source::weakest(sources),
     })
@@ -319,29 +285,24 @@ pub fn graha_month(
     graha: Graha,
     grid: &[(CivilDay, bool)],
     frames: Option<&[CellTithi]>,
-    zone_name: &str,
     naming: MonthLabel,
 ) -> Result<GrahaMonth> {
     let mut cells = Vec::with_capacity(grid.len());
     let mut sources = Vec::with_capacity(grid.len());
 
     for (cell, (day, in_month)) in grid.iter().enumerate() {
-        let position = engine.position(day.noon_jd(), graha)?;
-        let sun = engine.position(day.noon_jd(), Graha::Surya)?;
-        let combustion = combustion_from(
-            graha,
-            position.longitude,
-            sun.longitude,
-            position.is_retrograde(),
-        );
+        // Both at local noon, and in one call: combustion is judged at the day's
+        // midpoint for every subject alike (D-019), and the Sun's longitude is
+        // wanted at exactly the instant the graha's was taken.
+        let bodies = engine.positions(day.noon_jd(), &[graha, Graha::Surya])?;
+        let position = bodies[0];
+        let combustion = combustion_from(graha, &position, bodies[1].longitude);
 
         cells.push(GrahaCell {
             date: day.date,
             in_month: *in_month,
             tithi: frames.map(|frames| frames[cell].clone()),
             longitude: position.longitude,
-            rashi: Rashi::from_longitude(position.longitude),
-            nakshatra: Nakshatra::from_longitude(position.longitude),
             retrograde: position.is_retrograde(),
             speed: position.speed,
             combust: combustion.combust,
@@ -364,11 +325,7 @@ pub fn graha_month(
         label: naming.label,
         name: naming.name,
         adhika: naming.adhika,
-        kshaya_masa_name: naming.kshaya_masa_name,
-        era_year: naming.era_year,
-        system: naming.system,
         anchor_unix_ms: anchor(grid),
-        time_zone: zone_name.to_string(),
         days: cells,
         events,
         source: Source::weakest(sources),

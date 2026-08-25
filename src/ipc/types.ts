@@ -134,9 +134,13 @@ export interface MoonCell {
   in_month: boolean;
   tithi: CellTithi | null;
   illumination: number;
+  /**
+   * Read at the day's start, where the phase name is decided; `illumination` is
+   * read at local noon. The two can differ on the day of a new or full moon.
+   */
   is_waxing: boolean;
+  /** A principal name appears only on the day that phase actually occurs. */
   phase: PhaseKey;
-  principal: boolean;
   /** Within the Sun's rays; for the Moon that is the days around new moon. */
   combust: boolean;
 }
@@ -146,14 +150,10 @@ export interface MoonMonth {
   label: string;
   /** The name alone, so the header can set `Adhika` apart from it. */
   name: string;
+  /** Intercalary. The header reads this rather than searching the label. */
   adhika: boolean;
-  kshaya_masa_name: string | null;
-  /** Vikram Samvat. `null` in solar mode, which counts Gregorian years. */
-  era_year: number | null;
-  system: MonthSystem;
   /** An instant inside this month; navigation steps from it. */
   anchor_unix_ms: number;
-  time_zone: string;
   /** Exactly 42 cells, in reading order, laid out by the back end. */
   days: MoonCell[];
   source: Source;
@@ -163,9 +163,8 @@ export interface GrahaCell {
   date: DateKey;
   in_month: boolean;
   tithi: CellTithi | null;
+  /** Sidereal longitude at local noon, the instant combustion is judged at. */
   longitude: number;
-  rashi: string;
-  nakshatra: string;
   retrograde: boolean;
   speed: number;
   combust: boolean;
@@ -185,11 +184,7 @@ export interface GrahaMonth {
   label: string;
   name: string;
   adhika: boolean;
-  kshaya_masa_name: string | null;
-  era_year: number | null;
-  system: MonthSystem;
   anchor_unix_ms: number;
-  time_zone: string;
   days: GrahaCell[];
   events: TransitEvent[];
   source: Source;

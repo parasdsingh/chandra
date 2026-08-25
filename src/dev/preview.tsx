@@ -117,6 +117,7 @@ function moonHeader(title: string) {
       snapshot={data.snapshot}
       southern={false}
       title={title}
+      adhika={false}
       selected={null}
       view="calendar"
       onBack={() => {}}
@@ -178,6 +179,7 @@ export function Preview(): JSX.Element {
           snapshot={data.snapshot}
           southern={false}
           title=""
+          adhika={false}
           selected={{ year: 2026, month: 8, day: 20 }}
           view="day"
           onBack={() => {}}
@@ -242,6 +244,7 @@ export function Preview(): JSX.Element {
           snapshot={undefined}
           southern={false}
           title={data.grahaMonth.label}
+          adhika={false}
           selected={null}
           view="calendar"
           onBack={() => {}}
@@ -304,6 +307,7 @@ export function Preview(): JSX.Element {
               snapshot={data.snapshot}
               southern={false}
               title={SECTION_TITLES[id]}
+              adhika={false}
               selected={null}
               view="settings"
               onBack={() => {}}

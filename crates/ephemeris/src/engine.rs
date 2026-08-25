@@ -26,6 +26,10 @@ const SE_CALC_SET: i32 = 2;
 const ATMOSPHERIC_PRESSURE_MBAR: f64 = 1013.25;
 const ATMOSPHERIC_TEMPERATURE_C: f64 = 15.0;
 
+/// A date the bundled files must be able to serve: 2000-01-01, in the middle of
+/// their 1800-2399 range.
+const DATA_FILE_PROBE_JD: f64 = 2_451_545.0;
+
 /// Size of the Swiss Ephemeris error buffer. The library's own headers require
 /// at least 256 bytes and write a NUL-terminated string into it.
 const ERROR_BUFFER_LEN: usize = 256;
@@ -192,6 +196,22 @@ impl Engine {
         {
             let _guard = engine.inner.lock().map_err(|_| Error::Poisoned)?;
             set_sid_mode(config);
+
+            // `is_dir` says a directory exists, not that anything is in it. An
+            // empty one passes it, and Swiss Ephemeris then falls back to
+            // Moshier for every date without raising anything - the silent
+            // downgrade this whole crate exists to prevent, arriving through the
+            // check meant to prevent it. So the files are asked for a date they
+            // must be able to serve, and the flags they come back with decide.
+            let (_, returned) = calc_raw(
+                DATA_FILE_PROBE_JD,
+                se_body::MOON,
+                SEFLG_SWIEPH | SEFLG_SPEED,
+                "ephemeris data probe",
+            )?;
+            if Source::from_returned_flags(returned) != Source::Swieph {
+                return Err(Error::EphemerisDataUnusable(ephemeris_path.to_path_buf()));
+            }
         }
         Ok(engine)
     }

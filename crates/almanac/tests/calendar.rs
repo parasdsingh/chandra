@@ -120,7 +120,7 @@ fn illumination_is_a_fraction_and_tracks_the_phase() {
         );
     }
 
-    for cell in inside(&view).into_iter().filter(|c| c.principal) {
+    for cell in inside(&view).into_iter().filter(|c| c.phase.is_principal()) {
         use chandra_almanac::phase::PhaseName::*;
         match cell.phase {
             FullMoon => assert!(
@@ -149,7 +149,10 @@ fn every_principal_phase_falls_on_exactly_one_day() {
     reset(&almanac);
 
     let view = almanac.moon_month(solar(2026, 8)).expect("month");
-    let principal: Vec<_> = inside(&view).into_iter().filter(|c| c.principal).collect();
+    let principal: Vec<_> = inside(&view)
+        .into_iter()
+        .filter(|c| c.phase.is_principal())
+        .collect();
 
     assert!(
         (3..=5).contains(&principal.len()),
@@ -975,7 +978,6 @@ fn every_subject_shares_one_month_system() {
         for graha in [Graha::Mangala, Graha::Shukra, Graha::Shani] {
             let month = almanac.graha_month(graha, cursor).expect("graha month");
             assert_eq!(month.label, moon.label, "{graha:?} {system:?}: label");
-            assert_eq!(month.system, system, "{graha:?} {system:?}: system");
             assert_eq!(
                 inside_graha(&month)
                     .iter()

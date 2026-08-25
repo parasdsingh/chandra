@@ -3,7 +3,7 @@
 //! All three are sign changes of some continuous function of time, so all three
 //! use the same scan-then-refine machinery in [`crate::roots`].
 
-use chandra_ephemeris::{Engine, Graha, Source};
+use chandra_ephemeris::{Engine, Graha, Position, Source};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
@@ -98,18 +98,19 @@ pub struct Combustion {
     pub combust: bool,
 }
 
-/// Combustion from longitudes already in hand.
+/// Combustion from a position already in hand.
 ///
-/// Separate from [`combustion_at`] so a caller that has just fetched both
-/// positions does not fetch them again.
-pub fn combustion_from(
-    graha: Graha,
-    longitude: f64,
-    sun_longitude: f64,
-    retrograde: bool,
-) -> Combustion {
-    let separation = crate::roots::signed_delta(longitude, sun_longitude).abs();
-    let orb = combustion_orb(graha, retrograde);
+/// The one place the question is asked. [`combustion_at`] is this with the fetch
+/// in front of it, so a month cell and the day it opens cannot reach different
+/// answers however they got their positions.
+///
+/// Takes the whole position rather than a longitude and a direction of travel,
+/// because the orb narrows while a graha is retrograde: passing the two
+/// separately let a caller pair a longitude from one instant with a flag from
+/// another and never notice.
+pub fn combustion_from(graha: Graha, position: &Position, sun_longitude: f64) -> Combustion {
+    let separation = crate::roots::signed_delta(position.longitude, sun_longitude).abs();
+    let orb = combustion_orb(graha, position.is_retrograde());
     Combustion {
         separation,
         orb,
@@ -120,12 +121,7 @@ pub fn combustion_from(
 /// Combustion at an instant.
 pub fn combustion_at(engine: &Engine, graha: Graha, jd: f64) -> Result<Combustion> {
     let bodies = engine.positions(jd, &[graha, Graha::Surya])?;
-    Ok(combustion_from(
-        graha,
-        bodies[0].longitude,
-        bodies[1].longitude,
-        bodies[0].is_retrograde(),
-    ))
+    Ok(combustion_from(graha, &bodies[0], bodies[1].longitude))
 }
 
 /// Every event for one graha between two instants.

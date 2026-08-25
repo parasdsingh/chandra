@@ -153,20 +153,22 @@ function Calendar(props: SectionProps): JSX.Element {
         A lunar month runs between syzygies, not between calendar dates, and is
         named from where the Sun stands at that moment.
       </p>
-      <For each={props.boot.month_systems}>
-        {(choice) => (
-          <Choice
-            label={choice.label}
-            selected={settings().calendar.month_system === choice.key}
-            onSelect={() =>
-              props.apply({
-                ...settings(),
-                calendar: { month_system: choice.key as MonthSystem },
-              })
-            }
-          />
-        )}
-      </For>
+      <ChoiceGroup label="Month system">
+        <For each={props.boot.month_systems}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().calendar.month_system === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  calendar: { month_system: choice.key as MonthSystem },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
     </div>
   );
 }
@@ -381,36 +383,40 @@ function Astrology(props: SectionProps): JSX.Element {
   return (
     <div class="settings__section settings__section--scroll">
       <p class="settings__group">Ayanamsa</p>
-      <For each={props.boot.ayanamsas}>
-        {(choice) => (
-          <Choice
-            label={choice.label}
-            selected={settings().sidereal.ayanamsa === choice.key}
-            onSelect={() =>
-              props.apply({
-                ...settings(),
-                sidereal: { ...settings().sidereal, ayanamsa: choice.key },
-              })
-            }
-          />
-        )}
-      </For>
+      <ChoiceGroup label="Ayanamsa">
+        <For each={props.boot.ayanamsas}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().sidereal.ayanamsa === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  sidereal: { ...settings().sidereal, ayanamsa: choice.key },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
 
       <p class="settings__group">Rahu and Ketu</p>
-      <For each={props.boot.node_types}>
-        {(choice) => (
-          <Choice
-            label={choice.label}
-            selected={settings().sidereal.node_type === choice.key}
-            onSelect={() =>
-              props.apply({
-                ...settings(),
-                sidereal: { ...settings().sidereal, node_type: choice.key },
-              })
-            }
-          />
-        )}
-      </For>
+      <ChoiceGroup label="Rahu and Ketu">
+        <For each={props.boot.node_types}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().sidereal.node_type === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  sidereal: { ...settings().sidereal, node_type: choice.key },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
     </div>
   );
 }
@@ -457,10 +463,10 @@ function MenuBar(props: SectionProps): JSX.Element {
         The moon is always shown.
       </p>
 
-      <Choice
+      <Toggle
         label="Coloured icons"
-        selected={settings().tray.colour_mode}
-        onSelect={() =>
+        on={settings().tray.colour_mode}
+        onToggle={() =>
           props.apply({
             ...settings(),
             tray: {
@@ -506,6 +512,21 @@ function About(props: { boot: Bootstrap }): JSX.Element {
   );
 }
 
+/**
+ * A set of mutually exclusive choices.
+ *
+ * The element exists for the role. A radio outside a radiogroup announces itself
+ * as one of one, so the set of ayanamsas read as eleven unrelated controls each
+ * claiming to be the only option it had.
+ */
+function ChoiceGroup(props: { label: string; children: JSX.Element }): JSX.Element {
+  return (
+    <div class="settings__choices" role="radiogroup" aria-label={props.label}>
+      {props.children}
+    </div>
+  );
+}
+
 /** A single-choice row. Selection is a mark, not a control that could be half-set. */
 function Choice(props: {
   label: string;
@@ -522,6 +543,34 @@ function Choice(props: {
     >
       <span>{props.label}</span>
       <Show when={props.selected}>
+        <Tick />
+      </Show>
+    </button>
+  );
+}
+
+/**
+ * A row that turns one thing on or off.
+ *
+ * Drawn exactly like a `Choice`, but it is not a radio: a radio is one of
+ * several and cannot be switched off again once chosen, which is the opposite of
+ * what this does. `switch` is the role for a control with two states.
+ */
+function Toggle(props: {
+  label: string;
+  on: boolean;
+  onToggle: () => void;
+}): JSX.Element {
+  return (
+    <button
+      class="settings__choice"
+      classList={{ "is-selected": props.on }}
+      role="switch"
+      aria-checked={props.on}
+      onClick={props.onToggle}
+    >
+      <span>{props.label}</span>
+      <Show when={props.on}>
         <Tick />
       </Show>
     </button>

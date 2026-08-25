@@ -313,7 +313,6 @@ export function Panel(props: Props): JSX.Element {
   });
 
   const [detail] = createResource(detailKey, async (key) => {
-    if (!key) return undefined;
     setError(undefined);
     try {
       return (await ipc.dayDetail(
@@ -554,6 +553,7 @@ export function Panel(props: Props): JSX.Element {
           snapshot={snapshot()}
           southern={props.boot.location.latitude < 0}
           title={headerTitle()}
+          adhika={monthAt(visibleDelta())?.adhika ?? false}
           selected={selected()}
           view={view()}
           onBack={back}
@@ -589,7 +589,7 @@ export function Panel(props: Props): JSX.Element {
                       today={today()}
                       southern={props.boot.location.latitude < 0}
                       onSelect={openDay}
-                      onCommit={(delta) => setOffset((current) => current + delta)}
+                      onCommit={step}
                       onVisibleChange={setVisibleDelta}
                     />
                   )}

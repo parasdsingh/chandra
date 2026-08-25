@@ -110,8 +110,6 @@
         },
         "in_month": "boolean",
         "longitude": "number",
-        "nakshatra": "string",
-        "rashi": "string",
         "retrograde": "boolean",
         "speed": "number",
         "tithi": {
@@ -129,7 +127,6 @@
         }
       }
     ],
-    "era_year": "integer",
     "events": [
       {
         "at": {
@@ -148,12 +145,9 @@
       }
     ],
     "graha": "string",
-    "kshaya_masa_name": "null",
     "label": "string",
     "name": "string",
-    "source": "string",
-    "system": "string",
-    "time_zone": "string"
+    "source": "string"
   },
   "MoonDay": {
     "combustion": {
@@ -256,7 +250,6 @@
         "in_month": "boolean",
         "is_waxing": "boolean",
         "phase": "string",
-        "principal": "boolean",
         "tithi": {
           "index": "integer",
           "kshaya": [
@@ -279,13 +272,9 @@
         }
       }
     ],
-    "era_year": "integer",
-    "kshaya_masa_name": "null",
     "label": "string",
     "name": "string",
-    "source": "string",
-    "system": "string",
-    "time_zone": "string"
+    "source": "string"
   },
   "Settings": {
     "calendar": {

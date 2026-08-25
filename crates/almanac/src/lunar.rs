@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::roots::{self, Bracket};
-use crate::time::{CivilDay, DateKey};
+use crate::time::{date_at, CivilDay, DateKey};
 use crate::zodiac::{Rashi, RASHI_ARC};
 
 /// Which month a calendar navigates by.
@@ -222,7 +222,7 @@ fn first_civil_day(
     observer: Observer,
     zone: &jiff::tz::TimeZone,
 ) -> Result<DateKey> {
-    let mut date = CivilDay::new(DateKey::new(1, 1, 1)?, zone)?.date_of(syzygy_jd)?;
+    let mut date = date_at(syzygy_jd, zone)?;
 
     // At most two steps: sunrise is within a day of any instant.
     for _ in 0..3 {
@@ -267,7 +267,7 @@ pub fn month_containing(
 
     // At most one month out, because the two rules never differ by more than a
     // single civil day.
-    let date = CivilDay::new(DateKey::new(1, 1, 1)?, zone)?.date_of(jd)?;
+    let date = date_at(jd, zone)?;
     let step = if date < month.first_day {
         -1
     } else if date > month.last_day {
@@ -343,9 +343,8 @@ fn build(
     let name_index = rashi_at_start;
 
     let first_day = first_civil_day(engine, start_jd, observer, zone)?;
-    let next_first = first_civil_day(engine, end_jd, observer, zone)?;
-    let last_day = CivilDay::new(next_first, zone)?
-        .date_of(CivilDay::new(next_first, zone)?.start_jd - 0.5)?;
+    let next_month = CivilDay::new(first_civil_day(engine, end_jd, observer, zone)?, zone)?;
+    let last_day = date_at(next_month.start_jd - 0.5, zone)?;
 
     Ok(LunarMonth {
         name: NAMES_BY_SOLAR_RASHI[name_index],

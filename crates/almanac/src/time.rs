@@ -147,13 +147,20 @@ impl CivilDay {
 
     /// The civil date a Julian Day falls on in this zone.
     pub fn date_of(&self, jd: f64) -> Result<DateKey> {
-        let unix_ms = (jd_to_unix_seconds(jd) * MILLIS_PER_SECOND).round() as i64;
-        let timestamp =
-            Timestamp::from_millisecond(unix_ms).map_err(|e| Error::TimeZone(e.to_string()))?;
-        Ok(DateKey::from_civil(
-            timestamp.to_zoned(self.zone.clone()).date(),
-        ))
+        date_at(jd, &self.zone)
     }
+}
+
+/// The civil date a Julian Day falls on in a zone.
+///
+/// A free function because the answer depends on the zone and nothing else.
+/// Callers that had only a zone used to construct a `CivilDay` for 1 January of
+/// year 1 and ask that, purely because the question was a method.
+pub fn date_at(jd: f64, zone: &TimeZone) -> Result<DateKey> {
+    let unix_ms = (jd_to_unix_seconds(jd) * MILLIS_PER_SECOND).round() as i64;
+    let timestamp =
+        Timestamp::from_millisecond(unix_ms).map_err(|e| Error::TimeZone(e.to_string()))?;
+    Ok(DateKey::from_civil(timestamp.to_zoned(zone.clone()).date()))
 }
 
 fn timestamp_to_jd(timestamp: Timestamp) -> f64 {
@@ -192,17 +199,6 @@ pub const VARA_NAMES: [&str; 7] = [
 /// 31 day month whose first day sits in the last column, which needs 37 - with
 /// room to spare, and hold a 29 day lunar month without collapsing to five.
 pub const GRID_CELLS: usize = 42;
-
-/// Weekday of the first of the month as a zero-based offset from Monday, used to
-/// place the first cell in the grid.
-pub fn first_weekday_offset(year: i16, month: i8) -> Result<u8> {
-    let first = Date::new(year, month, 1).map_err(|_| Error::InvalidDate {
-        year,
-        month,
-        day: 1,
-    })?;
-    Ok(first.weekday().to_monday_zero_offset() as u8)
-}
 
 /// Vara index for a date, 0 = Ravivara.
 pub fn vara(date: DateKey) -> Result<u8> {
@@ -325,14 +321,6 @@ mod tests {
         assert_eq!(days_in_month(1900, 2).unwrap(), 28);
         assert_eq!(days_in_month(2026, 8).unwrap(), 31);
         assert_eq!(days_in_month(2026, 4).unwrap(), 30);
-    }
-
-    #[test]
-    fn first_weekday_offset_is_monday_based() {
-        // 2026-08-01 is a Saturday: five days past Monday.
-        assert_eq!(first_weekday_offset(2026, 8).unwrap(), 5);
-        // 2026-06-01 is a Monday.
-        assert_eq!(first_weekday_offset(2026, 6).unwrap(), 0);
     }
 
     #[test]

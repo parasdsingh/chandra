@@ -140,37 +140,51 @@ export function formatIllumination(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}% lit`;
 }
 
-/** `118° 42′ 07″`, zero-padded so the columns align. */
+/**
+ * `18° 42′ 07″`, zero-padded so the columns align.
+ *
+ * Two places for the degrees, not three: this is a position *within* a rashi and
+ * so is 0 to 29, and padding to three printed a leading zero on every longitude
+ * in the app.
+ */
 export function formatDegrees(parts: [number, number, number]): string {
   const [degrees, minutes, seconds] = parts;
-  const pad = (value: number) => value.toString().padStart(2, "0");
-  return `${degrees.toString().padStart(3, "0")}° ${pad(minutes)}′ ${pad(
-    Math.floor(seconds),
-  )}″`;
+  return `${pad(degrees)}° ${pad(minutes)}′ ${pad(Math.floor(seconds))}″`;
+}
+
+function pad(value: number): string {
+  return value.toString().padStart(2, "0");
 }
 
 /**
- * An angle as degrees and arcminutes: `7° 12′`.
+ * An angle split into whole degrees and arcminutes, with the carry applied.
  *
- * Arcseconds are dropped. This formats a separation from the Sun, which is
- * compared against an orb quoted in whole degrees, so a third place would be
- * precision the reading does not have a use for.
+ * Rounding 59.7 arcminutes up has to carry into the degree rather than print 60,
+ * and that arithmetic was written out twice - once for the printed form and once
+ * for the spoken one, which is two places for one rule to be wrong in.
  */
-export function formatSeparation(degrees: number): string {
+function degreesAndMinutes(degrees: number): [number, number] {
   const whole = Math.floor(degrees);
   const minutes = Math.round((degrees - whole) * 60);
-  // Rounding 59.7 arcminutes up must carry into the degree, not print 60.
-  return minutes === 60
-    ? `${whole + 1}° 00′`
-    : `${whole}° ${minutes.toString().padStart(2, "0")}′`;
+  return minutes === 60 ? [whole + 1, 0] : [whole, minutes];
+}
+
+/**
+ * A separation from the Sun: `7° 12′`.
+ *
+ * Arcseconds are dropped. It is compared against an orb quoted in whole degrees,
+ * so a third place would be precision the reading has no use for.
+ */
+export function formatSeparation(degrees: number): string {
+  const [whole, minutes] = degreesAndMinutes(degrees);
+  return `${whole}° ${pad(minutes)}′`;
 }
 
 /** Spoken form for a separation, for assistive technology. */
 export function spokenSeparation(degrees: number): string {
-  const whole = Math.floor(degrees);
-  const minutes = Math.round((degrees - whole) * 60);
-  return minutes === 60
-    ? `${whole + 1} degrees`
+  const [whole, minutes] = degreesAndMinutes(degrees);
+  return minutes === 0
+    ? `${whole} degrees`
     : `${whole} degrees ${minutes} minutes`;
 }
 

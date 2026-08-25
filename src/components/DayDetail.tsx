@@ -306,7 +306,13 @@ function CombustionBlock(props: { combustion: Combustion }): JSX.Element {
 }
 
 /**
- * The tithis touching the day, prevailing one first.
+ * The tithis touching the day, in the order they occupy it.
+ *
+ * Not sorted with the prevailing one first, which the row above this used to
+ * claim: a day's tithis run in time order, and reordering them would break the
+ * one thing the boundaries in the captions are for, which is reading straight
+ * down as a sequence. The prevailing one is marked by weight instead - the
+ * others are dimmed - so it still reads first.
  *
  * Reuses the same block the nakshatra and rashi rows use, so the three read as
  * one list: label on the first row, continuations dimmed, boundaries in the

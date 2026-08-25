@@ -96,9 +96,16 @@ fn from_place(place: &PlaceSetting, provenance: Provenance) -> Resolved {
 /// Falls back to UTC at Greenwich if the machine reports a zone that is not in
 /// the table, which happens only for a hand-edited or fixed-offset zone.
 pub fn from_time_zone() -> Resolved {
-    let zone_name = system_zone_name();
+    for_zone(&system_zone_name())
+}
 
-    match chandra_geo::place_for_zone(&zone_name) {
+/// The representative city for a named zone, or Greenwich if the table has none.
+///
+/// Split from [`from_time_zone`] so the fallback can be asserted: reading the
+/// machine's own zone made the Greenwich branch untestable, and the test that
+/// was meant to cover it built a `Resolved` by hand and compared it with itself.
+fn for_zone(zone_name: &str) -> Resolved {
+    match chandra_geo::place_for_zone(zone_name) {
         Some(place) => Resolved {
             label: place.city.clone(),
             zone: place.zone.clone(),
@@ -434,17 +441,17 @@ mod tests {
 
     #[test]
     fn an_unknown_zone_falls_back_to_greenwich() {
-        assert!(chandra_geo::place_for_zone("Not/AZone").is_none());
-        // from_time_zone reads the machine's zone, so the fallback is asserted
-        // through the lookup it depends on rather than by faking the system.
-        let greenwich = Resolved {
-            label: "Greenwich".into(),
-            zone: "UTC".into(),
-            latitude: 51.4779,
-            longitude: 0.0,
-            elevation: 0.0,
-            provenance: Provenance::TimeZone,
-        };
-        assert_eq!(greenwich.zone, "UTC");
+        let fallback = for_zone("Not/AZone");
+        assert_eq!(fallback.label, "Greenwich");
+        assert_eq!(fallback.zone, "UTC");
+        assert_eq!(fallback.longitude, 0.0);
+        assert_eq!(fallback.provenance, Provenance::TimeZone);
+
+        // A zone the table does know resolves to its own representative city,
+        // so the fallback is a fallback rather than the only branch that runs.
+        let known = for_zone("Asia/Kolkata");
+        assert_eq!(known.zone, "Asia/Kolkata");
+        assert_ne!(known.label, "Greenwich");
+        assert_eq!(known.provenance, Provenance::TimeZone);
     }
 }

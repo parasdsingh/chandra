@@ -23,6 +23,8 @@ interface Props {
   southern: boolean;
   /** Month label in the calendar, section name in settings. */
   title: string;
+  /** Whether the month in view is intercalary, so `Adhika` can be set apart. */
+  adhika: boolean;
   selected: DateKey | null;
   view: "calendar" | "day" | "settings";
   onBack: () => void;
@@ -114,7 +116,7 @@ export function Header(props: Props): JSX.Element {
           month name of its own. Split from the fitted string rather than passed
           separately, so the measuring ladder above still sees one label. */}
       <div class="header__label" ref={labelElement} aria-label={full()}>
-        <Show when={qualifier(fitted())} fallback={fitted()}>
+        <Show when={props.adhika ? qualifier(fitted()) : null} fallback={fitted()}>
           {(split) => (
             <>
               {split().before}
@@ -138,11 +140,19 @@ export function Header(props: Props): JSX.Element {
   );
 }
 
-/** Splits a label around the `Adhika` prefix, if it carries one. */
+/**
+ * Splits a label around its `Adhika` prefix.
+ *
+ * Only called for a month that carries the flag. Searching the label for the
+ * word was re-deriving from a string what the payload already stated, and would
+ * have set the qualifier apart on any month whose name happened to contain it.
+ */
+const QUALIFIER = "Adhika ";
+
 function qualifier(label: string): { before: string; after: string } | null {
-  const at = label.indexOf("Adhika ");
+  const at = label.indexOf(QUALIFIER);
   if (at < 0) return null;
-  return { before: label.slice(0, at), after: label.slice(at + "Adhika ".length) };
+  return { before: label.slice(0, at), after: label.slice(at + QUALIFIER.length) };
 }
 
 function Chevron(): JSX.Element {

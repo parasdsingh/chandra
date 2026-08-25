@@ -46,6 +46,14 @@ pub struct MoonDay {
     pub phase: PhaseName,
     /// Illuminated fraction at local noon, 0.0 to 1.0.
     pub illumination: f64,
+    /// Whether the lit fraction is growing, read at the day's *start*.
+    ///
+    /// Not at noon, where `illumination` is read. The phase name is decided from
+    /// the elongation the day opens at, and this has to agree with it or the
+    /// glyph would point one way while the words said the other. The two
+    /// instants disagree only on the day the Moon crosses a syzygy between them,
+    /// where the disc is within a fraction of a percent of full or of dark and
+    /// which way it is turning is not visible at 14 pixels.
     pub is_waxing: bool,
     pub moonrise: Option<Moment>,
     pub moonset: Option<Moment>,

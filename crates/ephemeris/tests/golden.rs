@@ -314,22 +314,9 @@ fn bundled_data_serves_the_navigable_range_at_full_precision() {
     }
 }
 
-#[test]
-fn a_second_engine_is_refused() {
-    let _held = engine();
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../src-tauri/resources/ephe");
-    assert!(
-        Engine::new(&path, SiderealConfig::default()).is_err(),
-        "a second engine would silently reconfigure the first"
-    );
-}
-
-#[test]
-fn missing_data_directory_is_an_error_not_a_silent_downgrade() {
-    let _held = engine();
-    let missing = PathBuf::from("/nonexistent/chandra/ephe");
-    assert!(Engine::new(&missing, SiderealConfig::default()).is_err());
-}
+// Construction is tested in `tests/construction.rs`, which is a separate
+// process. Every test here holds the process's one engine, so `Engine::new`
+// refuses before it reaches any of the checks that were meant to be exercised.
 
 /// A configuration change is one critical section, not two (D-005).
 ///
