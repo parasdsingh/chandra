@@ -26,6 +26,7 @@ import type {
   Bootstrap,
   City,
   GrahaKey,
+  IngressMode,
   MonthSystem,
   Settings,
 } from "../ipc/types";
@@ -241,16 +242,54 @@ function Calendar(props: SectionProps): JSX.Element {
               onSelect={() =>
                 props.apply({
                   ...settings(),
-                  calendar: { month_system: choice.key as MonthSystem },
+                  calendar: {
+                    ...settings().calendar,
+                    month_system: choice.key as MonthSystem,
+                  },
                 })
               }
             />
           )}
         </For>
       </ChoiceGroup>
+
+      {/* One or the other, never both: the label takes the glyph's place in a
+          40px cell, and there is one glyph. */}
+      <ChoiceGroup label="Ingress labels">
+        <For each={INGRESS_CHOICES}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().calendar.ingress === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  calendar: { ...settings().calendar, ingress: choice.key },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
+      <p class="settings__hint settings__hint--foot">
+        On the day a graha enters a sign or a nakshatra, its cell names what it
+        entered instead of drawing the glyph. Not on the Moon's calendar: it
+        enters a nakshatra every day, so every cell would be a label and none of
+        them would be a phase.
+      </p>
     </div>
   );
 }
+
+const INGRESS_CHOICES: { key: IngressMode; label: string }[] = [
+  { key: "off", label: "None" },
+  // Western three-letter forms, because the Sanskrit names cannot be
+  // abbreviated and stay distinct - Vrishabha and Vrishchika are both `Vri`.
+  { key: "rashi", label: "Rashi — Ari, Tau, Gem" },
+  // Two parts where the name has two: six nakshatras begin Purva or Uttara and
+  // three of each share what follows.
+  { key: "nakshatra", label: "Nakshatra — Ashw, P.Ash" },
+];
 
 /** Quiet time after the last keystroke before a search is sent. */
 const SEARCH_SETTLE_MS = 180;

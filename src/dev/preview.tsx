@@ -62,7 +62,7 @@ const boot: Bootstrap = {
       elevation: null,
     },
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
-    calendar: { month_system: "amanta" },
+    calendar: { month_system: "amanta", ingress: "rashi" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
     tray: { subjects: ["mangala", "shani"], colour_mode: false },
     appearance: { scale: 1 },
@@ -149,6 +149,7 @@ export function Preview(): JSX.Element {
               selected={{ year: 2026, month: 8, day: 21 }}
               today={{ year: 2026, month: 8, day: 21 }}
               southern={false}
+              ingress="rashi"
               active
               onSelect={() => {}}
             />
@@ -168,6 +169,7 @@ export function Preview(): JSX.Element {
               selected={null}
               today={{ year: 2026, month: 8, day: 21 }}
               southern={false}
+              ingress="rashi"
               active
               onSelect={() => {}}
             />
@@ -269,6 +271,7 @@ export function Preview(): JSX.Element {
               selected={{ year: 2025, month: 2, day: 24 }}
               today={{ year: 2025, month: 2, day: 10 }}
               southern={false}
+              ingress="rashi"
               active
               onSelect={() => {}}
             />

@@ -18,12 +18,7 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 
-import type {
-  CellTithi,
-  GrahaCell,
-  GrahaInfo,
-  MoonCell,
-} from "../ipc/types";
+import type { CellTithi, GrahaCell, GrahaInfo, MoonCell } from "../ipc/types";
 import { GrahaGlyph } from "./GrahaGlyph";
 import { PhaseGlyph } from "./PhaseGlyph";
 
@@ -57,6 +52,15 @@ interface GrahaProps extends CommonProps {
   data: GrahaCell;
   info: GrahaInfo | undefined;
   retro: RetroPhase | null;
+  /**
+   * Short form of the division entered on this day, or `null`.
+   *
+   * `Ari`, `P.Ash`. It replaces the glyph rather than joining it: the cell is
+   * 40px and the glyph's line is the only place a five-character word fits.
+   * Losing the glyph for one cell in a month costs nothing - the whole column
+   * of them says which graha this is, and the header says it too.
+   */
+  ingress: string | null;
 }
 
 type Props = MoonProps | GrahaProps;
@@ -69,7 +73,10 @@ type Props = MoonProps | GrahaProps;
  * from the astronomical 1-30 index: amanta and purnimanta months count from
  * opposite ends of that index, so it is right in one and wrong in the other.
  */
-export function tithiLabel(tithi: CellTithi): { prefix: string; value: string } {
+export function tithiLabel(tithi: CellTithi): {
+  prefix: string;
+  value: string;
+} {
   if (tithi.number === 15) {
     return { prefix: "", value: tithi.paksha === "shukla" ? "P" : "A" };
   }
@@ -141,10 +148,7 @@ export function DayCell(props: Props): JSX.Element {
       </Show>
 
       <span class="day-cell__content">
-        <Show
-          when={props.kind === "moon"}
-          fallback={<GrahaMark {...props} />}
-        >
+        <Show when={props.kind === "moon"} fallback={<GrahaMark {...props} />}>
           <PhaseGlyph
             illumination={(props as MoonProps).data.illumination}
             waxing={(props as MoonProps).data.is_waxing}
@@ -168,8 +172,6 @@ export function DayCell(props: Props): JSX.Element {
       <Show when={props.data.combust}>
         <span class="day-cell__combust" />
       </Show>
-
-
     </div>
   );
 }
@@ -226,16 +228,38 @@ function RetroRing(props: { phase: RetroPhase }): JSX.Element {
   );
 }
 
-/** The graha's symbol, on the second line in both calendars. */
+/**
+ * The graha's symbol, on the second line in both calendars - or, on the day it
+ * enters a division, the name of what it entered.
+ *
+ * The word takes the glyph's place rather than sitting beside it. A 40px cell
+ * has room for one thing on that line, and on the one day a month the graha
+ * changes sign, which sign it changed to is the more useful of the two: the
+ * column of glyphs above and below still says which graha this is, and so does
+ * the header.
+ */
 function GrahaMark(props: Props): JSX.Element {
+  const ingress = () =>
+    props.kind === "graha" ? (props as GrahaProps).ingress : null;
+
   return (
-    <Show when={props.kind === "graha" && (props as GrahaProps).info}>
+    <Show
+      when={props.kind === "graha" && (props as GrahaProps).info}
+      keyed={false}
+    >
       {(info) => (
         <span
           class="day-cell__graha"
           classList={{ "is-outside": !props.data.in_month }}
         >
-          <GrahaGlyph info={info()} size={14} colour="currentColor" />
+          <Show
+            when={ingress()}
+            fallback={
+              <GrahaGlyph info={info()} size={14} colour="currentColor" />
+            }
+          >
+            {(name) => <span class="day-cell__ingress">{name()}</span>}
+          </Show>
         </span>
       )}
     </Show>

@@ -250,6 +250,9 @@ export interface TransitEvent {
   date: DateKey;
   at: Moment;
   target: string | null;
+  /** The same thing in three to five characters, for a 40px calendar cell:
+   * `Ari`, `P.Ash`. `null` wherever `target` is. */
+  target_short: string | null;
   source: Source;
 }
 
@@ -364,6 +367,9 @@ export interface PlaceSetting {
   elevation: number;
 }
 
+/** Which division a cell names when the subject enters one. */
+export type IngressMode = "off" | "rashi" | "nakshatra";
+
 export interface Settings {
   schema_version: number;
   location: {
@@ -381,6 +387,9 @@ export interface Settings {
   };
   calendar: {
     month_system: MonthSystem;
+    /** Which ingress the grid labels, if either. Never both: the label takes
+     * the glyph's place in a 40px cell and there is one glyph. */
+    ingress: IngressMode;
   };
   /**
    * The optional limbs of the day view. Only the three that cost something have
@@ -458,11 +467,7 @@ export interface City {
 
 /** Every failure carries a stable code; there is no generic fallback. */
 export interface AppError {
-  code:
-    | "DATE_OUT_OF_RANGE"
-    | "NO_CONVERGENCE"
-    | "ENGINE"
-    | "SETTINGS";
+  code: "DATE_OUT_OF_RANGE" | "NO_CONVERGENCE" | "ENGINE" | "SETTINGS";
   message: string;
 }
 

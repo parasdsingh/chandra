@@ -11,6 +11,7 @@ import type {
   GrahaCell,
   GrahaInfo,
   GrahaMonth,
+  IngressMode,
   MoonCell,
   MoonMonth,
   TransitEvent,
@@ -37,6 +38,15 @@ interface Props {
    * neighbours at all.
    */
   active: boolean;
+  /**
+   * Which ingress the grid labels, if either.
+   *
+   * Never both: the label takes the glyph's place in a 40px cell and there is
+   * one glyph. Ignored for the Moon, which enters a rashi every two and a bit
+   * days and a nakshatra every day - a label on every cell says nothing, and it
+   * would cost the phase glyph the calendar is for.
+   */
+  ingress: IngressMode;
   onSelect: (date: DateKey) => void;
 }
 
@@ -105,6 +115,11 @@ export function MonthCells(props: Props): JSX.Element {
                 {(cell, column) => {
                   const cells = props.month.days as (MoonCell | GrahaCell)[];
                   const index = row() * 7 + column();
+                  const label = ingressLabel(
+                    props.kind === "graha" ? props.ingress : "off",
+                    (props.month as GrahaMonth).events,
+                    cell,
+                  );
                   const common = {
                     selected: sameDate(props.selected, cell.date),
                     today: sameDate(props.today, cell.date),
@@ -122,7 +137,8 @@ export function MonthCells(props: Props): JSX.Element {
                           data={cell as GrahaCell}
                           info={props.info}
                           retro={retroPhase(cells, index)}
-                          label={grahaCellLabel(cell as GrahaCell)}
+                          ingress={label}
+                          label={grahaCellLabel(cell as GrahaCell, label)}
                         />
                       }
                     >
@@ -143,6 +159,30 @@ export function MonthCells(props: Props): JSX.Element {
       </div>
     </>
   );
+}
+
+/**
+ * The short name of the division this cell's subject entered today, or `null`.
+ *
+ * Read from the month's own event list rather than from a flag on the cell: the
+ * events are already on the payload for the day view, and a second copy on 42
+ * cells is a second thing to keep in step with the first.
+ *
+ * A day can hold two ingresses of the same kind only if the graha crosses two
+ * boundaries in one day, which nothing but the Moon does - and the Moon is not
+ * labelled. The first is taken, which is the one the day is named for.
+ */
+function ingressLabel(
+  mode: IngressMode,
+  events: TransitEvent[] | undefined,
+  cell: MoonCell | GrahaCell,
+): string | null {
+  if (mode === "off" || !events) return null;
+  const wanted = mode === "rashi" ? "rashi_ingress" : "nakshatra_ingress";
+  const found = events.find(
+    (event) => event.kind === wanted && sameDate(event.date, cell.date),
+  );
+  return found?.target_short ?? null;
 }
 
 /**
@@ -173,7 +213,9 @@ function retroPhase(
 
 /** Splits the flat 42-cell grid into six rows of seven. */
 function weeks<T>(cells: T[]): T[][] {
-  return Array.from({ length: 6 }, (_, row) => cells.slice(row * 7, row * 7 + 7));
+  return Array.from({ length: 6 }, (_, row) =>
+    cells.slice(row * 7, row * 7 + 7),
+  );
 }
 
 /** Spoken date. A cell says the Gregorian date whichever calendar is in force. */
@@ -224,9 +266,13 @@ function moonCellLabel(cell: MoonCell): string {
   return parts.join(", ");
 }
 
-function grahaCellLabel(cell: GrahaCell): string {
+function grahaCellLabel(cell: GrahaCell, ingress: string | null): string {
   const parts = [spokenDate(cell.date)];
   if (cell.tithi) parts.push(spokenTithi(cell.tithi));
+  // The abbreviation is what the cell prints, and `Ari` read aloud is a word
+  // rather than a sign. The full name is on the event in the day view; here the
+  // label says an ingress happened and which division it was into.
+  if (ingress) parts.push(`enters ${ingress}`);
   if (cell.retrograde) parts.push("retrograde");
   // Both are read at the day's reference instant, so the label says so rather
   // than claiming the state held from midnight to midnight.

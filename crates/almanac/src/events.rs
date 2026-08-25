@@ -46,6 +46,13 @@ pub struct Event {
     /// What the event moves into, where that makes sense: the rashi or nakshatra
     /// entered. Empty for stations and combustion.
     pub target: Option<String>,
+    /// The same thing in three to five characters, for a 40px calendar cell.
+    /// Empty wherever `target` is.
+    ///
+    /// Owned rather than borrowed, like every other string on the payload: a
+    /// month is cached and the cache round-trips through `Deserialize`, which
+    /// cannot produce a `&'static str`.
+    pub target_short: Option<String>,
     pub source: Source,
 }
 
@@ -241,6 +248,13 @@ fn ingress_events(
                         Division::Rashi => Rashi::ALL[entered].name().to_string(),
                         Division::Nakshatra => Nakshatra::ALL[entered].name().to_string(),
                     }),
+                    target_short: Some(
+                        match division {
+                            Division::Rashi => Rashi::ALL[entered].short(),
+                            Division::Nakshatra => Nakshatra::ALL[entered].short(),
+                        }
+                        .to_string(),
+                    ),
                     source: current.2,
                 });
             }
@@ -288,6 +302,7 @@ fn station_events(
                 date,
                 at: moment,
                 target: None,
+                target_short: None,
                 source: engine.position(exact, graha)?.source,
             },
         ));
@@ -353,6 +368,7 @@ fn combustion_events(
                 date,
                 at: moment,
                 target: None,
+                target_short: None,
                 source: engine.position(exact, graha)?.source,
             });
         }

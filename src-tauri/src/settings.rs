@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -99,6 +99,21 @@ pub struct CalendarSetting {
     /// Whether months run Gregorian, new moon to new moon, or full moon to full
     /// moon.
     pub month_system: MonthSystem,
+    /// Which ingress, if either, is labelled on the grid.
+    pub ingress: IngressSetting,
+}
+
+/// Which division a cell names when the subject enters one.
+///
+/// One or the other, never both: the label takes the glyph's place in a 40px
+/// cell, and there is one glyph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IngressSetting {
+    #[default]
+    Off,
+    Rashi,
+    Nakshatra,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -176,6 +191,7 @@ impl Default for Settings {
             },
             calendar: CalendarSetting {
                 month_system: MonthSystem::Solar,
+                ingress: IngressSetting::Off,
             },
             panchanga: PanchangaSetting::default(),
             tray: TraySetting {
@@ -209,6 +225,7 @@ impl Settings {
             },
             calendar: CalendarSetting {
                 month_system: MonthSystem::Amanta,
+                ingress: IngressSetting::Rashi,
             },
             tray: TraySetting {
                 subjects: vec![Graha::Mangala],
@@ -341,6 +358,19 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
             );
         value["schema_version"] = serde_json::Value::from(4u32);
         version = 4;
+    }
+
+    // 4 -> 5. The grid gained ingress labels. A file written before them means
+    // the state they were in, which is off: D-024 had taken the ingress markers
+    // off the grid entirely, and there was nothing to label.
+    if version == 4 {
+        value
+            .get_mut("calendar")
+            .and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| AppError::Settings("settings schema 4 has no calendar block".into()))?
+            .insert("ingress".into(), serde_json::Value::from("off"));
+        value["schema_version"] = serde_json::Value::from(5u32);
+        version = 5;
     }
 
     match version {

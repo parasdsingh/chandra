@@ -338,9 +338,20 @@
   position: relative;
   z-index: 1;
   margin-top: var(--s-1);
+  /* Full width, so a child wider than a glyph has somewhere to centre in. */
+  align-self: stretch;
   height: 14px;
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+/* An ingress label is up to five characters where a glyph is 14px, so it
+   reaches the corner the other calendar's date sits in. The padding takes that
+   corner out of the space the label centres in, rather than letting the two
+   overlap. Only when there is a label: a glyph never needs it. */
+.day-cell__content:has(.day-cell__ingress) {
+  padding-right: 13px;
 }
 
 /* ---------- lunar cell ---------- */
@@ -827,4 +838,18 @@
 .detail__pane.is-current {
   color: var(--text-primary);
   border-bottom-color: var(--text-primary);
+}
+
+/* The name of the division a graha entered, in the glyph's place on that one
+   cell. Sized to fit `P.Ash` inside 40px with the side margins intact - the
+   cell's own type is 13px and would not. */
+.day-cell__ingress {
+  /* The same size and weight as the corner date, because they sit on the same
+     line and a label heavier than the date would read as the cell's subject.
+     Nine pixels is also what `P.Pha` needs to fit the 27px left after the date
+     takes its corner. */
+  font: 600 9px / 1 var(--font-stack);
+  letter-spacing: 0.2px;
+  color: inherit;
+  white-space: nowrap;
 }

@@ -83,6 +83,29 @@ impl Rashi {
 
     /// Western equivalent, shown as a secondary label for readers who know the
     /// signs but not the Sanskrit.
+    /// Three letters, for a 40px calendar cell.
+    ///
+    /// Western forms, because the Sanskrit names cannot be abbreviated to three
+    /// letters and stay distinct: `Vrishabha` and `Vrishchika` are identical for
+    /// six. Both names are already carried on every rashi, so this is a choice
+    /// of which to print rather than new data.
+    pub const fn short(self) -> &'static str {
+        match self {
+            Rashi::Mesha => "Ari",
+            Rashi::Vrishabha => "Tau",
+            Rashi::Mithuna => "Gem",
+            Rashi::Karka => "Can",
+            Rashi::Simha => "Leo",
+            Rashi::Kanya => "Vir",
+            Rashi::Tula => "Lib",
+            Rashi::Vrishchika => "Sco",
+            Rashi::Dhanu => "Sag",
+            Rashi::Makara => "Cap",
+            Rashi::Kumbha => "Aqu",
+            Rashi::Meena => "Pis",
+        }
+    }
+
     pub const fn western(self) -> &'static str {
         match self {
             Rashi::Mesha => "Aries",
@@ -211,6 +234,45 @@ impl Nakshatra {
         }
     }
 
+    /// A short form for a 40px calendar cell.
+    ///
+    /// Two parts where the name has two, because six of the twenty-seven begin
+    /// `Purva` or `Uttara` and three of each share what follows: `P.Ash` and
+    /// `U.Ash` are Purva and Uttara Ashadha, and truncating either to four
+    /// letters would give `Asha` for both. The rest are the first four letters
+    /// of the name, which are distinct across all twenty-one.
+    pub const fn short(self) -> &'static str {
+        match self {
+            Nakshatra::Ashwini => "Ashw",
+            Nakshatra::Bharani => "Bhar",
+            Nakshatra::Krittika => "Krit",
+            Nakshatra::Rohini => "Rohi",
+            Nakshatra::Mrigashira => "Mrig",
+            Nakshatra::Ardra => "Ardr",
+            Nakshatra::Punarvasu => "Puna",
+            Nakshatra::Pushya => "Push",
+            Nakshatra::Ashlesha => "Ashl",
+            Nakshatra::Magha => "Magh",
+            Nakshatra::PurvaPhalguni => "P.Pha",
+            Nakshatra::UttaraPhalguni => "U.Pha",
+            Nakshatra::Hasta => "Hast",
+            Nakshatra::Chitra => "Chit",
+            Nakshatra::Swati => "Swat",
+            Nakshatra::Vishakha => "Vish",
+            Nakshatra::Anuradha => "Anur",
+            Nakshatra::Jyeshtha => "Jyes",
+            Nakshatra::Mula => "Mula",
+            Nakshatra::PurvaAshadha => "P.Ash",
+            Nakshatra::UttaraAshadha => "U.Ash",
+            Nakshatra::Shravana => "Shra",
+            Nakshatra::Dhanishta => "Dhan",
+            Nakshatra::Shatabhisha => "Shat",
+            Nakshatra::PurvaBhadrapada => "P.Bha",
+            Nakshatra::UttaraBhadrapada => "U.Bha",
+            Nakshatra::Revati => "Reva",
+        }
+    }
+
     /// Ruling graha in the Vimshottari sequence, which repeats every nine
     /// nakshatras starting from Ashwini.
     pub fn lord(self) -> chandra_ephemeris::Graha {
@@ -334,5 +396,71 @@ mod tests {
         }
         assert_eq!(Nakshatra::Ashwini.lord(), chandra_ephemeris::Graha::Ketu);
         assert_eq!(Nakshatra::Rohini.lord(), chandra_ephemeris::Graha::Chandra);
+    }
+}
+
+#[cfg(test)]
+mod short_form_tests {
+    use super::*;
+
+    /// A label that names two things names neither. Every short form has to be
+    /// unique inside its own division, which is the whole reason the two-part
+    /// nakshatra forms exist.
+    #[test]
+    fn short_forms_are_distinct_within_their_division() {
+        let rashis: std::collections::BTreeSet<&str> =
+            Rashi::ALL.iter().map(|rashi| rashi.short()).collect();
+        assert_eq!(rashis.len(), 12, "two rashis share a short form");
+
+        let nakshatras: std::collections::BTreeSet<&str> = Nakshatra::ALL
+            .iter()
+            .map(|nakshatra| nakshatra.short())
+            .collect();
+        assert_eq!(nakshatras.len(), 27, "two nakshatras share a short form");
+    }
+
+    /// The cell is 40px wide and the label replaces a 16px glyph in it. Five
+    /// characters is what the two-part nakshatra forms need and is the ceiling.
+    #[test]
+    fn short_forms_fit_a_cell() {
+        for rashi in Rashi::ALL {
+            assert_eq!(rashi.short().chars().count(), 3, "{rashi:?}");
+        }
+        for nakshatra in Nakshatra::ALL {
+            let length = nakshatra.short().chars().count();
+            assert!(
+                (4..=5).contains(&length),
+                "{nakshatra:?} is {length} characters"
+            );
+        }
+    }
+
+    /// The six that begin Purva or Uttara are the reason for the two-part form,
+    /// and three pairs of them would collide without it.
+    #[test]
+    fn the_purva_and_uttara_pairs_stay_apart() {
+        for (purva, uttara) in [
+            (Nakshatra::PurvaPhalguni, Nakshatra::UttaraPhalguni),
+            (Nakshatra::PurvaAshadha, Nakshatra::UttaraAshadha),
+            (Nakshatra::PurvaBhadrapada, Nakshatra::UttaraBhadrapada),
+        ] {
+            assert_ne!(purva.short(), uttara.short());
+            assert!(purva.short().starts_with("P."));
+            assert!(uttara.short().starts_with("U."));
+        }
+    }
+
+    /// Vrishabha and Vrishchika are identical for six letters, which is why the
+    /// rashi forms are western rather than transliterated.
+    #[test]
+    fn the_rashi_pair_that_forced_western_forms_stays_apart() {
+        assert_eq!(Rashi::Vrishabha.short(), "Tau");
+        assert_eq!(Rashi::Vrishchika.short(), "Sco");
+        // Three letters of either transliteration is "Vri". That is the whole
+        // argument for western forms, so it is asserted rather than asserted
+        // about: if these ever differ, transliterated forms become possible.
+        assert_eq!(Rashi::Vrishabha.name()[..3], Rashi::Vrishchika.name()[..3]);
+        assert_eq!(&Rashi::Vrishabha.name()[..5], "Vrish");
+        assert_eq!(&Rashi::Vrishchika.name()[..5], "Vrish");
     }
 }

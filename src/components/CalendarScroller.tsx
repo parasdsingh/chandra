@@ -31,7 +31,13 @@
 import type { JSX } from "solid-js";
 import { batch, createSignal, Index, onCleanup, Show } from "solid-js";
 
-import type { DateKey, GrahaInfo, GrahaMonth, MoonMonth } from "../ipc/types";
+import type {
+  DateKey,
+  GrahaInfo,
+  GrahaMonth,
+  IngressMode,
+  MoonMonth,
+} from "../ipc/types";
 import { MonthCells, WeekdayRow } from "./MonthGrid";
 
 /** Height of one month of cells: six rows of 40px. */
@@ -110,6 +116,8 @@ interface Props {
    * slides a third further than the finger that pushed it.
    */
   scale: number;
+  /** Which ingress the grid labels, if either. */
+  ingress: IngressMode;
   /**
    * Which month now fills most of the window, before it has been committed.
    *
@@ -247,7 +255,11 @@ export function CalendarScroller(props: Props): JSX.Element {
     const onward = flicked || Math.abs(travelled) >= COMMIT_DISTANCE;
 
     // Either the rest of the way to the neighbour, or back to where it started.
-    animate(onward ? (travelled < 0 ? -MONTH_HEIGHT : MONTH_HEIGHT) - travelled : -travelled);
+    animate(
+      onward
+        ? (travelled < 0 ? -MONTH_HEIGHT : MONTH_HEIGHT) - travelled
+        : -travelled,
+    );
   }
 
   /**
@@ -268,7 +280,10 @@ export function CalendarScroller(props: Props): JSX.Element {
       ? SETTLE_REDUCED_MS
       : Math.max(
           SETTLE_MIN_MS,
-          Math.min(SETTLE_MAX_MS, (Math.abs(distance) / MONTH_HEIGHT) * SETTLE_MAX_MS),
+          Math.min(
+            SETTLE_MAX_MS,
+            (Math.abs(distance) / MONTH_HEIGHT) * SETTLE_MAX_MS,
+          ),
         );
     const started = performance.now();
     let covered = 0;
@@ -362,7 +377,10 @@ export function CalendarScroller(props: Props): JSX.Element {
               which is what these three slots are. */}
           <Index each={months()}>
             {(entry) => (
-              <div class="scroller__month" style={{ top: `${entry().offset}px` }}>
+              <div
+                class="scroller__month"
+                style={{ top: `${entry().offset}px` }}
+              >
                 <Show when={entry().month}>
                   {(month) => (
                     <MonthCells
@@ -373,6 +391,7 @@ export function CalendarScroller(props: Props): JSX.Element {
                       selected={props.selected}
                       today={props.today}
                       southern={props.southern}
+                      ingress={props.ingress}
                       active={entry().offset === 0}
                       onSelect={(date) => {
                         // A drag that ends over a cell must not also select it.

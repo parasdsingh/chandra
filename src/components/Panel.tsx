@@ -637,6 +637,7 @@ export function Panel(props: Props): JSX.Element {
                         onCommit={step}
                         onVisibleChange={setVisibleDelta}
                         scale={props.boot.settings.appearance.scale}
+                        ingress={props.boot.settings.calendar.ingress}
                       />
                     )}
                   </Show>

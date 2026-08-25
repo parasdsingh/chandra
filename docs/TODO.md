@@ -225,24 +225,40 @@ Notes worth keeping:
 
 ---
 
-## 8. Ingress labels — queued
+## 8. Ingress labels — done
 
-Agreed: three-letter rashi abbreviations on the ingress day, replacing the glyph
-on that cell only. Western forms, because the Sanskrit names cannot be
-abbreviated — *Vrishabha* and *Vrishchika* are identical for six letters. Since
-both names are already on every rashi this is a language setting, not a data
-change, and it should apply app-wide.
+On the day a graha enters a rashi or a nakshatra, its cell names what it entered
+instead of drawing the glyph. **Settings › Calendar › Ingress labels**, one or
+the other or neither.
 
-Nakshatras take two-part forms — `P.Ash`, `U.Bha` — because three of them begin
-*Purva* and three begin *Uttara*. One or the other is marked, never both;
-settings chooses.
+The label takes the glyph's place rather than joining it. A 40px cell has room
+for one thing on that line, and on the one day a month a graha changes sign,
+which sign it changed to is the more useful of the two: the column of glyphs
+above and below still says which graha this is, and so does the header.
 
-This is the one thing that would put an ingress back on the grid after D-024
-took the marker off it, and it puts it there as a word rather than as a shape.
+- **Rashi forms are western** — `Ari`, `Tau`, `Gem`. The Sanskrit names cannot
+  be abbreviated to three letters and stay distinct: *Vrishabha* and
+  *Vrishchika* are both `Vri`. A test asserts that collision, so if the two ever
+  differ in their first three letters, transliterated forms become possible.
+- **Nakshatra forms are two-part where the name is** — `P.Ash`, `U.Bha`. Six
+  begin *Purva* or *Uttara* and three of each share what follows. The other
+  twenty-one are the first four letters, which are distinct.
+- **Not on the Moon's calendar.** It enters a nakshatra every day and a rashi
+  every two and a bit, so every cell would be a label and none of them would be
+  a phase.
+- The label reads from the month's own event list, which was already on the
+  payload for the day view. A second copy on 42 cells is a second thing to keep
+  in step with the first.
+- A five-character label reaches the corner the other calendar's date sits in.
+  The cell takes that corner out of the space the label centres in, rather than
+  letting the two overlap.
+
+This is the one thing that puts an ingress back on the grid after D-024 took the
+marker off it, and it puts it there as a word rather than as a shape.
 
 | | |
 |---|---|
-| Status | queued |
+| Status | done |
 
 ---
 

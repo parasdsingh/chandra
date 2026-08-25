@@ -30,12 +30,22 @@ interface Props {
  * horizontal, both measured from the centre.
  */
 function quarter(from: [number, number], to: [number, number]): string {
-  const c1: [number, number] = [from[0] + to[0] * KAPPA, from[1] + to[1] * KAPPA];
-  const c2: [number, number] = [to[0] + from[0] * KAPPA, to[1] + from[1] * KAPPA];
+  const c1: [number, number] = [
+    from[0] + to[0] * KAPPA,
+    from[1] + to[1] * KAPPA,
+  ];
+  const c2: [number, number] = [
+    to[0] + from[0] * KAPPA,
+    to[1] + from[1] * KAPPA,
+  ];
   return `C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${to[0]} ${to[1]}`;
 }
 
-export function litPath(radius: number, illumination: number, lightRight: boolean): string {
+export function litPath(
+  radius: number,
+  illumination: number,
+  lightRight: boolean,
+): string {
   const terminator = radius * (1 - 2 * illumination);
   const side = lightRight ? 1 : -1;
 
