@@ -8,6 +8,12 @@ other twice. Both contradictions were settled by hand and are recorded below.
 Source column: **A**, **B**, or **A+B** where both found it independently.
 Status is one of `open`, `fixed`, `wontfix` (with a reason), `verified`.
 
+**All 56 are closed.** None ended as `wontfix`. Two findings were partly wrong
+about the code and say so where they stand: F-18's headline claim does not hold,
+and F-55 was filed as speculative and is not. Where a fix could not be held by a
+test, the line says why - the front end has no test harness at all, and two
+findings live in the window server.
+
 ---
 
 ## Method note worth keeping
@@ -450,6 +456,13 @@ latitude with no sunrise on any of three days the slice is empty, so every tithi
 that day is captioned a kshaya while the cell, which falls back to local noon, is
 right.
 
+**fixed** — `TithiSpan.sunrises` is `Option<u8>`: `None` for an unresolved
+boundary and for a latitude with no sunrise on any of the three days, `Some(0)`
+only for a real kshaya. The day view captions only the count it is given.
+`a_polar_night_reports_no_sunrise_count_rather_than_none_at_all` holds both
+halves - Longyearbyen in January reports no count, and a year at Bengaluru
+reports a count on every span and a genuine zero among them.
+
 ### F-56 The panel has no fallback when the popover material fails to apply — coordinator
 `src-tauri/src/panel.rs:73-89` (`apply_material`), `src/styles/panel.css` (`.panel` background)
 
@@ -478,13 +491,6 @@ fixes it. Every colour token is left exactly as it is.
 `false`, which is the truthful answer there. No test: this is a window-server
 outcome no headless suite can produce, and the false branch is what the preview
 harness has always rendered under.
-
-**fixed** — `TithiSpan.sunrises` is `Option<u8>`: `None` for an unresolved
-boundary and for a latitude with no sunrise on any of the three days, `Some(0)`
-only for a real kshaya. The day view captions only the count it is given.
-`a_polar_night_reports_no_sunrise_count_rather_than_none_at_all` holds both
-halves - Longyearbyen in January reports no count, and a year at Bengaluru
-reports a count on every span and a genuine zero among them.
 
 ---
 
@@ -561,6 +567,10 @@ defect gets written.
   `spans.rs:150` computes a real per-span source that `NakshatraSpan` /
   `RashiSpan` then drop. `Source::weakest` over an empty iterator returns
   `Swieph` — full precision claimed from no evidence.
+  **fixed** — the span builders return the weakest ephemeris behind them and a day
+  folds it in along with its rise/set and its tithis; `Source::weakest` of
+  nothing is `Moshier`, and `Source::weaker` is the two-value form the fixed-arity
+  call sites now use.
 - **F-32** `MoonCell.principal` is documented as "the grid marks these"; nothing
   draws it. Draw it or drop the field.
   **dropped.** `phase` already carries it exactly: `intermediate_phase` never
