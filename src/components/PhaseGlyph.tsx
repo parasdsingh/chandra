@@ -64,8 +64,14 @@ export function PhaseGlyph(props: Props): JSX.Element {
       aria-hidden="true"
       style={{ opacity: props.dim ? 0.45 : 1 }}
     >
-      {/* The ring is what keeps a new moon visible at all. It is omitted at full,
-          where it would only thicken the edge of a solid disc. */}
+      {/* A new moon is a dark disc with an edge, not an empty ring. Filled, it
+          reads as the Moon with no light on it; unfilled it read as a hole in
+          the panel, and on a translucent surface it was literally one. The ring
+          is omitted at full, where it would only thicken a solid disc. */}
+      <Show when={isNew()}>
+        <circle cx="0" cy="0" r={radius() - 0.5} fill="var(--ground)" />
+      </Show>
+
       <Show when={!isFull()}>
         <circle
           cx="0"

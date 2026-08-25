@@ -1018,7 +1018,10 @@ fn a_lunar_month_runs_from_one_end_of_the_tithis_to_the_other() {
     let first = days[0].tithi.as_ref().expect("lunar cells carry a tithi");
     let last = days[days.len() - 1].tithi.as_ref().expect("tithi");
 
-    assert_eq!(amanta.label, "Shravana 2083", "Vikram Samvat year");
+    assert_eq!(
+        amanta.label, "Shravana VS 2083",
+        "the era is named: a bare 2083 reads as a Gregorian year"
+    );
     assert_eq!(first.paksha, Paksha::Shukla);
     assert_eq!(first.number, 1, "an amanta month opens on Shukla Pratipada");
     assert_eq!(last.paksha, Paksha::Krishna);

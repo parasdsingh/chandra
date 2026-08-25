@@ -234,7 +234,11 @@ impl Almanac {
 
         Ok(Resolved {
             naming: MonthLabel {
-                label: format!("{} {}", month.display_name(), month.vikram_year),
+                // The era is named. Printed bare, "Shravana 2083" reads as a
+                // year 57 in the future - especially in a panel whose solar
+                // mode says "August 2026" in the same slot and whose cells are
+                // annotated with Gregorian dates.
+                label: format!("{} VS {}", month.display_name(), month.vikram_year),
                 name: month.name.to_string(),
                 adhika: month.adhika,
             },

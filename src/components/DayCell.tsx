@@ -19,7 +19,6 @@ import { Show } from "solid-js";
 
 import type {
   CellTithi,
-  EventKind,
   GrahaCell,
   GrahaInfo,
   MoonCell,
@@ -42,22 +41,26 @@ interface MoonProps extends CommonProps {
   southern: boolean;
 }
 
+/**
+ * Where a day sits in a stretch of retrograde motion.
+ *
+ * The ring is a bracket, not a badge: it opens on the day the motion turns,
+ * closes on the day it turns back, and is whole in between. A run therefore
+ * reads as one shape spanning several cells, which is what the span rule at the
+ * cell's edge used to say and says better, because it is attached to the graha
+ * it is about.
+ */
+export type RetroPhase = "begins" | "within" | "ends";
+
 interface GrahaProps extends CommonProps {
   kind: "graha";
   data: GrahaCell;
   events: TransitEvent[];
   info: GrahaInfo | undefined;
+  retro: RetroPhase | null;
 }
 
 type Props = MoonProps | GrahaProps;
-
-/** Events drawn as a mark on the cell. Spans are drawn as rules instead. */
-const MARKED_EVENTS: EventKind[] = [
-  "rashi_ingress",
-  "nakshatra_ingress",
-  "retrograde_station",
-  "direct_station",
-];
 
 /**
  * What a tithi is called in a cell.
@@ -88,8 +91,6 @@ export function DayCell(props: Props): JSX.Element {
   const date = () => props.data.date;
   const inMonth = () => props.data.in_month;
   const tithi = () => props.data.tithi;
-  const retrograde = () =>
-    props.kind === "graha" && (props as GrahaProps).data.retrograde;
 
   const classes = () => ({
     "day-cell": true,
@@ -98,18 +99,6 @@ export function DayCell(props: Props): JSX.Element {
     "is-selected": props.selected,
     "is-today": props.today,
   });
-
-  const marked = () =>
-    props.kind === "graha"
-      ? props.events.filter((event) => MARKED_EVENTS.includes(event.kind))
-      : [];
-
-  /** A station outranks an ingress: it is the rarer and larger event. */
-  const isStation = () =>
-    marked().some(
-      (event) =>
-        event.kind === "retrograde_station" || event.kind === "direct_station",
-    );
 
   /**
    * The Gregorian day, which becomes the annotation in lunar mode.
@@ -174,14 +163,10 @@ export function DayCell(props: Props): JSX.Element {
         </Show>
       </span>
 
-      {/* Beside the glyph, in both calendars, placed out of the flow so the
-          glyph stays on the column's centre line whether or not the day is
-          retrograde. A colour cannot do this job: it has to be learnt, and it is
-          the first thing a grayscale or colour-blind rendering loses. */}
-      <Show when={retrograde()}>
-        <span class="day-cell__retro-mark" aria-hidden="true">
-          ℞
-        </span>
+      {/* Drawn around the graha rather than beside it, so the bracket encloses
+          the thing it describes. Dotted because the motion is. */}
+      <Show when={props.kind === "graha" && (props as GrahaProps).retro}>
+        {(phase) => <RetroRing phase={phase()} />}
       </Show>
 
       {/* Combustion is a span. A rule says "all day", where a marker would read
@@ -198,12 +183,59 @@ export function DayCell(props: Props): JSX.Element {
         <span class="day-cell__vriddhi" />
       </Show>
 
-      {/* An event is an instant, so it gets a single mark in the corner rather
-          than a row competing with the content for the cell's 40 pixels. */}
-      <Show when={marked().length > 0}>
-        <span class="day-cell__event" classList={{ "is-station": isStation() }} />
-      </Show>
     </div>
+  );
+}
+
+/**
+ * The bracket a retrograde stretch is drawn with.
+ *
+ * A day the motion turns on shows the half facing the days that are retrograde,
+ * so a run opens with a right half, closes with a left one, and is a whole
+ * circle in between. Centred on the glyph rather than on the cell: the cell's
+ * middle sits between the numeral and the symbol, and a ring there cut through
+ * both.
+ */
+function RetroRing(props: { phase: RetroPhase }): JSX.Element {
+  const RADIUS = 9;
+  const path = () =>
+    props.phase === "begins"
+      ? `M 0 ${-RADIUS} A ${RADIUS} ${RADIUS} 0 0 1 0 ${RADIUS}`
+      : `M 0 ${RADIUS} A ${RADIUS} ${RADIUS} 0 0 1 0 ${-RADIUS}`;
+
+  return (
+    <svg
+      class="day-cell__retro-ring"
+      viewBox="-10 -10 20 20"
+      width="20"
+      height="20"
+      aria-hidden="true"
+    >
+      <Show
+        when={props.phase === "within"}
+        fallback={
+          <path
+            d={path()}
+            fill="none"
+            stroke="var(--marker)"
+            stroke-width="1"
+            stroke-dasharray="1.6 2.2"
+            stroke-linecap="round"
+          />
+        }
+      >
+        <circle
+          cx="0"
+          cy="0"
+          r={RADIUS}
+          fill="none"
+          stroke="var(--marker)"
+          stroke-width="1"
+          stroke-dasharray="1.6 2.2"
+          stroke-linecap="round"
+        />
+      </Show>
+    </svg>
   );
 }
 

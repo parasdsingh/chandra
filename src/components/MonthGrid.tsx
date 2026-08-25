@@ -15,7 +15,7 @@ import type {
   MoonMonth,
   TransitEvent,
 } from "../ipc/types";
-import { DayCell, tithiLabel } from "./DayCell";
+import { DayCell, tithiLabel, type RetroPhase } from "./DayCell";
 import { phaseLabel } from "../lib/format";
 
 interface Props {
@@ -108,10 +108,12 @@ export function MonthCells(props: Props): JSX.Element {
         aria-hidden={props.active ? undefined : "true"}
       >
         <For each={weeks(props.month.days as (MoonCell | GrahaCell)[])}>
-          {(week) => (
+          {(week, row) => (
             <div class="week" role="row">
               <For each={week}>
-                {(cell) => {
+                {(cell, column) => {
+                  const cells = props.month.days as (MoonCell | GrahaCell)[];
+                  const index = row() * 7 + column();
                   const common = {
                     selected: sameDate(props.selected, cell.date),
                     today: sameDate(props.today, cell.date),
@@ -129,6 +131,7 @@ export function MonthCells(props: Props): JSX.Element {
                           data={cell as GrahaCell}
                           events={eventsFor(props.month as GrahaMonth, cell.date)}
                           info={props.info}
+                          retro={retroPhase(cells, index)}
                           label={grahaCellLabel(
                             cell as GrahaCell,
                             eventsFor(props.month as GrahaMonth, cell.date),
@@ -155,6 +158,32 @@ export function MonthCells(props: Props): JSX.Element {
   );
 }
 
+/**
+ * Where a cell sits in a stretch of retrograde motion.
+ *
+ * Read from the neighbours in the grid, which arrive in date order. A run that
+ * carries on past the grid's edge reads as whole there rather than as opening or
+ * closing, which is true: the bracket says where the motion turns, and at the
+ * edge of the six weeks on screen it does not.
+ */
+function retroPhase(
+  cells: (MoonCell | GrahaCell)[],
+  index: number,
+): RetroPhase | null {
+  const isRetro = (at: number) => {
+    const cell = cells[at] as GrahaCell | undefined;
+    return cell?.retrograde ?? false;
+  };
+  if (!isRetro(index)) return null;
+
+  const before = index === 0 ? true : isRetro(index - 1);
+  const after = index === cells.length - 1 ? true : isRetro(index + 1);
+
+  if (before && after) return "within";
+  if (!before) return "begins";
+  return "ends";
+}
+
 /** Splits the flat 42-cell grid into six rows of seven. */
 function weeks<T>(cells: T[]): T[][] {
   return Array.from({ length: 6 }, (_, row) => cells.slice(row * 7, row * 7 + 7));
@@ -177,9 +206,20 @@ function spokenTithi(tithi: CellTithi): string {
   const parts = [
     `${tithi.paksha === "shukla" ? "Shukla" : "Krishna"} ${tithi.name}`,
   ];
-  if (tithi.reference === "local_noon") parts.push("tithi at local noon");
-  if (tithi.vriddhi === "first") parts.push("first of two sunrises");
-  if (tithi.vriddhi === "second") parts.push("second sunrise");
+  // Said as the reason, not the mechanism: an instant was chosen because there
+  // was no sunrise to choose, and naming only the instant leaves that unsaid.
+  if (tithi.reference === "local_noon") {
+    parts.push("read at noon, the Sun did not rise");
+  }
+  // The vriddhi is a property of the tithi, not of the day's dawns. "Second
+  // sunrise" beside a date read as a claim that the day had two, which is the
+  // wording the day view already dropped for the same reason.
+  if (tithi.vriddhi === "first") {
+    parts.push("vriddhi, the same tithi names the day after");
+  }
+  if (tithi.vriddhi === "second") {
+    parts.push("vriddhi, the same tithi names the day before");
+  }
   for (const skipped of tithi.kshaya) {
     parts.push(`${skipped.name} skipped, no sunrise`);
   }
@@ -192,7 +232,7 @@ function moonCellLabel(cell: MoonCell): string {
   parts.push(
     `${phaseLabel(cell.phase).toLowerCase()}, ${Math.round(cell.illumination * 100)} percent illuminated`,
   );
-  if (cell.combust) parts.push("combust");
+  if (cell.combust) parts.push("combust at noon");
   if (!cell.in_month) parts.push("outside this month");
   return parts.join(", ");
 }
@@ -201,7 +241,9 @@ function grahaCellLabel(cell: GrahaCell, events: TransitEvent[]): string {
   const parts = [spokenDate(cell.date)];
   if (cell.tithi) parts.push(spokenTithi(cell.tithi));
   if (cell.retrograde) parts.push("retrograde");
-  if (cell.combust) parts.push("combust");
+  // Both are read at the day's reference instant, so the label says so rather
+  // than claiming the state held from midnight to midnight.
+  if (cell.combust) parts.push("combust at sunrise");
   if (events.length > 0) {
     parts.push(
       `${events.length} ${events.length === 1 ? "event" : "events"}: ${events

@@ -144,6 +144,8 @@ function Subject(props: {
     props.detail.kind === "graha" ? (props.detail as GrahaDay) : null;
   const panchanga = () => props.detail.panchanga;
 
+  const isNode = () =>
+    graha()?.graha === "rahu" || graha()?.graha === "ketu";
   const rise = () => (moon() ? moon()!.moonrise : graha()!.rise);
   const set = () => (moon() ? moon()!.moonset : graha()!.set);
 
@@ -195,8 +197,14 @@ function Subject(props: {
         )}
       </Show>
 
-      {/* Rise and set on one line: they are two ends of the same fact, and a
-          body that does not set is stated rather than left blank. */}
+      {/* Rise and set on one line: two ends of the same fact, and a body that
+          does not set says so rather than leaving a blank.
+
+          Absent for the nodes. They are points on the ecliptic and do cross the
+          horizon; the app declines to model it, and "does not rise" would report
+          that decision as an observation - the same sentence a circumpolar Moon
+          gets for a completely different reason. */}
+      <Show when={!isNode()}>
       <Field
         label={riseLabel()}
         value={rise() ? formatTime(rise()!, props.context) : "does not rise"}
@@ -205,6 +213,7 @@ function Subject(props: {
           set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"
         }`}
       />
+      </Show>
 
       {/* Combustion is drawn on the surface, so this is the words that carry it
           for anyone the drawing does not reach (DESIGN 11.3). The separation in
@@ -220,7 +229,9 @@ function Subject(props: {
 
       <Show when={props.events.length > 0}>
         <div class="field">
-          <div class="field__key">Today</div>
+          {/* Not "Today": these are the selected day's, and the selected day is
+              usually not today. The header above already names the date. */}
+          <div class="field__key">Events</div>
           <Index each={props.events}>
             {(event) => (
               <div class="field__line">
@@ -285,8 +296,13 @@ function Spans(props: { label: string; spans: SpanRow[] }): JSX.Element {
  */
 function tithiRows(panchanga: DayPanchanga, context: FormatContext): SpanRow[] {
   return panchanga.tithis.map((span: TithiSpan) => {
-    const note =
-      span.sunrises === 0 ? " · kshaya" : span.sunrises === 2 ? " · two sunrises" : "";
+    // A kshaya is a property of the tithi: it is one no day is named after, and
+    // saying so explains a number missing from the grid. "Two sunrises" was the
+    // same fact from the other end and did not survive the trip - it is a
+    // statement about the tithi read beside a heading that names one civil day,
+    // where it reads as a claim that the day had two dawns. The repeat is
+    // already visible in the grid, where the same numeral appears twice.
+    const note = span.sunrises === 0 ? " · kshaya" : "";
     return {
       value: `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}${note}`,
       until: span.exit ? formatUntil(span.exit, context) : "time unavailable",

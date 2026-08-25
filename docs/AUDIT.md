@@ -736,3 +736,62 @@ defect gets written.
   are ever taken. No test: the front end has no test harness, so this was checked
   by extracting the two versions of `move` and `settle` and running them over a
   range of deltas.
+
+---
+
+# Wording audit, August 2026
+
+A separate pass over every user-facing string, looking for one defect class:
+**a fact about one thing printed beside a heading about another**, so a reader
+takes it to mean something false. Prompted by a real one — the day view showed
+`Shukla Dvadashi · two sunrises` under the heading `25 August 2026`. Every word
+was true. The tithi does span two sunrises; that is what makes it a vriddhi. But
+under a heading naming one civil date it read as a claim that the 25th had two
+dawns.
+
+Ten confirmed, seven suspected. Fixed in this pass:
+
+- **W-01** Events for the selected day were headed `Today`. They are the selected
+  day's, and that is usually not today.
+- **W-02** Rahu and Ketu reported `does not rise`. Nothing was computed: a node is
+  a point on the ecliptic and does cross the horizon, and the app declines to
+  model it. Reporting a decision as an observation, in the same sentence a
+  circumpolar Moon gets. The field is now absent for the nodes.
+- **W-05** `Shravana 2083` printed a Vikram Samvat year bare, in a slot whose
+  solar mode says `August 2026` and whose cells carry Gregorian dates. Now
+  `Shravana VS 2083`.
+- **W-09** The spoken label said `combust` for a state read at one instant.
+  Now `combust at noon` / `combust at sunrise`, naming what was measured.
+- **W-10** The cell's spoken label still said `first of two sunrises` — the
+  specimen's own wording, fixed in the day view and missed here. Now
+  `vriddhi, the same tithi names the day after`.
+- **W-16** `tithi at local noon` named the mechanism. It happens because the Sun
+  did not rise, which is the part worth saying: `read at noon, the Sun did not
+  rise`.
+
+## Still open
+
+- **W-03** A Moshier month draws 42 cells with no precision note. The note exists
+  only in the day view, gated on the day payload, so scrolling to 1750 renders a
+  whole grid silently from the analytic fallback. D-006 promises otherwise.
+- **W-04** Clock times carry no zone, and the zone need not be the machine's. A
+  user in London with the location set to Bengaluru reads `Sunrise 06:12` as
+  London's, off by five and a half hours.
+- **W-06** `Ephemeris unavailable.` is shown for failures with no ephemeris in
+  them — a window that would not open, a thread that could not be reached — and
+  is also the fallback for any unknown code. It names the one failure a user
+  cannot work around.
+- **W-07** An unknown elevation prints as `0 m`, a measurement of sea level.
+  `Resolved.elevation` is an `f64` and cannot tell "not known" from "measured".
+- **W-08** `GrahaCell.retrograde` and `speed` are read at local noon while the day
+  the cell opens reads its state at sunrise. A station between the two puts a
+  retrograde ring on a cell whose day says `Direct`. The rashi and nakshatra were
+  removed from that struct for exactly this reason; these two were left behind.
+  Fixing it means threading the observer into `graha_month`, which changes the
+  facade's signature — deliberately not started rather than half-done.
+
+Suspected, unverified: a tray tooltip refreshed once a day but written in the
+present tense; `Combust` naming a state where a span start is meant;
+`DATE_OUT_OF_RANGE` reported for dates that are not dates; three decimals of
+latitude on a timezone centroid; `Enters Magha` not saying what kind of thing
+Magha is.

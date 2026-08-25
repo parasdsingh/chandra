@@ -392,20 +392,17 @@
   color: var(--disc-lit);
 }
 
-/* Sits outside the glyph's box rather than in the flow, so the symbol stays on
-   the column's centre line whether or not the day is retrograde. A ragged column
-   of glyphs is the cost of putting the mark in the flow, and it is paid on every
-   cell to annotate a few. */
-.day-cell__retro-mark {
+/* Centred on the glyph, not on the cell: the cell's middle falls between the
+   numeral and the symbol, and a ring there cut through both. */
+.day-cell__retro-ring {
   position: absolute;
-  left: calc(50% + 8px);
-  bottom: 5px;
-  font-size: 9px;
-  line-height: 1;
-  color: var(--text-secondary);
+  left: 50%;
+  top: 31px;
+  margin: -10px 0 0 -10px;
+  z-index: 1;
 }
 
-.day-cell.is-outside .day-cell__retro-mark {
+.day-cell.is-outside .day-cell__retro-ring {
   opacity: 0.45;
 }
 
