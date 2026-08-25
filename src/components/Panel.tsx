@@ -14,6 +14,7 @@ import {
   createMemo,
   createResource,
   createSignal,
+  on,
   onCleanup,
   onMount,
   Show,
@@ -36,7 +37,7 @@ import { isAppError } from "../ipc/types";
 import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
 import { localeFirstWeekday } from "../lib/format";
 import { CalendarScroller } from "./CalendarScroller";
-import { DayDetail } from "./DayDetail";
+import { DayDetail, ErrorBlock } from "./DayDetail";
 import { Header } from "./Header";
 import { SECTION_TITLES, SettingsView, type SettingsSection } from "./SettingsView";
 
@@ -85,13 +86,21 @@ export function Panel(props: Props): JSX.Element {
    *
    * Bounded, because navigation re-anchors and old keys are then unreachable.
    */
-  const months = new Map<string, MoonMonth | GrahaMonth>();
+  interface Remembered {
+    /** Everything but the address: subject, configuration, location, weekday. */
+    context: string;
+    anchor: number;
+    offset: number;
+    month: MoonMonth | GrahaMonth;
+  }
+
+  const months = new Map<string, Remembered>();
   const [loaded, setLoaded] = createSignal(0);
 
   const MONTH_MEMORY = 32;
 
-  function remember(key: string, month: MoonMonth | GrahaMonth) {
-    months.set(key, month);
+  function remember(entry: Remembered) {
+    months.set(address(entry.context, entry.anchor, entry.offset), entry);
     while (months.size > MONTH_MEMORY) {
       const oldest = months.keys().next();
       if (oldest.done) break;
@@ -101,15 +110,15 @@ export function Panel(props: Props): JSX.Element {
   }
 
   /**
-   * Identity of a month.
+   * What a month is an answer to, apart from where it sits.
    *
-   * Everything the answer depends on is in the key, rather than being cleared
-   * out of the map when it changes. The map now outlives an open, so a month
-   * cached under one ayanamsa or one location must not be handed back under
-   * another; naming the inputs makes that impossible instead of remembering to
+   * Everything the answer depends on is in here, rather than being cleared out
+   * of the map when it changes. The map outlives an open, so a month computed
+   * under one ayanamsa or one location must not be handed back under another;
+   * naming the inputs makes that impossible instead of remembering to
    * invalidate.
    */
-  function monthKey(delta: number): string {
+  function context(): string {
     const location = props.boot.location;
     return [
       subject(),
@@ -121,15 +130,51 @@ export function Panel(props: Props): JSX.Element {
       location.longitude,
       location.elevation,
       firstWeekday,
-      anchor(),
-      offset() + delta,
     ].join("|");
+  }
+
+  /** Where a month sits: a context, and a position relative to an anchor. */
+  function address(context: string, anchor: number, offset: number): string {
+    return `${context}|${anchor}|${offset}`;
+  }
+
+  function monthKey(delta: number): string {
+    return address(context(), anchor(), offset() + delta);
   }
 
   /** The month `delta` steps away, or undefined until its first fetch lands. */
   function monthAt(delta: number): MoonMonth | GrahaMonth | undefined {
     loaded();
-    return months.get(monthKey(delta));
+    return months.get(monthKey(delta))?.month;
+  }
+
+  /**
+   * Re-addresses every remembered month onto a new anchor.
+   *
+   * Re-anchoring moves both halves of every address at once, so all three
+   * visible months became keys that had never been inserted: nothing rendered
+   * and the title emptied until three IPC round trips came back, even though
+   * every month involved was already in hand. The months have not changed - only
+   * the way they are addressed has - so they are re-addressed rather than
+   * refetched. This is I-042 section 2 recurring.
+   *
+   * Only the current context and the anchor being left are touched; a month
+   * remembered under an older configuration is unreachable already and must not
+   * be given a current address.
+   */
+  function readdress(from: number, to: number, shift: number) {
+    const here = context();
+    const moved: Remembered[] = [];
+
+    for (const [key, entry] of [...months]) {
+      if (entry.context !== here || entry.anchor !== from) continue;
+      months.delete(key);
+      moved.push({ ...entry, anchor: to, offset: entry.offset - shift });
+    }
+    for (const entry of moved) {
+      months.set(address(entry.context, entry.anchor, entry.offset), entry);
+    }
+    setLoaded((count) => count + 1);
   }
 
   /**
@@ -140,14 +185,16 @@ export function Panel(props: Props): JSX.Element {
    */
   function monthResource(delta: number) {
     const key = createMemo(() => ({
-      id: monthKey(delta),
       subject: subject(),
+      context: context(),
       anchor: anchor(),
       offset: offset() + delta,
     }));
 
     createResource(key, async (current) => {
-      if (months.has(current.id)) return true;
+      if (months.has(address(current.context, current.anchor, current.offset))) {
+        return true;
+      }
       try {
         const month =
           current.subject === "chandra"
@@ -162,7 +209,14 @@ export function Panel(props: Props): JSX.Element {
                 current.offset,
                 firstWeekday,
               )) as GrahaMonth);
-        remember(current.id, month);
+        remember({
+          context: current.context,
+          anchor: current.anchor,
+          offset: current.offset,
+          month,
+        });
+        // A month that loads is the answer to the question the error was about.
+        if (delta === 0) setError(undefined);
       } catch (thrown) {
         if (delta === 0) setError(toError(thrown));
       }
@@ -185,6 +239,19 @@ export function Panel(props: Props): JSX.Element {
   const [visibleDelta, setVisibleDelta] = createSignal(0);
 
   /**
+   * Counts opens, and nothing else reads it as a number.
+   *
+   * The scroller is keyed on it so every open builds a fresh one. Its gesture
+   * state - the strip's offset, a pending wheel timer, a pending animation frame
+   * - lives inside the component and cannot be reached from here, so an open
+   * while the panel was already on the calendar left a strip mid-gesture: a
+   * resumed settle then committed a month after the offset had been put back to
+   * zero. Remounting resets all of it at once, and cannot miss a field the way
+   * an imperative reset can.
+   */
+  const [opened, setOpened] = createSignal(1);
+
+  /**
    * Keeps the offset small.
    *
    * Every fetch resolves the month by stepping `offset` months from the anchor,
@@ -195,13 +262,40 @@ export function Panel(props: Props): JSX.Element {
    */
   createEffect(() => {
     const month = monthAt(0);
-    if (month && Math.abs(offset()) >= 6) {
-      batch(() => {
-        setAnchor(month.anchor_unix_ms);
-        setOffset(0);
-      });
-    }
+    if (!month || Math.abs(offset()) < 6) return;
+
+    const from = anchor();
+    const to = month.anchor_unix_ms;
+    const shift = offset();
+    batch(() => {
+      readdress(from, to, shift);
+      setAnchor(to);
+      setOffset(0);
+    });
   });
+
+  /**
+   * Which civil day is today depends on the zone, so a location change moves it.
+   *
+   * Everything computed already follows the new location, because the month
+   * address names it; today and the anchor were fixed at construction and
+   * refreshed only by an open, so crossing the date line left the today ring on
+   * the old zone's date until the panel was closed and reopened.
+   */
+  createEffect(
+    on(
+      () => props.boot.location.zone,
+      (zone) => {
+        const now = todayIn(zone);
+        batch(() => {
+          setToday(now);
+          setAnchor(noonAnchor(now, zone));
+          setOffset(0);
+        });
+      },
+      { defer: true },
+    ),
+  );
 
   const [snapshot, { refetch: refetchSnapshot }] = createResource(async () => {
     try {
@@ -320,7 +414,11 @@ export function Panel(props: Props): JSX.Element {
 
   async function applySettings(next: Settings) {
     try {
-      props.onSettingsApplied(await ipc.updateSettings(next));
+      const applied = await ipc.updateSettings(next);
+      batch(() => {
+        props.onSettingsApplied(applied);
+        setError(undefined);
+      });
     } catch (thrown) {
       setError(toError(thrown));
     }
@@ -411,6 +509,7 @@ export function Panel(props: Props): JSX.Element {
       setView("calendar");
       setSection("root");
       setError(undefined);
+      setOpened((count) => count + 1);
     });
     // The header's phase glyph is a live reading, not a property of the day.
     void refetchSnapshot();
@@ -465,21 +564,43 @@ export function Panel(props: Props): JSX.Element {
         />
 
         <div class="region">
+          {/* Every view renders the failure it can cause. The signal used to
+              reach only the day detail, so a month that failed to load showed
+              nothing at all in the calendar, and a settings save that failed
+              fired while the user was by definition in settings - which made
+              ERROR_TEXT.SETTINGS unreachable text. */}
           <Show when={view() === "calendar"}>
-            <CalendarScroller
-              firstWeekday={firstWeekday}
-              previous={monthAt(-1)}
-              current={monthAt(0)}
-              next={monthAt(1)}
-              kind={subject() === "chandra" ? "moon" : "graha"}
-              info={grahaInfo()}
-              selected={selected()}
-              today={today()}
-              southern={props.boot.location.latitude < 0}
-              onSelect={openDay}
-              onCommit={(delta) => setOffset((current) => current + delta)}
-              onVisibleChange={setVisibleDelta}
-            />
+            <Show
+              when={error()}
+              fallback={
+                // Keyed on the open counter: a fresh scroller per open.
+                <Show when={opened()} keyed>
+                  {(_generation) => (
+                    <CalendarScroller
+                      firstWeekday={firstWeekday}
+                      previous={monthAt(-1)}
+                      current={monthAt(0)}
+                      next={monthAt(1)}
+                      kind={subject() === "chandra" ? "moon" : "graha"}
+                      info={grahaInfo()}
+                      selected={selected()}
+                      today={today()}
+                      southern={props.boot.location.latitude < 0}
+                      onSelect={openDay}
+                      onCommit={(delta) => setOffset((current) => current + delta)}
+                      onVisibleChange={setVisibleDelta}
+                    />
+                  )}
+                </Show>
+              }
+            >
+              {/* The month in the window is the one that failed - the grid has
+                  nothing left to stay live for, which is the case DESIGN 9.3's
+                  "the grid stays navigable" does not cover. */}
+              {(problem) => (
+                <ErrorBlock code={problem().code} message={problem().message} />
+              )}
+            </Show>
           </Show>
 
           <Show when={view() === "day"}>
@@ -497,6 +618,13 @@ export function Panel(props: Props): JSX.Element {
           </Show>
 
           <Show when={view() === "settings"}>
+            {/* Above the list rather than instead of it: the controls are what
+                the user needs in order to try something else. */}
+            <Show when={error()}>
+              {(problem) => (
+                <ErrorBlock code={problem().code} message={problem().message} />
+              )}
+            </Show>
             <SettingsView
               boot={props.boot}
               section={section()}

@@ -21,12 +21,13 @@ use crate::time::{self, CivilDay, DateKey};
 use crate::tithi::CellTithi;
 use crate::zodiac::{Nakshatra, Rashi};
 
-/// Months held per subject before the coldest is dropped.
+/// Entries held before the coldest is dropped.
 ///
-/// Twelve covers a year of back-and-forth navigation plus the neighbours
+/// Twelve months covers a year of back-and-forth navigation plus the neighbours
 /// prefetched around it, which is well past the point where a user is browsing
-/// rather than scrubbing.
-const CACHE_CAPACITY: usize = 12 * (1 + 9);
+/// rather than scrubbing. Ten subjects, plus two entries a month that every
+/// subject shares: the resolved grid and, in a lunar month, its tithis.
+const CACHE_CAPACITY: usize = 12 * (1 + 9 + 2);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Location {
@@ -54,6 +55,7 @@ pub struct MonthCursor {
 }
 
 /// A month resolved to the 42 cells the grid draws, and what it is called.
+#[derive(Debug, Clone)]
 struct Resolved {
     grid: Vec<(CivilDay, bool)>,
     naming: MonthLabel,
@@ -80,6 +82,14 @@ enum CacheKey {
     Graha(Graha, MonthSystem, DateKey, u8),
     /// The lunar days of a grid, shared by every subject drawn on it.
     Frames(MonthSystem, DateKey, u8),
+    /// A cursor resolved to a grid and a label.
+    ///
+    /// Keyed on the cursor and not on the month, because resolving is the step
+    /// being avoided: it is what finds out which month the cursor names. A
+    /// lunar cursor walks syzygies and builds 42 civil days to get there, and a
+    /// warm month paid for all of it again on every open because the key was
+    /// derived from its answer.
+    Resolution(MonthSystem, i64, i32, u8),
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +97,7 @@ enum Cached {
     Moon(MoonMonth),
     Graha(Box<GrahaMonth>),
     Frames(Vec<CellTithi>),
+    Resolution(Box<Resolved>),
 }
 
 /// The location and its zone, always read together.
@@ -133,11 +144,6 @@ impl Almanac {
         Ok(self.engine.config()?)
     }
 
-    /// Ayanamsa in degrees at an instant, for the Astrology pane.
-    pub fn ayanamsa(&self, jd_ut: f64) -> Result<f64> {
-        Ok(self.engine.ayanamsa(jd_ut)?)
-    }
-
     pub fn set_location(&self, location: Location) -> Result<()> {
         let zone = resolve_zone(&location.zone_name)?;
         {
@@ -156,6 +162,28 @@ impl Almanac {
         }
         self.engine.reconfigure(sidereal)?;
         self.invalidate()
+    }
+
+    /// Resolves a cursor, from the cache where possible.
+    fn resolved(
+        &self,
+        cursor: MonthCursor,
+        settings: &Settings,
+        generation: u64,
+    ) -> Result<Resolved> {
+        let key = CacheKey::Resolution(
+            cursor.system,
+            cursor.anchor_unix_ms,
+            cursor.offset,
+            cursor.first_weekday,
+        );
+        if let Some(Cached::Resolution(cached)) = self.cached(key)? {
+            return Ok(*cached);
+        }
+
+        let built = self.resolve(cursor, settings)?;
+        self.store(key, Cached::Resolution(Box::new(built.clone())), generation)?;
+        Ok(built)
     }
 
     /// Resolves a cursor to the 42 cells the grid draws and its display label.
@@ -265,7 +293,7 @@ impl Almanac {
         let settings = self.settings_snapshot()?;
         let generation = self.generation()?;
 
-        let resolved = self.resolve(cursor, &settings)?;
+        let resolved = self.resolved(cursor, &settings, generation)?;
         let key = CacheKey::Moon(cursor.system, resolved.first_day(), cursor.first_weekday);
         if let Some(Cached::Moon(cached)) = self.cached(key)? {
             return Ok(cached);
@@ -296,7 +324,7 @@ impl Almanac {
         let settings = self.settings_snapshot()?;
         let generation = self.generation()?;
 
-        let resolved = self.resolve(cursor, &settings)?;
+        let resolved = self.resolved(cursor, &settings, generation)?;
         let key = CacheKey::Graha(
             graha,
             cursor.system,

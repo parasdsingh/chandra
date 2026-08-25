@@ -223,10 +223,6 @@
       "vara_name": "string"
     },
     "phase": "string",
-    "principal_at": {
-      "day_offset": "integer",
-      "unix_ms": "integer"
-    },
     "rashis": [
       {
         "entry": {

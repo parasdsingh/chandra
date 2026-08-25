@@ -276,9 +276,7 @@ pub fn moon_month(
             tithi: frames.map(|frames| frames[position].clone()),
             illumination: illumination.fraction,
             is_waxing: phase::is_waxing(elongation_start),
-            phase: principal
-                .map(|(name, _)| name)
-                .unwrap_or_else(|| phase::intermediate_phase(elongation_start)),
+            phase: principal.unwrap_or_else(|| phase::intermediate_phase(elongation_start)),
             principal: principal.is_some(),
             combust: combustion.combust,
         });

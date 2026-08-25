@@ -546,6 +546,32 @@ fn a_lunar_month_stays_inside_the_budget_and_is_computed_once() {
         "the second subject re-resolved the tithis: {shared:?} against {cold:?}"
     );
 
+    // Warm, which the solar test has always measured and this one never did.
+    // The resolution is the expensive half and the key was derived from its
+    // answer, so a warm lunar month walked its syzygies and built its 42 civil
+    // days again before the cache was consulted at all.
+    let started = Instant::now();
+    let _ = almanac.moon_month(cursor).expect("month");
+    let warm = started.elapsed();
+    assert!(
+        warm.as_micros() < 5_000,
+        "warm lunar month took {warm:?}, over the 5ms budget"
+    );
+
+    // And at an offset, where the syzygy walk from the anchor is longest.
+    let far = MonthCursor {
+        offset: 5,
+        ..cursor
+    };
+    let _ = almanac.moon_month(far).expect("month");
+    let started = Instant::now();
+    let _ = almanac.moon_month(far).expect("month");
+    let warm_far = started.elapsed();
+    assert!(
+        warm_far.as_micros() < 5_000,
+        "warm lunar month five steps out took {warm_far:?}, over the 5ms budget"
+    );
+
     // Solar mode names no tithi, and pays nothing for it.
     let solar_month = almanac.moon_month(solar(2031, 3)).expect("month");
     assert!(solar_month.days.iter().all(|cell| cell.tithi.is_none()));
@@ -1370,4 +1396,81 @@ fn every_day_opens_the_lunar_month_that_draws_it() {
             }
         }
     }
+}
+
+/// A sunrise count of zero and no count at all are different answers.
+///
+/// Zero says no civil day is named after this tithi, which is a kshaya and is
+/// drawn as one. Inside a polar night there are no sunrises to count against at
+/// all, which is a fact about the latitude: reporting zero there captioned every
+/// tithi of every day a kshaya, while the grid cell beside it fell back to local
+/// noon and was right.
+#[test]
+fn a_polar_night_reports_no_sunrise_count_rather_than_none_at_all() {
+    let almanac = almanac();
+    reset(&almanac);
+    almanac
+        .set_location(Location {
+            // Longyearbyen: the Sun stays below the horizon from November to
+            // late January.
+            observer: Observer::new(78.2232, 15.6469, 20.0),
+            zone_name: "Arctic/Longyearbyen".into(),
+        })
+        .expect("relocate");
+
+    let DayDetail::Moon(day) = almanac
+        .day_detail(
+            Graha::Chandra,
+            DateKey::new(2026, 1, 5).unwrap(),
+            System::Amanta,
+        )
+        .expect("detail")
+    else {
+        panic!("moon detail");
+    };
+
+    let panchanga = day.panchanga.expect("a lunar day carries a panchanga");
+    assert!(panchanga.sunrise.is_none(), "the Sun does not rise here");
+    for span in &panchanga.tithis {
+        assert_eq!(
+            span.sunrises, None,
+            "{span:?} claims a sunrise count where the Sun never rose"
+        );
+    }
+
+    // The same day at a latitude where the Sun does rise counts them, and a
+    // year of them contains a real kshaya reported as an honest zero.
+    reset(&almanac);
+    let mut counted = 0;
+    let mut kshaya = 0;
+    for offset in 0..13 {
+        let month = almanac
+            .moon_month(MonthCursor {
+                system: System::Amanta,
+                offset,
+                ..solar(2026, 8)
+            })
+            .expect("month");
+
+        for cell in inside(&month) {
+            let DayDetail::Moon(day) = almanac
+                .day_detail(Graha::Chandra, cell.date, System::Amanta)
+                .expect("detail")
+            else {
+                panic!("moon detail");
+            };
+            for span in &day.panchanga.expect("panchanga").tithis {
+                match span.sunrises {
+                    Some(0) => kshaya += 1,
+                    Some(_) => counted += 1,
+                    None => panic!("{:?}: no count where the Sun rises", cell.date),
+                }
+            }
+        }
+    }
+    assert!(counted > 0);
+    assert!(
+        kshaya > 0,
+        "a year of lunar months contains a tithi no day is named after"
+    );
 }

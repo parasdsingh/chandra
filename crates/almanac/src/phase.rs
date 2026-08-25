@@ -75,9 +75,13 @@ pub fn intermediate_phase(elongation: f64) -> PhaseName {
 ///
 /// `start` and `end` are elongations at the beginning and end of an interval
 /// short enough that the Moon cannot pass two principal phases within it - any
-/// interval under seven days. Returns the phase and how far into the interval,
-/// as a fraction, it occurred.
-pub fn principal_phase_in(start: f64, end: f64) -> Option<(PhaseName, f64)> {
+/// interval under seven days.
+///
+/// Only which phase, never when. The instant of a syzygy is found by bracketing
+/// and Brent refinement (D-016); interpolating it linearly across a whole civil
+/// day from these two endpoints disagreed with that by up to 3.6 minutes, which
+/// is visible at the resolution the app prints.
+pub fn principal_phase_in(start: f64, end: f64) -> Option<PhaseName> {
     let start = start.rem_euclid(360.0);
     let travelled = (end - start).rem_euclid(360.0);
 
@@ -92,9 +96,10 @@ pub fn principal_phase_in(start: f64, end: f64) -> Option<(PhaseName, f64)> {
             // `to_target == 0` means the interval begins exactly on the phase,
             // which belongs to this interval; the far endpoint belongs to the
             // next one, so the comparison is exclusive at the top.
-            (to_target < travelled).then_some((name, to_target / travelled))
+            (to_target < travelled).then_some((name, to_target))
         })
         .min_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(name, _)| name)
 }
 
 /// True while the illuminated fraction is growing.
@@ -133,14 +138,25 @@ mod tests {
     #[test]
     fn principal_phase_detected_inside_a_day() {
         // A day spanning full moon: 178 -> 190 degrees.
-        let (name, at) = principal_phase_in(178.0, 190.0).expect("full moon inside");
-        assert_eq!(name, PhaseName::FullMoon);
-        assert!((at - 2.0 / 12.0).abs() < 1e-9, "position within day");
+        assert_eq!(
+            principal_phase_in(178.0, 190.0),
+            Some(PhaseName::FullMoon),
+            "full moon inside"
+        );
 
         // A day spanning new moon across the wraparound: 354 -> 6 degrees.
-        let (name, at) = principal_phase_in(354.0, 6.0).expect("new moon inside");
-        assert_eq!(name, PhaseName::NewMoon);
-        assert!((at - 6.0 / 12.0).abs() < 1e-9);
+        assert_eq!(
+            principal_phase_in(354.0, 6.0),
+            Some(PhaseName::NewMoon),
+            "new moon inside"
+        );
+
+        // The nearest phase wins when an interval could reach two: an interval
+        // long enough to hold both must still name the one it reaches first.
+        assert_eq!(
+            principal_phase_in(88.0, 182.0),
+            Some(PhaseName::FirstQuarter)
+        );
     }
 
     #[test]
@@ -167,9 +183,11 @@ mod tests {
 
     #[test]
     fn interval_starting_exactly_on_a_phase_owns_it() {
-        let (name, at) = principal_phase_in(180.0, 192.0).expect("owns the boundary");
-        assert_eq!(name, PhaseName::FullMoon);
-        assert_eq!(at, 0.0);
+        assert_eq!(
+            principal_phase_in(180.0, 192.0),
+            Some(PhaseName::FullMoon),
+            "owns the boundary"
+        );
         // The preceding interval must not also claim it.
         assert!(principal_phase_in(168.0, 180.0).is_none());
     }

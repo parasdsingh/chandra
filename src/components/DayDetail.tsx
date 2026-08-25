@@ -337,7 +337,7 @@ function TithiBlock(props: {
  * A tithi's boundaries, and what makes it unusual.
  *
  * An unresolved boundary says so rather than printing a guessed time: the other
- * side is still real and still shown.
+ * side is still real and still shown, and no state is inferred from its absence.
  */
 function tithiCaption(span: TithiSpan, context: FormatContext): string {
   const window =
@@ -349,6 +349,9 @@ function tithiCaption(span: TithiSpan, context: FormatContext): string {
           ? `time unavailable → ${formatBoundary(span.exit, context)}`
           : "times unavailable";
 
+  // `null` means the question could not be put - an unresolved boundary, or a
+  // latitude where the Sun rose on none of the three days - and says nothing.
+  // Reading it as zero captioned an ordinary tithi as one no day is named after.
   const note =
     span.sunrises === 0
       ? "kshaya, no sunrise"
@@ -493,7 +496,7 @@ const ERROR_TEXT: Record<string, { headline: string; cause: string }> = {
   },
 };
 
-function ErrorBlock(props: { code: string; message: string }): JSX.Element {
+export function ErrorBlock(props: { code: string; message: string }): JSX.Element {
   const text = () => ERROR_TEXT[props.code] ?? ERROR_TEXT.ENGINE!;
   return (
     <div class="error-block">

@@ -54,15 +54,25 @@ impl Source {
         }
     }
 
+    /// The weaker of two provenances.
+    pub fn weaker(self, other: Source) -> Source {
+        match (self, other) {
+            (Source::Swieph, Source::Swieph) => Source::Swieph,
+            _ => Source::Moshier,
+        }
+    }
+
     /// Combines the provenance of several values into the weakest of them, so a
     /// composite result is never reported as more precise than its worst input.
+    ///
+    /// No values at all yields `Moshier`. Folding from `Swieph` instead made an
+    /// empty iterator claim full precision from no evidence, which is the exact
+    /// failure this type exists to prevent.
     pub fn weakest(values: impl IntoIterator<Item = Source>) -> Source {
         values
             .into_iter()
-            .fold(Source::Swieph, |acc, s| match (acc, s) {
-                (Source::Swieph, Source::Swieph) => Source::Swieph,
-                _ => Source::Moshier,
-            })
+            .reduce(Source::weaker)
+            .unwrap_or(Source::Moshier)
     }
 }
 
@@ -108,6 +118,20 @@ pub struct RiseSet {
     pub rise: Option<f64>,
     /// Julian Day (UT) of setting, if it occurs within the search window.
     pub set: Option<f64>,
+    /// Which theory served this body over this window (D-006).
+    ///
+    /// `swe_rise_trans` reports a status code rather than a flag word, so it
+    /// cannot answer for itself. This is read from a position call for the same
+    /// body at the same instant - the quantity the rise search integrates - so
+    /// it is observed rather than inferred from the date.
+    pub source: Source,
+}
+
+/// A scalar reading, with the theory that produced it.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Reading {
+    pub degrees: f64,
+    pub source: Source,
 }
 
 /// Guards the invariant that at most one [`Engine`] exists per process.
@@ -267,17 +291,25 @@ impl Engine {
         graha: Graha,
         observer: Observer,
     ) -> Result<RiseSet> {
+        let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        let body = se_body_id(graha, inner.config.node_type);
+
+        // One position call for the body, purely to read the flags Swiss
+        // Ephemeris returns. It is asked for even when there can be no rise, so
+        // the provenance of the window is always stated rather than assumed.
+        let flags = SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_SIDEREAL;
+        let (_, returned) = calc_raw(jd_ut_start, body, flags, graha.name())?;
+        let source = Source::from_returned_flags(returned);
+
         // The nodes are geometric points with no disc and never cross the
         // horizon in the sense a rise/set calculation means.
         if matches!(graha, Graha::Rahu | Graha::Ketu) {
             return Ok(RiseSet {
                 rise: None,
                 set: None,
+                source,
             });
         }
-
-        let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
-        let body = se_body_id(graha, inner.config.node_type);
 
         let rise = calc_rise_event(jd_ut_start, body, SE_CALC_RISE, observer, graha)?;
         let set = calc_rise_event(jd_ut_start, body, SE_CALC_SET, observer, graha)?;
@@ -290,6 +322,7 @@ impl Engine {
         Ok(RiseSet {
             rise: within(rise),
             set: within(set),
+            source,
         })
     }
 
@@ -302,7 +335,7 @@ impl Engine {
     /// applied to every position this app displays. Showing a number that does
     /// not reconcile with the longitudes beside it would be a bug report waiting
     /// to happen.
-    pub fn ayanamsa(&self, jd_ut: f64) -> Result<f64> {
+    pub fn ayanamsa(&self, jd_ut: f64) -> Result<Reading> {
         let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
 
         let tropical = calc_raw(jd_ut, se_body::SUN, SEFLG_SWIEPH | SEFLG_SPEED, "ayanamsa")?;
@@ -313,7 +346,14 @@ impl Engine {
             "ayanamsa",
         )?;
 
-        Ok((tropical.0[0] - sidereal.0[0]).rem_euclid(360.0))
+        // Both calls are compared against what came back, as ARCHITECTURE says
+        // every call is. Throwing the flag word away here made this the one
+        // displayed figure that could be Moshier without saying so.
+        Ok(Reading {
+            degrees: (tropical.0[0] - sidereal.0[0]).rem_euclid(360.0),
+            source: Source::from_returned_flags(tropical.1)
+                .weaker(Source::from_returned_flags(sidereal.1)),
+        })
     }
 
     /// Swiss Ephemeris version string, shown in the About pane so a support

@@ -237,7 +237,11 @@ pub struct TithiSpan {
     /// Sunrises inside `[entry, exit)`. The primitive the other two states are
     /// read off: 0 is a kshaya, 2 a vriddhi. Supplied instead of two booleans so
     /// a payload claiming both cannot be constructed.
-    pub sunrises: u8,
+    ///
+    /// `None` where the count is not a fact about the tithi: a boundary that did
+    /// not resolve leaves nothing to count between, and a latitude where the Sun
+    /// rises on none of the three days has no sunrises to count at all.
+    pub sunrises: Option<u8>,
     /// In force at the day's reference instant. Exactly one span per day.
     pub prevailing: bool,
     pub source: Source,
@@ -363,19 +367,29 @@ pub fn spans_in_day(
     Ok(spans)
 }
 
-/// Sunrises inside `[entry, exit)`.
+/// Sunrises inside `[entry, exit)`, or `None` where there is no count to give.
 ///
-/// An unresolved boundary yields zero rather than a guess, and the day view
-/// prints the boundary as unavailable rather than inferring a state from it.
-fn count_sunrises(entry: Option<f64>, exit: Option<f64>, sunrises: &[f64]) -> u8 {
+/// Zero and unknown are different answers and used to be the same one. Zero says
+/// no civil day is named after this tithi, which is a kshaya; unknown says the
+/// question could not be put - either a boundary did not resolve, or the Sun
+/// rose on none of the three days the window is counted against, which is a fact
+/// about the latitude. The day view captioned both as a kshaya, so inside a
+/// polar night every tithi of every day claimed to be one while the grid cell
+/// beside it, which falls back to local noon, was right.
+fn count_sunrises(entry: Option<f64>, exit: Option<f64>, sunrises: &[f64]) -> Option<u8> {
     let (Some(entry), Some(exit)) = (entry, exit) else {
-        return 0;
+        return None;
     };
-    sunrises
-        .iter()
-        .filter(|&&jd| jd >= entry && jd < exit)
-        .count()
-        .min(u8::MAX as usize) as u8
+    if sunrises.is_empty() {
+        return None;
+    }
+    Some(
+        sunrises
+            .iter()
+            .filter(|&&jd| jd >= entry && jd < exit)
+            .count()
+            .min(u8::MAX as usize) as u8,
+    )
 }
 
 #[derive(Debug, Clone, Copy)]

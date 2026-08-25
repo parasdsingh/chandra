@@ -19,7 +19,7 @@ mod observer;
 mod sidereal;
 
 pub use body::Graha;
-pub use engine::{Engine, Illumination, Position, RiseSet, Source};
+pub use engine::{Engine, Illumination, Position, Reading, RiseSet, Source};
 pub use error::{Error, Result};
 pub use julian::{
     from_julian_day, jd_to_unix_seconds, julian_day, unix_seconds_to_jd, JD_UNIX_EPOCH,

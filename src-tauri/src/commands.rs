@@ -173,15 +173,6 @@ pub async fn snapshot(app: AppHandle, unix_ms: i64) -> Result<Snapshot> {
 }
 
 #[tauri::command]
-pub async fn ayanamsa_degrees(app: AppHandle, unix_ms: i64) -> Result<f64> {
-    blocking(app, move |state| {
-        let jd = chandra_ephemeris::unix_seconds_to_jd(unix_ms as f64 / 1000.0);
-        state.almanac.ayanamsa(jd).map_err(AppError::from)
-    })
-    .await
-}
-
-#[tauri::command]
 pub async fn update_settings(app: AppHandle, settings: Settings) -> Result<Bootstrap> {
     let applied = {
         let state = app.state::<AppState>();

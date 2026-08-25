@@ -44,7 +44,6 @@ pub fn run() {
             commands::graha_month,
             commands::day_detail,
             commands::snapshot,
-            commands::ayanamsa_degrees,
             commands::update_settings,
             commands::search_cities,
             commands::request_device_location,

@@ -277,17 +277,31 @@ function Location(props: SectionProps): JSX.Element {
         </div>
 
         <div class="settings__actions">
-          <button
-            class="settings__button"
-            disabled={locating()}
-            onClick={() => {
-              setLocating(true);
-              void ipc.requestDeviceLocation().finally(() => setLocating(false));
-            }}
+          {/* Not offered while a chosen location is in force. A manual override
+              is authoritative and is never overridden (D-007), so the button
+              granted permission, took CoreLocation's answer and dropped it
+              without saying anything. */}
+          <Show when={settings().location.mode !== "manual"}>
+            <button
+              class="settings__button"
+              disabled={locating()}
+              onClick={() => {
+                setLocating(true);
+                void ipc.requestDeviceLocation().finally(() => setLocating(false));
+              }}
+            >
+              {locating() ? "Asking macOS…" : "Use this Mac"}
+            </button>
+          </Show>
+          {/* Offered whenever a stored place is standing in for the timezone,
+              which includes a cached device fix. Showing it only in manual mode
+              left an automatic place with no way back to the chain. */}
+          <Show
+            when={
+              settings().location.mode === "manual" ||
+              settings().location.place !== null
+            }
           >
-            {locating() ? "Asking macOS…" : "Use this Mac"}
-          </button>
-          <Show when={settings().location.mode === "manual"}>
             <button
               class="settings__button"
               onClick={() =>

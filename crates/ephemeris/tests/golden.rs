@@ -195,11 +195,15 @@ fn ayanamsa_matches_the_value_applied_to_positions() {
         let jd = f(case, "jd_ut");
         let got = engine.ayanamsa(jd).expect("ayanamsa");
         assert!(
-            (got - f(case, "degrees")).abs() < POSITION_TOLERANCE_DEG,
-            "{} ayanamsa at JD {jd}: got {got}, want {}",
+            (got.degrees - f(case, "degrees")).abs() < POSITION_TOLERANCE_DEG,
+            "{} ayanamsa at JD {jd}: got {}, want {}",
             case["ayanamsa"],
+            got.degrees,
             f(case, "degrees")
         );
+        // Every value carries the theory that produced it (D-006). The vectors
+        // are all inside 1800-2399, so every one of them is data-file backed.
+        assert_eq!(got.source, Source::Swieph, "ayanamsa provenance at JD {jd}");
     }
 }
 
@@ -263,6 +267,13 @@ fn bundled_data_serves_the_navigable_range_at_full_precision() {
         .reconfigure(SiderealConfig::default())
         .expect("reconfigure");
 
+    // Every entry point, not just `position`. ARCHITECTURE says the flags asked
+    // for are compared against the flags returned on every call; two of the four
+    // did not, so a user who scrolled outside 1800-2399 got a moonrise with no
+    // precision note beside it - the exact failure D-006 exists to prevent, on
+    // the one figure the calendar can be scrolled into.
+    let observer = Observer::new(12.9716, 77.5946, 920.0);
+
     for (year, expected) in [
         (1800, Source::Swieph),
         (2026, Source::Swieph),
@@ -273,8 +284,33 @@ fn bundled_data_serves_the_navigable_range_at_full_precision() {
         (2500, Source::Moshier),
     ] {
         let jd = chandra_ephemeris::julian_day(year, 6, 15, 0.0);
-        let got = engine.position(jd, Graha::Chandra).expect("position");
-        assert_eq!(got.source, expected, "provenance for year {year}");
+
+        assert_eq!(
+            engine
+                .position(jd, Graha::Chandra)
+                .expect("position")
+                .source,
+            expected,
+            "position provenance for year {year}"
+        );
+        assert_eq!(
+            engine.illumination(jd).expect("illumination").source,
+            expected,
+            "illumination provenance for year {year}"
+        );
+        assert_eq!(
+            engine
+                .rise_set(jd, jd + 1.0, Graha::Chandra, observer)
+                .expect("rise_set")
+                .source,
+            expected,
+            "rise/set provenance for year {year}"
+        );
+        assert_eq!(
+            engine.ayanamsa(jd).expect("ayanamsa").source,
+            expected,
+            "ayanamsa provenance for year {year}"
+        );
     }
 }
 

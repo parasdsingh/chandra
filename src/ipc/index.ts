@@ -57,9 +57,6 @@ export const dayDetail = (
 export const snapshot = (unixMs: number) =>
   invoke<Snapshot>("snapshot", { unixMs });
 
-export const ayanamsaDegrees = (unixMs: number) =>
-  invoke<number>("ayanamsa_degrees", { unixMs });
-
 export const updateSettings = (settings: Settings) =>
   invoke<Bootstrap>("update_settings", { settings });
 

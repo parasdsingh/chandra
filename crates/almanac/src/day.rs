@@ -44,9 +44,6 @@ pub struct DayPanchanga {
 pub struct MoonDay {
     pub date: DateKey,
     pub phase: PhaseName,
-    /// Present only when a principal phase occurs during this day, in which case
-    /// it is the exact instant of that phase.
-    pub principal_at: Option<Moment>,
     /// Illuminated fraction at local noon, 0.0 to 1.0.
     pub illumination: f64,
     pub is_waxing: bool,
@@ -194,39 +191,46 @@ pub fn moon_day(
 
     // A principal phase belongs to the day containing its exact instant, so the
     // day it is named on is the day it actually happens.
-    let principal = phase::principal_phase_in(elongation_start, elongation_end);
-    let (phase_name, principal_at) = match principal {
-        Some((name, fraction)) => {
-            let jd = day.start_jd + fraction * day.length();
-            (name, Some(day.moment(jd)?))
-        }
-        None => (phase::intermediate_phase(elongation_start), None),
-    };
+    let phase_name = phase::principal_phase_in(elongation_start, elongation_end)
+        .unwrap_or_else(|| phase::intermediate_phase(elongation_start));
 
     let rise_set = engine.rise_set(day.start_jd, day.end_jd, Graha::Chandra, observer)?;
-    let nakshatras = nakshatra_spans(engine, Graha::Chandra, day, reference)?;
-    let rashis = rashi_spans(engine, Graha::Chandra, day, reference)?;
-
-    let source = Source::weakest(
-        [noon.source]
-            .into_iter()
-            .chain(nakshatras.iter().map(|_| Source::Swieph)),
-    );
+    let (nakshatras, nakshatra_source) = nakshatra_spans(engine, Graha::Chandra, day, reference)?;
+    let (rashis, rashi_source) = rashi_spans(engine, Graha::Chandra, day, reference)?;
+    let panchanga = panchanga(engine, day, observer, system)?;
 
     Ok(MoonDay {
         date: day.date,
         phase: phase_name,
-        principal_at,
         illumination: noon.fraction,
         is_waxing: phase::is_waxing(elongation_start),
         moonrise: rise_set.rise.map(|jd| day.moment(jd)).transpose()?,
         moonset: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
         combustion: combustion_at(engine, Graha::Chandra, day.noon_jd())?,
-        panchanga: panchanga(engine, day, observer, system)?,
+        source: day_source(
+            [noon.source, rise_set.source, nakshatra_source, rashi_source],
+            panchanga.as_ref(),
+        ),
+        panchanga,
         nakshatras,
         rashis,
-        source,
     })
+}
+
+/// The weakest ephemeris behind everything a day is assembled from.
+///
+/// Every part, not a count of them: chaining a constant `Swieph` once per
+/// nakshatra read as accounting for span provenance while ignoring it entirely,
+/// so a day whose spans were resolved from Moshier positions reported itself as
+/// exact.
+fn day_source(parts: [Source; 4], panchanga: Option<&DayPanchanga>) -> Source {
+    Source::weakest(
+        parts.into_iter().chain(
+            panchanga
+                .into_iter()
+                .flat_map(|p| p.tithis.iter().map(|span| span.source)),
+        ),
+    )
 }
 
 pub fn graha_day(
@@ -239,6 +243,9 @@ pub fn graha_day(
     let reference = reference_instant(engine, day, observer)?;
     let position = engine.position(reference, graha)?;
     let rise_set = engine.rise_set(day.start_jd, day.end_jd, graha, observer)?;
+    let (nakshatras, nakshatra_source) = nakshatra_spans(engine, graha, day, reference)?;
+    let (rashis, rashi_source) = rashi_spans(engine, graha, day, reference)?;
+    let panchanga = panchanga(engine, day, observer, system)?;
 
     Ok(GrahaDay {
         date: day.date,
@@ -250,10 +257,18 @@ pub fn graha_day(
         rise: rise_set.rise.map(|jd| day.moment(jd)).transpose()?,
         set: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
         combustion: combustion_at(engine, graha, day.noon_jd())?,
-        panchanga: panchanga(engine, day, observer, system)?,
-        nakshatras: nakshatra_spans(engine, graha, day, reference)?,
-        rashis: rashi_spans(engine, graha, day, reference)?,
-        source: position.source,
+        source: day_source(
+            [
+                position.source,
+                rise_set.source,
+                nakshatra_source,
+                rashi_source,
+            ],
+            panchanga.as_ref(),
+        ),
+        panchanga,
+        nakshatras,
+        rashis,
     })
 }
 
@@ -262,16 +277,23 @@ fn elongation(engine: &Engine, jd: f64) -> Result<f64> {
     Ok((bodies[0].longitude - bodies[1].longitude).rem_euclid(360.0))
 }
 
+/// The nakshatras the graha occupies, and the weakest ephemeris behind them.
+///
+/// The provenance is returned rather than put on each span: nothing shows it per
+/// span, and a payload field nothing reads is weight. It must not be dropped
+/// either - a day assembled from Moshier positions is not an exact day - so it
+/// is folded into the day's own source.
 fn nakshatra_spans(
     engine: &Engine,
     graha: Graha,
     day: &CivilDay,
     reference: f64,
-) -> Result<Vec<NakshatraSpan>> {
+) -> Result<(Vec<NakshatraSpan>, Source)> {
     let spans = divisions_in_day(engine, graha, day, Division::Nakshatra, reference)?;
     let reference_longitude = engine.position(reference, graha)?.longitude;
+    let source = Source::weakest(spans.iter().map(|span| span.source));
 
-    spans
+    let named = spans
         .into_iter()
         .map(|span: Span| {
             let nakshatra = Nakshatra::ALL[span.index];
@@ -292,17 +314,21 @@ fn nakshatra_spans(
                 prevailing: span.prevailing,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>>>()?;
+    Ok((named, source))
 }
 
+/// The rashis the graha occupies, and the weakest ephemeris behind them.
 fn rashi_spans(
     engine: &Engine,
     graha: Graha,
     day: &CivilDay,
     reference: f64,
-) -> Result<Vec<RashiSpan>> {
+) -> Result<(Vec<RashiSpan>, Source)> {
     let spans = divisions_in_day(engine, graha, day, Division::Rashi, reference)?;
-    Ok(spans
+    let source = Source::weakest(spans.iter().map(|span| span.source));
+
+    let named = spans
         .into_iter()
         .map(|span| {
             let rashi = Rashi::ALL[span.index];
@@ -315,5 +341,6 @@ fn rashi_spans(
                 prevailing: span.prevailing,
             }
         })
-        .collect())
+        .collect();
+    Ok((named, source))
 }

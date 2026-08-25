@@ -105,8 +105,14 @@ export interface TithiSpan {
   /** `null` only when the boundary did not resolve. No time is ever guessed. */
   entry: Moment | null;
   exit: Moment | null;
-  /** Sunrises inside the span: 0 is a kshaya, 2 a vriddhi. */
-  sunrises: number;
+  /**
+   * Sunrises inside the span: 0 is a kshaya, 2 a vriddhi.
+   *
+   * `null` where there is no count to give: a boundary that did not resolve, or
+   * a latitude where the Sun rose on none of the three days. Neither is a
+   * kshaya.
+   */
+  sunrises: number | null;
   prevailing: boolean;
   source: Source;
 }
@@ -227,7 +233,6 @@ export interface MoonDay {
   kind: "moon";
   date: DateKey;
   phase: PhaseKey;
-  principal_at: Moment | null;
   illumination: number;
   is_waxing: boolean;
   moonrise: Moment | null;

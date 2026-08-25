@@ -289,6 +289,11 @@ the exact failure D-006 exists to prevent.
 `swe_rise_trans` returns a status code rather than a flag word, so `RiseSet` as
 typed cannot carry one; `ayanamsa` throws its flag word away.
 
+**fixed** — `RiseSet` carries a `source`, read from a position call for the same
+body at the same instant, and `ayanamsa` returns a `Reading` that carries one
+too. `bundled_data_serves_the_navigable_range_at_full_precision` now asks all
+four entry points at each of the five sample years instead of only `position`.
+
 ### F-14 The scroller's gesture state is not reset on open — A (B: speculative)
 `src/components/CalendarScroller.tsx:109`, `src/components/Panel.tsx:381`
 
@@ -304,6 +309,10 @@ speculative. The absence of any reset path is confirmed either way.
 
 Fix: give the scroller an imperative reset, or remount it on open.
 
+**fixed** — the scroller is keyed on an open counter, so every open builds a
+fresh one and its offset, wheel timer and pending frame go with the old one.
+Remounting cannot miss a field the way an imperative reset can.
+
 ### F-15 Re-anchoring at six months blanks the strip — A+B
 `src/components/Panel.tsx:194`
 
@@ -316,6 +325,11 @@ cache hits, the front-end Map does not. This is I-042 §2 recurring.
 Fix: rekey the Map entries under the new anchor when re-anchoring, or key on the
 identity of the month returned rather than on the request parameters.
 
+**fixed** — a month's address is split into what it is an answer to and where
+it sits, and re-anchoring re-addresses the entries it already holds instead of
+orphaning them. Only the current context and the anchor being left are moved, so
+a month remembered under an older configuration is never given a current address.
+
 ### F-16 Errors are captured into a signal almost nothing renders — A+B
 `src/components/Panel.tsx:165,307,457`
 
@@ -324,6 +338,13 @@ identity of the month returned rather than on the request parameters.
 settings-save failure fires while the user is by definition in the settings view,
 so `ERROR_TEXT.SETTINGS` is unreachable. Opening any day clears the signal before
 it could have been read.
+
+**fixed** — the calendar and the settings views render the error too. A month
+that fails to load replaces the strip, which has nothing left to show; a settings
+failure appears above the list rather than instead of it, because the controls
+are what the user needs to try something else. A month or a settings save that
+succeeds clears the signal, so `ERROR_TEXT.SETTINGS` is now reachable and now
+goes away.
 
 ### F-17 `principal_at` is a linear interpolation — A+B
 `crates/almanac/src/day.rs:189`
@@ -337,6 +358,11 @@ resolution. D-016 says the bracket+Brent machinery applies to syzygies.
 `MoonDay.principal_at` is also never rendered.
 
 Fix: use the refined syzygy, or delete the field. Do not keep both routes.
+
+**fixed** — the field is deleted, and with it the interpolation. `phase` already
+names a principal phase only on the day it occurs, so nothing was lost;
+`principal_phase_in` now returns the name alone, which removes the second route
+to a syzygy instant rather than leaving two that disagree by 3.6 minutes.
 
 ### F-18 Elevation is discarded in automatic mode — A+B
 `src/components/SettingsView.tsx:257-275`, `src-tauri/src/location.rs:56-58`
@@ -356,6 +382,10 @@ Both are computed from the zone at construction and refreshed only in `open()`.
 Changing location across the date line updates every computed value but leaves
 the today ring on the old zone's date until the panel is closed and reopened.
 
+**fixed** — `today` and the anchor follow the observer's zone through an
+effect deferred past construction, so a location change across the date line
+moves the today ring without waiting for the panel to be closed and reopened.
+
 ### F-20 An ayanamsa change does not refresh the tray tooltips — B
 `src-tauri/src/state.rs:101`
 
@@ -374,6 +404,11 @@ The refusal is correct per D-007, but `request_device_location` returns
 unconditionally. The user grants permission, CoreLocation answers, the answer is
 dropped, and nothing is said.
 
+**fixed** — the button is not offered while a manual location is in force,
+which is the state in which it can do nothing (D-007). `Use my timezone` is now
+offered whenever a stored place is standing in for the chain, so a cached device
+fix can be cleared as well.
+
 ### F-22 A warm lunar month costs 100–300× a warm solar one — B
 `crates/almanac/src/almanac.rs:252,281`
 
@@ -385,6 +420,13 @@ subject, per open.
 
 `a_lunar_month_stays_inside_the_budget_and_is_computed_once` never measures a
 warm lunar month, unlike its solar counterpart.
+
+**fixed** — the resolution is cached under the cursor, which is the step being
+avoided: the old key was derived from the resolution's own answer, so a warm
+lunar month walked its syzygies and built 42 civil days before the cache was
+consulted. `a_lunar_month_stays_inside_the_budget_and_is_computed_once` now
+measures a warm month at offset 0 and at offset 5; the second took 5.74 ms before
+the fix, over the documented budget.
 
 ### F-23 `count_sunrises` conflates "zero" with "unknown" — A
 `crates/almanac/src/tithi.rs:360`, `src/components/DayDetail.tsx:352`
@@ -424,6 +466,13 @@ fixes it. Every colour token is left exactly as it is.
 `false`, which is the truthful answer there. No test: this is a window-server
 outcome no headless suite can produce, and the false branch is what the preview
 harness has always rendered under.
+
+**fixed** — `TithiSpan.sunrises` is `Option<u8>`: `None` for an unresolved
+boundary and for a latitude with no sunrise on any of the three days, `Some(0)`
+only for a real kshaya. The day view captions only the count it is given.
+`a_polar_night_reports_no_sunrise_count_rather_than_none_at_all` holds both
+halves - Longyearbyen in January reports no count, and a year at Bengaluru
+reports a count on every span and a genuine zero among them.
 
 ---
 
@@ -466,6 +515,8 @@ defect gets written.
 - **F-30** Dead code: `month::days_between`, `time::first_weekday_offset`,
   `commands::ayanamsa_degrees` + its IPC wrapper, `Observer::is_polar`,
   `Almanac::sankrantis_between` (tests only).
+  **partly fixed** — `ayanamsa_degrees`, its IPC wrapper and `Almanac::ayanamsa`
+  (its only caller) are gone. The rest is in the next pass.
 - **F-31** `MoonDay.source` chains `Source::Swieph` per nakshatra, a constant, so
   the aggregation is a no-op that reads as if it accounts for span provenance.
   `spans.rs:150` computes a real per-span source that `NakshatraSpan` /
