@@ -257,7 +257,6 @@ pub fn at(engine: &Engine, jd: f64) -> Result<Tithi> {
     Ok(Tithi::from_elongation(elongation(engine, jd)?))
 }
 
-
 /// Every tithi touching `day`, in the order it occupies them.
 ///
 /// `sunrises` are the sunrise instants of the civil days the spans may reach

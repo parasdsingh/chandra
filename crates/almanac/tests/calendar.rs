@@ -189,11 +189,7 @@ fn nakshatra_entry_and_exit_land_on_exact_boundaries() {
     reset(&almanac);
 
     let detail = almanac
-        .day_detail(
-            Graha::Chandra,
-            DateKey::new(2026, 8, 20).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Chandra, DateKey::new(2026, 8, 20).unwrap(), limbs())
         .expect("detail");
     let DayDetail::Moon(moon) = detail else {
         panic!("the Moon must produce a moon detail");
@@ -229,11 +225,7 @@ fn a_span_boundary_is_the_instant_the_longitude_crosses_it() {
     reset(&almanac);
 
     let detail = almanac
-        .day_detail(
-            Graha::Chandra,
-            DateKey::new(2026, 8, 20).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Chandra, DateKey::new(2026, 8, 20).unwrap(), limbs())
         .expect("detail");
     let DayDetail::Moon(moon) = detail else {
         panic!("moon detail");
@@ -273,11 +265,7 @@ fn moonrise_and_moonset_stay_inside_the_day_they_are_reported_for() {
     let mut days_with_no_rise = 0;
     for day in 1..=31 {
         let DayDetail::Moon(moon) = almanac
-            .day_detail(
-                Graha::Chandra,
-                DateKey::new(2026, 8, day).unwrap(),
-                limbs(),
-            )
+            .day_detail(Graha::Chandra, DateKey::new(2026, 8, day).unwrap(), limbs())
             .expect("detail")
         else {
             panic!("moon detail");
@@ -672,11 +660,7 @@ fn report_timings() {
 
     let t = Instant::now();
     let _ = almanac
-        .day_detail(
-            Graha::Chandra,
-            DateKey::new(2033, 7, 15).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Chandra, DateKey::new(2033, 7, 15).unwrap(), limbs())
         .expect("detail");
     line("lunar moon day detail", t.elapsed());
 
@@ -688,21 +672,13 @@ fn report_timings() {
 
     let t = Instant::now();
     let _ = almanac
-        .day_detail(
-            Graha::Chandra,
-            DateKey::new(2033, 7, 15).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Chandra, DateKey::new(2033, 7, 15).unwrap(), limbs())
         .expect("detail");
     line("moon day detail", t.elapsed());
 
     let t = Instant::now();
     let _ = almanac
-        .day_detail(
-            Graha::Shani,
-            DateKey::new(2033, 7, 15).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Shani, DateKey::new(2033, 7, 15).unwrap(), limbs())
         .expect("detail");
     line("Shani day detail (slowest body)", t.elapsed());
 
@@ -1217,11 +1193,7 @@ fn the_cell_and_the_day_it_opens_name_the_same_tithi() {
     // costing a sunrise, and a day costs one. Yoga, karana and the muhurtas are
     // facts about a civil day, not about which calendar names its month.
     let DayDetail::Moon(day) = almanac
-        .day_detail(
-            Graha::Chandra,
-            DateKey::new(2026, 8, 20).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Chandra, DateKey::new(2026, 8, 20).unwrap(), limbs())
         .expect("detail")
     else {
         panic!("moon detail");
@@ -1263,9 +1235,8 @@ fn a_graha_day_and_its_prevailing_span_name_the_same_division() {
             for day in 1..=chandra_almanac::time::days_in_month(2024, month).expect("month length")
             {
                 let date = DateKey::new(2024, month, day as i8).expect("date");
-                let DayDetail::Graha(detail) = almanac
-                    .day_detail(graha, date, limbs())
-                    .expect("detail")
+                let DayDetail::Graha(detail) =
+                    almanac.day_detail(graha, date, limbs()).expect("detail")
                 else {
                     panic!("graha detail");
                 };
@@ -1451,11 +1422,7 @@ fn a_polar_night_reports_no_sunrise_count_rather_than_none_at_all() {
         .expect("relocate");
 
     let DayDetail::Moon(day) = almanac
-        .day_detail(
-            Graha::Chandra,
-            DateKey::new(2026, 1, 5).unwrap(),
-            limbs(),
-        )
+        .day_detail(Graha::Chandra, DateKey::new(2026, 1, 5).unwrap(), limbs())
         .expect("detail")
     else {
         panic!("moon detail");

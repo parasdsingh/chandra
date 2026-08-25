@@ -536,14 +536,25 @@
   color: var(--text-secondary);
 }
 
+/* A column: the date line and the pane tabs are fixed, and only the fields
+   below them scroll. The tabs scrolling away would leave a reader in a pane with
+   no way back to the other one that did not involve scrolling up first. */
 .detail {
   position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
-  scrollbar-width: none;
+  overflow: hidden;
   padding: var(--s-4) var(--s-5) var(--s-5);
   animation: detail-in var(--d-detail-in) var(--ease-standard)
     calc(var(--d-detail-in) * 0.55) backwards;
+}
+
+.detail__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
 @keyframes detail-in {
@@ -780,4 +791,40 @@
 
 .jump__qualifier {
   color: var(--text-secondary);
+}
+
+/* ---------- the day view's two panes ---------- */
+
+/* A pair of words with a rule under the current one, not a segmented control in
+   a pill. The panel has one bordered control already - the settings switch - and
+   a second box in the header's shadow would read as a toolbar. */
+.detail__panes {
+  display: flex;
+  gap: var(--s-4);
+  margin: var(--s-1) 0 var(--s-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail__pane {
+  padding: 0 0 var(--s-2);
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  font: var(--type-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  cursor: default;
+}
+
+.detail__pane:hover {
+  color: var(--text-primary);
+}
+
+/* The rule is the state, and the weight change carries it too: which pane is
+   showing must not rest on a one-pixel line alone. */
+.detail__pane.is-current {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
 }

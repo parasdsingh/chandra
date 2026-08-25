@@ -49,7 +49,7 @@ const context: FormatContext = { timeZone: data.timeZone };
 
 const boot: Bootstrap = {
   settings: {
-    schema_version: 2,
+    schema_version: 4,
     location: {
       mode: "manual",
       place: {
@@ -65,7 +65,7 @@ const boot: Bootstrap = {
     calendar: { month_system: "amanta" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
     tray: { subjects: ["mangala", "shani"], colour_mode: false },
-  appearance: { scale: 1 },
+    appearance: { scale: 1 },
   },
   location: {
     label: "Bengaluru",
@@ -124,8 +124,8 @@ function moonHeader(title: string) {
       view="calendar"
       onBack={() => {}}
       onSettings={() => {}}
-        jumping={false}
-        onJump={() => {}}
+      jumping={false}
+      onJump={() => {}}
     />
   );
 }
@@ -188,8 +188,8 @@ export function Preview(): JSX.Element {
           view="day"
           onBack={() => {}}
           onSettings={() => {}}
-        jumping={false}
-        onJump={() => {}}
+          jumping={false}
+          onJump={() => {}}
         />
         <div class="region">
           <DayDetail
@@ -197,6 +197,7 @@ export function Preview(): JSX.Element {
             events={[]}
             context={context}
             isToday
+            lunar={false}
             error={undefined}
           />
         </div>
@@ -209,6 +210,7 @@ export function Preview(): JSX.Element {
             events={[]}
             context={context}
             isToday={false}
+            lunar={true}
             error={undefined}
           />
         </div>
@@ -221,6 +223,7 @@ export function Preview(): JSX.Element {
             events={[]}
             context={context}
             isToday={false}
+            lunar={true}
             error={undefined}
           />
         </div>
@@ -233,6 +236,7 @@ export function Preview(): JSX.Element {
             events={[]}
             context={context}
             isToday={false}
+            lunar={true}
             error={undefined}
           />
         </div>
@@ -251,8 +255,8 @@ export function Preview(): JSX.Element {
           view="calendar"
           onBack={() => {}}
           onSettings={() => {}}
-        jumping={false}
-        onJump={() => {}}
+          jumping={false}
+          onJump={() => {}}
         />
         <div class="region">
           <div class="grid-region">
@@ -276,9 +280,12 @@ export function Preview(): JSX.Element {
         <div class="region">
           <DayDetail
             detail={data.grahaDay}
-            events={data.grahaMonth.events.filter((event) => event.date.day === 24)}
+            events={data.grahaMonth.events.filter(
+              (event) => event.date.day === 24,
+            )}
             context={context}
             isToday={false}
+            lunar={true}
             error={undefined}
           />
         </div>
@@ -291,6 +298,7 @@ export function Preview(): JSX.Element {
             events={[]}
             context={context}
             isToday={false}
+            lunar={true}
             error={{
               code: "DATE_OUT_OF_RANGE",
               message: "1650-08-20 is outside the range Chandra has data for",
@@ -299,8 +307,19 @@ export function Preview(): JSX.Element {
         </div>
       </Case>
 
-      <For each={["root", "calendar", "location", "astrology", "menubar",
-            "size", "about"] as const}>
+      <For
+        each={
+          [
+            "root",
+            "calendar",
+            "location",
+            "astrology",
+            "menubar",
+            "size",
+            "about",
+          ] as const
+        }
+      >
         {(id) => (
           <Case title={`Settings · ${id}`}>
             <Header
@@ -315,8 +334,8 @@ export function Preview(): JSX.Element {
               view="settings"
               onBack={() => {}}
               onSettings={() => {}}
-        jumping={false}
-        onJump={() => {}}
+              jumping={false}
+              onJump={() => {}}
             />
             <div class="region">
               <SettingsView

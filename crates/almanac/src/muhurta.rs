@@ -84,35 +84,63 @@ const BRAHMA: u8 = 14;
 /// minutes, so an offset divided by 48 minutes is the index. Saturday's is
 /// stated as a single window lasting 1h36m, which is two muhurtas.
 const DURMUHURTAM: [&[(Half, u8)]; 7] = [
-    &[(Half::Day, 14)],                 // Ravivara:    10h24m
-    &[(Half::Day, 9), (Half::Day, 12)], // Somavara:     6h24m, 8h48m
+    &[(Half::Day, 14)],                  // Ravivara:    10h24m
+    &[(Half::Day, 9), (Half::Day, 12)],  // Somavara:     6h24m, 8h48m
     &[(Half::Day, 4), (Half::Night, 8)], // Mangalavara: 2h24m; 5h36m after sunset
-    &[(Half::Day, 8)],                  // Budhavara:    5h36m
-    &[(Half::Day, 6), (Half::Day, 12)], // Guruvara:     4h00m, 8h48m
-    &[(Half::Day, 4), (Half::Day, 12)], // Shukravara:   2h24m, 8h48m
-    &[(Half::Day, 1), (Half::Day, 2)],  // Shanivara:    from sunrise, 1h36m
+    &[(Half::Day, 8)],                   // Budhavara:    5h36m
+    &[(Half::Day, 6), (Half::Day, 12)],  // Guruvara:     4h00m, 8h48m
+    &[(Half::Day, 4), (Half::Day, 12)],  // Shukravara:   2h24m, 8h48m
+    &[(Half::Day, 1), (Half::Day, 2)],   // Shanivara:    from sunrise, 1h36m
 ];
 
-/// Sunrise and sunset bounding one civil day's light and the night after it.
+/// Which night a window divides.
 ///
-/// All three instants are required. A day missing any of them has no muhurtas
-/// rather than muhurtas measured against a guess.
+/// A civil day touches two of them, and the rules do not agree on which they
+/// mean. Brahma Muhurta ends shortly before sunrise, so "today's" is the one in
+/// this morning's small hours - which is what a published panchanga prints, and
+/// what someone planning to be up for it needs. Tuesday's second Durmuhurtam is
+/// stated as an offset after sunset, so it is tonight's.
+///
+/// Not in the payload: `Half` is, and day-or-night is all the front end has to
+/// draw. Which night a window belongs to is answered by the time it carries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Night {
+    /// Last night's sunset to this morning's sunrise.
+    Before,
+    /// This evening's sunset to tomorrow's sunrise.
+    After,
+}
+
+/// The four instants bounding a civil day's light and the two nights it touches.
+///
+/// All four are required. A day missing any of them has no muhurtas rather than
+/// muhurtas measured against a guess.
 #[derive(Debug, Clone, Copy)]
 pub struct Horizon {
+    /// The previous evening's sunset, which opens the night this day dawns from.
+    pub previous_sunset: f64,
     pub sunrise: f64,
     pub sunset: f64,
-    /// The following day's sunrise, which closes the night.
+    /// The following day's sunrise, which closes the night this day ends in.
     pub next_sunrise: f64,
 }
 
 impl Horizon {
-    /// Resolves the three instants, or `None` if any is missing.
+    /// Resolves the four instants, or `None` if any is missing.
     ///
-    /// The next sunrise is searched in the following civil day rather than the
-    /// same one: the night runs past midnight, and looking for it inside today
-    /// would find this morning's sunrise, which has already gone.
+    /// The neighbouring days are searched in their own windows rather than in
+    /// this one: a night runs across midnight, and looking for either end of it
+    /// inside today finds this day's own sunrise and sunset, which bound the
+    /// daylight rather than the dark.
     pub fn of(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<Option<Self>> {
         let today = engine.rise_set(day.start_jd, day.end_jd, Graha::Surya, observer)?;
+        let yesterday_day = day.previous()?;
+        let yesterday = engine.rise_set(
+            yesterday_day.start_jd,
+            yesterday_day.end_jd,
+            Graha::Surya,
+            observer,
+        )?;
         let tomorrow_day = day.next()?;
         let tomorrow = engine.rise_set(
             tomorrow_day.start_jd,
@@ -121,39 +149,68 @@ impl Horizon {
             observer,
         )?;
 
-        let (Some(sunrise), Some(sunset), Some(next_sunrise)) =
-            (today.rise, today.set, tomorrow.rise)
+        let (Some(previous_sunset), Some(sunrise), Some(sunset), Some(next_sunrise)) =
+            (yesterday.set, today.rise, today.set, tomorrow.rise)
         else {
             return Ok(None);
         };
 
-        // A sunset before the sunrise it is paired with means the two belong to
-        // different daylight periods, which happens either side of a polar day.
-        // There is no daylight span to divide, so there are no muhurtas.
-        if sunset <= sunrise || next_sunrise <= sunset {
+        // Each span must run forwards. A sunset that does not precede the
+        // sunrise it is paired with means the two belong to different daylight
+        // periods, which happens either side of a polar day - there is nothing
+        // to divide, so there are no muhurtas.
+        if previous_sunset >= sunrise || sunset <= sunrise || next_sunrise <= sunset {
             return Ok(None);
         }
 
         Ok(Some(Self {
+            previous_sunset,
             sunrise,
             sunset,
             next_sunrise,
         }))
     }
 
-    fn bounds(&self, half: Half) -> (f64, f64) {
-        match half {
-            Half::Day => (self.sunrise, self.sunset),
-            Half::Night => (self.sunset, self.next_sunrise),
+    fn bounds(&self, half: Half, night: Night) -> (f64, f64) {
+        match (half, night) {
+            (Half::Day, _) => (self.sunrise, self.sunset),
+            (Half::Night, Night::Before) => (self.previous_sunset, self.sunrise),
+            (Half::Night, Night::After) => (self.sunset, self.next_sunrise),
         }
     }
 
-    /// The `index`th of `parts` equal divisions of `half`, 1-based.
-    fn part(&self, half: Half, index: u8, parts: u8) -> (f64, f64) {
-        let (start, end) = self.bounds(half);
+    /// The `index`th of `parts` equal divisions of a half, 1-based.
+    fn part(&self, half: Half, night: Night, index: u8, parts: u8) -> (f64, f64) {
+        let (start, end) = self.bounds(half, night);
         let width = (end - start) / parts as f64;
         let from = start + width * (index.saturating_sub(1) as f64);
         (from, from + width)
+    }
+}
+
+/// A window before it is resolved against a horizon.
+#[derive(Debug, Clone, Copy)]
+struct Window {
+    name: &'static str,
+    half: Half,
+    /// Ignored when `half` is `Day`.
+    night: Night,
+    /// 1-based, within `parts`.
+    index: u8,
+    parts: u8,
+    inauspicious: bool,
+}
+
+impl Window {
+    const fn day(name: &'static str, index: u8, parts: u8, inauspicious: bool) -> Self {
+        Self {
+            name,
+            half: Half::Day,
+            night: Night::After,
+            index,
+            parts,
+            inauspicious,
+        }
     }
 }
 
@@ -172,33 +229,55 @@ pub fn muhurtas_in_day(
     };
     let vara = (vara % 7) as usize;
 
-    let mut windows: Vec<(&'static str, Half, u8, u8, bool)> = vec![
-        ("Rahu Kaal", Half::Day, RAHU_KAAL[vara], EIGHTHS, true),
-        ("Yamaganda", Half::Day, YAMAGANDA[vara], EIGHTHS, true),
-        ("Gulika", Half::Day, GULIKA[vara], EIGHTHS, true),
-        ("Brahma Muhurta", Half::Night, BRAHMA, PER_HALF, false),
+    let mut windows: Vec<Window> = vec![
+        Window::day("Rahu Kaal", RAHU_KAAL[vara], EIGHTHS, true),
+        Window::day("Yamaganda", YAMAGANDA[vara], EIGHTHS, true),
+        Window::day("Gulika", GULIKA[vara], EIGHTHS, true),
+        // The night before, not the night after. Brahma Muhurta ends shortly
+        // before sunrise, so today's is the one in this morning's small hours -
+        // which is what a published panchanga prints, and the only reading that
+        // is any use to someone planning to be awake for it. Taken from the
+        // night after, it printed at the foot of the day's list at 03:45 the
+        // following morning, which reads as a sorting fault.
+        Window {
+            name: "Brahma Muhurta",
+            half: Half::Night,
+            night: Night::Before,
+            index: BRAHMA,
+            parts: PER_HALF,
+            inauspicious: false,
+        },
     ];
 
     // Abhijit and Wednesday's Durmuhurtam are the same slot, so on a Budhavara
     // the auspicious reading is the one that gives way. Printing both would put
     // two windows with opposite meanings on identical times.
     if vara != BUDHAVARA {
-        windows.push(("Abhijit", Half::Day, ABHIJIT, PER_HALF, false));
+        windows.push(Window::day("Abhijit", ABHIJIT, PER_HALF, false));
     }
 
+    // Tuesday's second window is stated as an offset after sunset, so it is
+    // tonight's - the other night from Brahma Muhurta's, and deliberately so.
     for &(half, index) in DURMUHURTAM[vara] {
-        windows.push(("Durmuhurtam", half, index, PER_HALF, true));
+        windows.push(Window {
+            name: "Durmuhurtam",
+            half,
+            night: Night::After,
+            index,
+            parts: PER_HALF,
+            inauspicious: true,
+        });
     }
 
     let mut muhurtas = Vec::with_capacity(windows.len());
-    for (name, half, index, parts, auspicious) in windows {
-        let (start, end) = horizon.part(half, index, parts);
+    for window in windows {
+        let (start, end) = horizon.part(window.half, window.night, window.index, window.parts);
         muhurtas.push(Muhurta {
-            name: name.to_string(),
-            half,
+            name: window.name.to_string(),
+            half: window.half,
             start: day.moment(start)?,
             end: day.moment(end)?,
-            inauspicious: auspicious,
+            inauspicious: window.inauspicious,
         });
     }
 
@@ -221,7 +300,11 @@ mod tests {
                 "vara {vara} has a slot outside the eight parts of the day"
             );
             let distinct: std::collections::BTreeSet<u8> = slots.into_iter().collect();
-            assert_eq!(distinct.len(), 3, "vara {vara} puts two windows in one eighth");
+            assert_eq!(
+                distinct.len(),
+                3,
+                "vara {vara} puts two windows in one eighth"
+            );
         }
     }
 
@@ -242,13 +325,12 @@ mod tests {
 
     #[test]
     fn every_durmuhurtam_window_is_inside_its_half() {
-        for vara in 0..7usize {
-            let windows = DURMUHURTAM[vara];
+        for (vara, windows) in DURMUHURTAM.iter().enumerate() {
             assert!(
                 !windows.is_empty(),
                 "every vara has at least one durmuhurtam"
             );
-            for &(_, index) in windows {
+            for &(_, index) in *windows {
                 assert!(
                     (1..=PER_HALF).contains(&index),
                     "vara {vara} has a durmuhurtam outside the fifteen muhurtas"
@@ -269,21 +351,32 @@ mod tests {
     #[test]
     fn the_parts_of_a_half_tile_it() {
         let horizon = Horizon {
+            previous_sunset: 99.75,
             sunrise: 100.25,
             sunset: 100.75,
             next_sunrise: 101.25,
         };
 
-        for (half, parts) in [(Half::Day, PER_HALF), (Half::Night, EIGHTHS)] {
-            let (start, end) = horizon.bounds(half);
-            let (first_from, _) = horizon.part(half, 1, parts);
-            let (_, last_to) = horizon.part(half, parts, parts);
-            assert!((first_from - start).abs() < 1e-9, "the first part opens the half");
-            assert!((last_to - end).abs() < 1e-9, "the last part closes the half");
+        for (half, night, parts) in [
+            (Half::Day, Night::After, PER_HALF),
+            (Half::Night, Night::Before, PER_HALF),
+            (Half::Night, Night::After, EIGHTHS),
+        ] {
+            let (start, end) = horizon.bounds(half, night);
+            let (first_from, _) = horizon.part(half, night, 1, parts);
+            let (_, last_to) = horizon.part(half, night, parts, parts);
+            assert!(
+                (first_from - start).abs() < 1e-9,
+                "the first part opens the half"
+            );
+            assert!(
+                (last_to - end).abs() < 1e-9,
+                "the last part closes the half"
+            );
 
             for index in 2..=parts {
-                let (_, previous_to) = horizon.part(half, index - 1, parts);
-                let (from, _) = horizon.part(half, index, parts);
+                let (_, previous_to) = horizon.part(half, night, index - 1, parts);
+                let (from, _) = horizon.part(half, night, index, parts);
                 assert!(
                     (from - previous_to).abs() < 1e-9,
                     "part {index} does not begin where {} ended",
@@ -291,5 +384,17 @@ mod tests {
                 );
             }
         }
+
+        // The two nights are different spans, and Brahma Muhurta has to land in
+        // the one that ends at this day's sunrise.
+        let (brahma_from, brahma_to) = horizon.part(Half::Night, Night::Before, BRAHMA, PER_HALF);
+        assert!(
+            brahma_from > horizon.previous_sunset,
+            "Brahma Muhurta begins after the previous sunset"
+        );
+        assert!(
+            brahma_to < horizon.sunrise,
+            "and ends before this day's sunrise, not at it"
+        );
     }
 }

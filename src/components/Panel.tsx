@@ -670,6 +670,7 @@ export function Panel(props: Props): JSX.Element {
               events={selectedEvents()}
               context={{ timeZone: timeZone() }}
               isToday={sameDate(selected(), today())}
+              lunar={props.boot.settings.calendar.month_system !== "solar"}
               error={error()}
             />
           </Show>

@@ -82,7 +82,10 @@ export function Header(props: Props): JSX.Element {
     void current;
     const element = labelElement;
     if (!element) return;
-    if (element.scrollWidth > element.clientWidth && level() < candidates().length - 1) {
+    if (
+      element.scrollWidth > element.clientWidth &&
+      level() < candidates().length - 1
+    ) {
       setLevel(level() + 1);
     }
   });
@@ -183,7 +186,10 @@ const QUALIFIER = "Adhika ";
  * ladder above still sees one label. */
 function Label(props: { adhika: boolean; text: string }): JSX.Element {
   return (
-    <Show when={props.adhika ? qualifier(props.text) : null} fallback={props.text}>
+    <Show
+      when={props.adhika ? qualifier(props.text) : null}
+      fallback={props.text}
+    >
       {(split) => (
         <>
           {split().before}
@@ -198,7 +204,10 @@ function Label(props: { adhika: boolean; text: string }): JSX.Element {
 function qualifier(label: string): { before: string; after: string } | null {
   const at = label.indexOf(QUALIFIER);
   if (at < 0) return null;
-  return { before: label.slice(0, at), after: label.slice(at + QUALIFIER.length) };
+  return {
+    before: label.slice(0, at),
+    after: label.slice(at + QUALIFIER.length),
+  };
 }
 
 function Chevron(): JSX.Element {
@@ -243,8 +252,22 @@ function Gear(): JSX.Element {
           stroke-width="2.6"
         />
       ))}
-      <circle cx="12" cy="12" r={RIM} fill="none" stroke="currentColor" stroke-width="1.6" />
-      <circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <circle
+        cx="12"
+        cy="12"
+        r={RIM}
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2.3"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+      />
     </svg>
   );
 }

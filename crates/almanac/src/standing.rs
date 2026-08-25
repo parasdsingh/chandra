@@ -163,8 +163,11 @@ pub fn at(engine: &Engine, graha: Graha, jd: f64) -> Result<Standing> {
     // the most expensive thing a day view does.
     let positions = engine.positions(jd, &Graha::ALL)?;
     let longitude_of = |subject: Graha| {
-        positions[Graha::ALL.iter().position(|&g| g == subject).expect("Graha::ALL is complete")]
-            .longitude
+        positions[Graha::ALL
+            .iter()
+            .position(|&g| g == subject)
+            .expect("Graha::ALL is complete")]
+        .longitude
     };
 
     let longitude = longitude_of(graha);
@@ -301,7 +304,11 @@ mod tests {
     #[test]
     fn the_special_drishtis_reach_the_houses_they_are_defined_as() {
         assert!(aspects_rashi(Graha::Mangala, Rashi::Mesha, Rashi::Karka)); // 4th
-        assert!(aspects_rashi(Graha::Mangala, Rashi::Mesha, Rashi::Vrishchika)); // 8th
+        assert!(aspects_rashi(
+            Graha::Mangala,
+            Rashi::Mesha,
+            Rashi::Vrishchika
+        )); // 8th
         assert!(!aspects_rashi(Graha::Mangala, Rashi::Mesha, Rashi::Simha)); // 5th
 
         assert!(aspects_rashi(Graha::Guru, Rashi::Mesha, Rashi::Simha)); // 5th
@@ -336,18 +343,27 @@ mod tests {
 
     #[test]
     fn dignity_reads_the_sign_not_the_degree() {
-        assert_eq!(dignity_of(Graha::Surya, Rashi::Mesha), Some(Dignity::Exalted));
+        assert_eq!(
+            dignity_of(Graha::Surya, Rashi::Mesha),
+            Some(Dignity::Exalted)
+        );
         assert_eq!(
             dignity_of(Graha::Surya, Rashi::Tula),
             Some(Dignity::Debilitated)
         );
-        assert_eq!(dignity_of(Graha::Surya, Rashi::Simha), Some(Dignity::OwnSign));
+        assert_eq!(
+            dignity_of(Graha::Surya, Rashi::Simha),
+            Some(Dignity::OwnSign)
+        );
         assert_eq!(dignity_of(Graha::Surya, Rashi::Karka), None);
         assert_eq!(dignity_of(Graha::Rahu, Rashi::Vrishabha), None);
 
         // Kanya is both Budha's exaltation and its own sign. Exaltation is the
         // stronger statement, so it is the one reported.
-        assert_eq!(dignity_of(Graha::Budha, Rashi::Kanya), Some(Dignity::Exalted));
+        assert_eq!(
+            dignity_of(Graha::Budha, Rashi::Kanya),
+            Some(Dignity::Exalted)
+        );
         assert_eq!(
             dignity_of(Graha::Budha, Rashi::Mithuna),
             Some(Dignity::OwnSign)

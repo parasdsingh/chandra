@@ -20,18 +20,22 @@
  */
 
 import type { JSX } from "solid-js";
-import { Index, Show } from "solid-js";
+import { createSignal, Index, Show } from "solid-js";
 
 import type {
   DayPanchanga,
   DayDetail as Detail,
+  Dignity,
   GrahaDay,
   GrahaKey,
+  KaranaSpan,
   MoonDay,
   NakshatraSpan,
   RashiSpan,
+  Standing,
   TithiSpan,
   TransitEvent,
+  YogaSpan,
 } from "../ipc/types";
 import type { FormatContext } from "../lib/format";
 import {
@@ -61,8 +65,18 @@ interface Props {
   events: TransitEvent[];
   context: FormatContext;
   isToday: boolean;
+  /** Whether the calendar in force names months by the Moon.
+   *
+   * The payload no longer says: a day carries its panchanga in both calendars.
+   * Two things still turn on it - whether the header is showing the tithi as
+   * the title, and therefore whether this view has to print the civil date and
+   * the Moon's phase itself. */
+  lunar: boolean;
   error: { code: string; message: string } | undefined;
 }
+
+/** Which pane is showing. */
+type Pane = "day" | "position";
 
 /* The two states the day carries on its surface as well as in its fields.
    Each is one predicate used in both places, so the drawing and the words
@@ -71,7 +85,9 @@ interface Props {
 
 /** Combust, and knowably so: `orb` is absent for the Sun and the nodes. */
 function isCombust(detail: Detail | undefined): boolean {
-  return detail?.combustion.orb !== null && (detail?.combustion.combust ?? false);
+  return (
+    detail?.combustion.orb !== null && (detail?.combustion.combust ?? false)
+  );
 }
 
 /** Retrograde, excluding the nodes.
@@ -83,9 +99,7 @@ function isCombust(detail: Detail | undefined): boolean {
 function hasRetrogradeRail(detail: Detail | undefined): boolean {
   if (detail?.kind !== "graha") return false;
   const graha = detail as GrahaDay;
-  return (
-    graha.retrograde && graha.graha !== "rahu" && graha.graha !== "ketu"
-  );
+  return graha.retrograde && graha.graha !== "rahu" && graha.graha !== "ketu";
 }
 
 export function DayDetail(props: Props): JSX.Element {
@@ -108,20 +122,36 @@ export function DayDetail(props: Props): JSX.Element {
       </Show>
 
       <Show when={props.error} fallback={<Body {...props} />}>
-        {(error) => <ErrorBlock code={error().code} message={error().message} />}
+        {(error) => (
+          <ErrorBlock code={error().code} message={error().message} />
+        )}
       </Show>
     </div>
   );
 }
 
 function Body(props: Props): JSX.Element {
+  /**
+   * Which pane is showing, per panel rather than per day.
+   *
+   * Opening a second day keeps the pane you were in: a pane that reset on every
+   * open would make comparing one field across a run of days a two-click
+   * operation, which is most of what a calendar is for.
+   *
+   * Position opens first, for every subject. It is the pane whose contents
+   * change with the subject, so it is the one the calendar you are in is about;
+   * the Day pane is identical on all nine panels, which is what makes it the one
+   * you go to deliberately.
+   */
+  const [pane, setPane] = createSignal<Pane>("position");
+
   return (
     <Show when={props.detail}>
       {(detail) => (
         <>
           {/* The header already carries the date, so this names the day rather
-              than repeating it: the weekday, and in a lunar month the vara,
-              which is what the day is actually called. */}
+              than repeating it: the weekday, and the vara, which is what the day
+              is actually called. */}
           <div class="detail__date">
             <Show when={props.isToday}>
               <span class="detail__today">TODAY</span>
@@ -131,36 +161,80 @@ function Body(props: Props): JSX.Element {
             {/* The civil date, where the header is carrying the tithi instead.
                 A lunar day still has to be findable in the world the user
                 lives in. */}
-            <Show when={detail().panchanga}>
-              {(panchanga) => (
-                <>
-                  <span> · {formatShortDate(detail().date)}</span>
-                  <span> · {panchanga().vara_name}</span>
-                </>
-              )}
+            <Show when={props.lunar}>
+              <span> · {formatShortDate(detail().date)}</span>
             </Show>
+            <span> · {detail().panchanga.vara_name}</span>
           </div>
 
-          <Subject
-            detail={detail()}
-            events={props.events}
-            context={props.context}
-          />
+          <div class="detail__panes" role="tablist" aria-label="Day detail">
+            <PaneTab pane="day" current={pane()} onPick={setPane}>
+              Day
+            </PaneTab>
+            <PaneTab pane="position" current={pane()} onPick={setPane}>
+              Position
+            </PaneTab>
+          </div>
 
-          <Show when={detail().source === "moshier"}>
-            {/* Named for what it means, not for the theory that produced it:
-                "Moshier ephemeris" is the name of a piece of arithmetic and
-                tells a reader nothing. The magnitude is given so it reads as a
-                fact rather than a warning - a second is nothing against times
-                printed to the minute, and a reader who is not told that has to
-                assume the worst. */}
-            <p class="detail__provenance">
-              Outside 1800–2399. Times here are approximate, by about a second.
-            </p>
-          </Show>
+          <div
+            class="detail__scroll"
+            role="tabpanel"
+            aria-label={pane() === "day" ? "Day" : "Position"}
+          >
+            <Show
+              when={pane() === "day"}
+              fallback={
+                <PositionPane
+                  detail={detail()}
+                  events={props.events}
+                  context={props.context}
+                  lunar={props.lunar}
+                />
+              }
+            >
+              <DayPane detail={detail()} context={props.context} />
+            </Show>
+
+            <Show when={detail().source === "moshier"}>
+              {/* Named for what it means, not for the theory that produced it:
+                  "Moshier ephemeris" is the name of a piece of arithmetic and
+                  tells a reader nothing. The magnitude is given so it reads as a
+                  fact rather than a warning - a second is nothing against times
+                  printed to the minute, and a reader who is not told that has to
+                  assume the worst. */}
+              <p class="detail__provenance">
+                Outside 1800–2399. Times here are approximate, by about a
+                second.
+              </p>
+            </Show>
+          </div>
         </>
       )}
     </Show>
+  );
+}
+
+/** One of the two pane tabs. */
+function PaneTab(props: {
+  pane: Pane;
+  current: Pane;
+  onPick: (pane: Pane) => void;
+  children: JSX.Element;
+}): JSX.Element {
+  const selected = () => props.current === props.pane;
+  return (
+    <button
+      type="button"
+      class="detail__pane"
+      classList={{ "is-current": selected() }}
+      role="tab"
+      // The state is announced, not left to the ground colour. Which pane is
+      // showing is the one thing on this control a reader has to know.
+      aria-selected={selected()}
+      onClick={() => props.onPick(props.pane)}
+    >
+      {props.children}
+    </button>
   );
 }
 
@@ -193,25 +267,111 @@ function Field(props: {
 }
 
 /**
- * Every field of a day, for whichever subject it belongs to.
+ * What the civil day is, regardless of what is being plotted on it.
  *
- * The spans - tithi, nakshatra, rashi - are read the same way: the one in force
- * at the reference instant is the value, the hour it ends is the time, and the
- * one that follows is named underneath. A day holds at most two of each, so
- * naming the successor costs one line and saves opening tomorrow.
+ * Identical on all nine panels, and that is the split: a tithi does not depend
+ * on which graha is being read against it. Nothing here names the subject.
+ *
+ * The Moon's nakshatra is the panchanga's fifth limb and is deliberately not
+ * here. The payload carries the *subject's* nakshatra, which on a Mangala day is
+ * Mangala's - so a Nakshatra row in this pane would be true only when the
+ * subject happened to be the Moon. It sits in Position, where it is the
+ * subject's and is labelled as such.
  */
-function Subject(props: {
+function DayPane(props: {
+  detail: Detail;
+  context: FormatContext;
+}): JSX.Element {
+  const day = () => props.detail.panchanga;
+
+  return (
+    <>
+      <Spans label="Tithi" spans={tithiRows(day(), props.context)} />
+
+      <Show when={day().yogas.length > 0}>
+        <Spans label="Yoga" spans={yogaRows(day().yogas, props.context)} />
+      </Show>
+
+      <Show when={day().karanas.length > 0}>
+        <Spans
+          label="Karana"
+          spans={karanaRows(day().karanas, props.context)}
+        />
+      </Show>
+
+      {/* Sunrise and sunset on one line, the two ends of the same fact. This is
+          the day's own light, not a subject's rise: Surya's rise is in Position
+          on Surya's panel, and says the same thing about a different thing. */}
+      <Field
+        label="Daylight"
+        value={
+          day().sunrise
+            ? formatTime(day().sunrise!, props.context)
+            : "the Sun does not rise"
+        }
+        when={
+          day().sunset
+            ? `sets ${formatTime(day().sunset!, props.context)}`
+            : undefined
+        }
+        spoken={`${
+          day().sunrise
+            ? `sunrise ${formatTime(day().sunrise!, props.context)}`
+            : "the Sun does not rise"
+        }${day().sunset ? `, sets ${formatTime(day().sunset!, props.context)}` : ""}`}
+      />
+
+      {/* Every window the day is divided into, in the order they begin. Empty
+          where the Sun does not rise and set: a window defined as a fraction of
+          daylight has no meaning on a day with none. */}
+      <Show when={day().muhurtas.length > 0}>
+        <div class="field">
+          <div class="field__key">Muhurtas</div>
+          <Index each={day().muhurtas}>
+            {(window) => (
+              <div
+                class="field__line"
+                role="group"
+                aria-label={`${window().name}, ${
+                  window().inauspicious ? "avoid" : "auspicious"
+                }, ${formatTime(window().start, props.context)} to ${formatTime(
+                  window().end,
+                  props.context,
+                )}`}
+              >
+                <span class="field__value">{window().name}</span>
+                <span class="field__time">
+                  {formatTime(window().start, props.context)}–
+                  {formatTime(window().end, props.context)}
+                </span>
+              </div>
+            )}
+          </Index>
+        </div>
+      </Show>
+    </>
+  );
+}
+
+/**
+ * Where the subject stands, and what that puts it in relation to.
+ *
+ * Nothing here is the same for two subjects, which is the other half of the
+ * split.
+ */
+function PositionPane(props: {
   detail: Detail;
   events: TransitEvent[];
   context: FormatContext;
+  lunar: boolean;
 }): JSX.Element {
-  const moon = () => (props.detail.kind === "moon" ? (props.detail as MoonDay) : null);
+  const moon = () =>
+    props.detail.kind === "moon" ? (props.detail as MoonDay) : null;
   const graha = () =>
     props.detail.kind === "graha" ? (props.detail as GrahaDay) : null;
-  const panchanga = () => props.detail.panchanga;
+  const standing = (): Standing => props.detail.standing;
 
-  const isNode = () =>
-    graha()?.graha === "rahu" || graha()?.graha === "ketu";
+  const isNode = () => graha()?.graha === "rahu" || graha()?.graha === "ketu";
   const rise = () => (moon() ? moon()!.moonrise : graha()!.rise);
   const set = () => (moon() ? moon()!.moonset : graha()!.set);
 
@@ -232,26 +392,37 @@ function Subject(props: {
   return (
     <>
       {/* The phase names what a Gregorian day shows of the Moon. In a lunar
-          month the tithi says the same thing more precisely, so it does not
-          appear twice. */}
-      <Show when={moon() && !panchanga()}>
-        <Field label="Phase" value={phaseLabel(moon()!.phase)} spoken={phaseLabel(moon()!.phase)} />
+          month the tithi says the same thing more precisely and is the header's
+          title, so it does not appear twice. */}
+      <Show when={moon() && !props.lunar}>
+        <Field
+          label="Phase"
+          value={phaseLabel(moon()!.phase)}
+          spoken={phaseLabel(moon()!.phase)}
+        />
       </Show>
 
-      <Show when={panchanga()}>
-        {(day) => (
-          <Spans label="Tithi" spans={tithiRows(day(), props.context)} />
-        )}
-      </Show>
+      <Spans
+        label="Rashi"
+        spans={rashiRows(props.detail.rashis, props.context)}
+      />
 
       <Spans
         label="Nakshatra"
         spans={nakshatraRows(props.detail.nakshatras, props.context)}
       />
 
-      <Spans label="Rashi" spans={rashiRows(props.detail.rashis, props.context)} />
+      {/* Whose ground it is standing on. A separate field from the nakshatra
+          above rather than a suffix on it, because the lord belongs to the
+          nakshatra prevailing at the reference instant and the row above names
+          its successor too - a suffix would have read as qualifying both. */}
+      <Field
+        label="Nakshatra lord"
+        value={GRAHA_NAMES[standing().nakshatra_lord]}
+        spoken={`in the nakshatra of ${GRAHA_NAMES[standing().nakshatra_lord]}`}
+      />
 
-      {/* Named in words as well as by the mark on the grid. A minus sign on a
+      {/* Named in words as well as by the rail in the margin. A minus sign on a
           speed is not a state anyone should have to infer - and the speed itself
           is gone. */}
       <Show when={graha()}>
@@ -262,11 +433,71 @@ function Subject(props: {
               <>
                 {body().retrograde ? "Retrograde" : "Direct"}
                 <Show when={body().retrograde}>
-                  <span class="chip" aria-hidden="true">℞</span>
+                  <span class="chip" aria-hidden="true">
+                    ℞
+                  </span>
                 </Show>
               </>
             }
             spoken={body().retrograde ? "retrograde" : "direct"}
+          />
+        )}
+      </Show>
+
+      <Show when={standing().dignity}>
+        {(dignity) => (
+          <Field
+            label="Dignity"
+            value={DIGNITY_LABELS[dignity()]}
+            spoken={DIGNITY_LABELS[dignity()]}
+          />
+        )}
+      </Show>
+
+      {/* Cast and received on one field, because they are the same relation read
+          from the two ends and a reader looking for one is looking for both. */}
+      <Show
+        when={standing().aspects.length + standing().aspected_by.length > 0}
+      >
+        <div class="field">
+          <div class="field__key">Drishti</div>
+          <Show when={standing().aspects.length > 0}>
+            <div
+              class="field__line"
+              role="group"
+              aria-label={`aspects ${names(standing().aspects)}`}
+            >
+              <span class="field__value">
+                aspects {names(standing().aspects)}
+              </span>
+            </div>
+          </Show>
+          <Show when={standing().aspected_by.length > 0}>
+            <div
+              class="field__line"
+              role="group"
+              aria-label={`aspected by ${names(standing().aspected_by)}`}
+            >
+              <span class="field__value">
+                aspected by {names(standing().aspected_by)}
+              </span>
+            </div>
+          </Show>
+        </div>
+      </Show>
+
+      {/* No winner. Which graha wins a graha yuddha is decided differently by
+          different authorities, so the pairing and the separation are what is
+          reported - the observation rather than a reading of it. */}
+      <Show when={standing().war}>
+        {(war) => (
+          <Field
+            label="Planetary war"
+            value={`with ${GRAHA_NAMES[war().with]}`}
+            when={`${war().separation.toFixed(2)}°`}
+            spoken={`at war with ${GRAHA_NAMES[war().with]}, ${war().separation.toFixed(
+              2,
+            )} degrees apart`}
           />
         )}
       </Show>
@@ -279,14 +510,16 @@ function Subject(props: {
           that decision as an observation - the same sentence a circumpolar Moon
           gets for a completely different reason. */}
       <Show when={!isNode()}>
-      <Field
-        label={riseLabel()}
-        value={rise() ? formatTime(rise()!, props.context) : "does not rise"}
-        when={set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"}
-        spoken={`${rise() ? formatTime(rise()!, props.context) : "does not rise"}, ${
-          set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"
-        }`}
-      />
+        <Field
+          label={riseLabel()}
+          value={rise() ? formatTime(rise()!, props.context) : "does not rise"}
+          when={
+            set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"
+          }
+          spoken={`${rise() ? formatTime(rise()!, props.context) : "does not rise"}, ${
+            set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"
+          }`}
+        />
       </Show>
 
       {/* Combustion is drawn on the surface, so this is the words that carry it
@@ -320,6 +553,19 @@ function Subject(props: {
       </Show>
     </>
   );
+}
+
+const DIGNITY_LABELS: Record<Dignity, string> = {
+  exalted: "Exalted",
+  debilitated: "Debilitated",
+  own_sign: "Own sign",
+};
+
+/** `Guru and Shani`, `Budha, Guru and Shani`. */
+function names(grahas: GrahaKey[]): string {
+  const words = grahas.map((graha) => GRAHA_NAMES[graha]);
+  if (words.length <= 1) return words.join("");
+  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 interface SpanRow {
@@ -385,7 +631,33 @@ function tithiRows(panchanga: DayPanchanga, context: FormatContext): SpanRow[] {
   });
 }
 
-function nakshatraRows(spans: NakshatraSpan[], context: FormatContext): SpanRow[] {
+function yogaRows(spans: YogaSpan[], context: FormatContext): SpanRow[] {
+  return spans.map((span) => ({
+    value: span.name,
+    until: span.exit ? formatUntil(span.exit, context) : "time unavailable",
+    prevailing: span.prevailing,
+  }));
+}
+
+/**
+ * A karana's rows.
+ *
+ * The four that occur once a lunar month are marked as such. Without it Shakuni
+ * and Bava read as the same kind of thing, and one of them will not be seen
+ * again for a month - which is the only reason a reader would look this up.
+ */
+function karanaRows(spans: KaranaSpan[], context: FormatContext): SpanRow[] {
+  return spans.map((span) => ({
+    value: span.fixed ? `${span.name} · fixed` : span.name,
+    until: span.exit ? formatUntil(span.exit, context) : "time unavailable",
+    prevailing: span.prevailing,
+  }));
+}
+
+function nakshatraRows(
+  spans: NakshatraSpan[],
+  context: FormatContext,
+): SpanRow[] {
   return spans.map((span) => ({
     value: `${span.name} · Pada ${span.pada}`,
     until: formatUntil(span.exit, context),
@@ -420,12 +692,17 @@ const ERROR_TEXT: Record<string, { headline: string; cause: string }> = {
   },
 };
 
-export function ErrorBlock(props: { code: string; message: string }): JSX.Element {
+export function ErrorBlock(props: {
+  code: string;
+  message: string;
+}): JSX.Element {
   const text = () => ERROR_TEXT[props.code] ?? ERROR_TEXT.ENGINE!;
   return (
     <div class="error-block">
       <p class="error-block__headline">{text().headline}</p>
-      <p class="error-block__cause">{text().cause || truncate(props.message)}</p>
+      <p class="error-block__cause">
+        {text().cause || truncate(props.message)}
+      </p>
     </div>
   );
 }

@@ -6,8 +6,8 @@
 //! straight table of 27, and a karana's is a cycle of eleven laid over sixty
 //! that does not repeat evenly.
 
-use chandra_ephemeris::Source;
 use chandra_ephemeris::Engine;
+use chandra_ephemeris::Source;
 use serde::{Deserialize, Serialize};
 
 use crate::angles::{self, Divisions, RawSpan};
@@ -47,13 +47,7 @@ const YOGAS: [&str; 27] = [
 
 /// The seven movable karanas, which repeat.
 const MOVABLE: [&str; 7] = [
-    "Bava",
-    "Balava",
-    "Kaulava",
-    "Taitila",
-    "Gara",
-    "Vanija",
-    "Vishti",
+    "Bava", "Balava", "Kaulava", "Taitila", "Gara", "Vanija", "Vishti",
 ];
 
 /// A yoga touching one civil day.
@@ -110,7 +104,9 @@ fn karana_name(index: u8) -> Result<(&'static str, bool)> {
         58 => Ok(("Shakuni", true)),
         59 => Ok(("Chatushpada", true)),
         60 => Ok(("Naga", true)),
-        other => Err(Error::TimeZone(format!("karana index {other} out of range"))),
+        other => Err(Error::TimeZone(format!(
+            "karana index {other} out of range"
+        ))),
     }
 }
 
@@ -128,11 +124,7 @@ fn yoga_name(index: u8) -> Result<&'static str> {
 }
 
 /// Every yoga touching `day`, in order.
-pub fn yogas_in_day(
-    engine: &Engine,
-    day: &CivilDay,
-    reference_jd: f64,
-) -> Result<Vec<YogaSpan>> {
+pub fn yogas_in_day(engine: &Engine, day: &CivilDay, reference_jd: f64) -> Result<Vec<YogaSpan>> {
     angles::spans_in_day(engine, day, reference_jd, Divisions::YOGA)?
         .into_iter()
         .map(|span| {
@@ -196,7 +188,11 @@ mod tests {
         }
         assert_eq!(fixed, 4, "four karanas occur once a month");
         assert_eq!(movable, 56, "the seven movable ones run eight times over");
-        assert_eq!(movable % MOVABLE.len(), 0, "the movable run must be whole cycles");
+        assert_eq!(
+            movable % MOVABLE.len(),
+            0,
+            "the movable run must be whole cycles"
+        );
 
         assert!(karana_name(0).is_err());
         assert!(karana_name(61).is_err());
@@ -213,7 +209,10 @@ mod tests {
         }
         assert_eq!(counts.len(), 11, "eleven names over sixty karanas");
         for name in MOVABLE {
-            assert_eq!(counts[name], 8, "{name} is movable and should occur eight times");
+            assert_eq!(
+                counts[name], 8,
+                "{name} is movable and should occur eight times"
+            );
         }
         for name in ["Kimstughna", "Shakuni", "Chatushpada", "Naga"] {
             assert_eq!(counts[name], 1, "{name} is fixed and should occur once");

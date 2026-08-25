@@ -13,12 +13,10 @@ use jiff::tz::TimeZone;
 use serde::{Deserialize, Serialize};
 
 use crate::cache::Lru;
+use crate::day::DayOptions;
 use crate::error::{Error, Result};
 use crate::lunar::{self, LunarMonth, MonthSystem};
-use crate::day::DayOptions;
-use crate::month::{
-    self, DayDetail, GrahaMonth, IndexedMonth, MonthIndex, MonthLabel, MoonMonth,
-};
+use crate::month::{self, DayDetail, GrahaMonth, IndexedMonth, MonthIndex, MonthLabel, MoonMonth};
 use crate::phase::{self, PhaseName};
 use crate::time::{self, CivilDay, DateKey};
 use crate::tithi::CellTithi;

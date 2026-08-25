@@ -12,7 +12,14 @@
  */
 
 import type { JSX } from "solid-js";
-import { batch, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import {
+  batch,
+  createEffect,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+} from "solid-js";
 
 import * as ipc from "../ipc";
 import type {
@@ -27,6 +34,7 @@ import { GrahaGlyph } from "./GrahaGlyph";
 export type SettingsSection =
   | "root"
   | "calendar"
+  | "panchanga"
   | "location"
   | "astrology"
   | "menubar"
@@ -36,6 +44,7 @@ export type SettingsSection =
 export const SECTION_TITLES: Record<SettingsSection, string> = {
   root: "Settings",
   calendar: "Calendar",
+  panchanga: "Panchanga",
   location: "Location",
   astrology: "Astrology",
   menubar: "Menu bar",
@@ -58,6 +67,9 @@ export function SettingsView(props: Props): JSX.Element {
       </Show>
       <Show when={props.section === "calendar"}>
         <Calendar boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "panchanga"}>
+        <Panchanga boot={props.boot} apply={props.apply} />
       </Show>
       <Show when={props.section === "location"}>
         <Location boot={props.boot} apply={props.apply} />
@@ -98,13 +110,16 @@ function Root(props: {
   const trayCount = () => settings().tray.subjects.length;
 
   const rows: { id: SettingsSection; value: () => string }[] = [
-    { id: "calendar", value: () => shortSystem(settings().calendar.month_system) },
+    {
+      id: "calendar",
+      value: () => shortSystem(settings().calendar.month_system),
+    },
+    { id: "panchanga", value: () => limbCount(settings()) },
     { id: "location", value: () => props.boot.location.label },
     { id: "astrology", value: () => ayanamsaLabel().split(" ")[0] ?? "" },
     {
       id: "menubar",
-      value: () =>
-        trayCount() === 0 ? "Moon only" : `Moon + ${trayCount()}`,
+      value: () => (trayCount() === 0 ? "Moon only" : `Moon + ${trayCount()}`),
     },
     { id: "size", value: () => sizeLabel(settings().appearance.scale) },
     { id: "about", value: () => "" },
@@ -171,9 +186,7 @@ function Size(props: SectionProps): JSX.Element {
           {(size) => (
             <Choice
               label={size.label}
-              selected={
-                sizeLabel(settings().appearance.scale) === size.label
-              }
+              selected={sizeLabel(settings().appearance.scale) === size.label}
               onSelect={() =>
                 props.apply({
                   ...settings(),
@@ -395,7 +408,9 @@ function Location(props: SectionProps): JSX.Element {
               disabled={locating()}
               onClick={() => {
                 setLocating(true);
-                void ipc.requestDeviceLocation().finally(() => setLocating(false));
+                void ipc
+                  .requestDeviceLocation()
+                  .finally(() => setLocating(false));
               }}
             >
               {locating() ? "Asking macOS…" : "Use this Mac"}
@@ -432,7 +447,9 @@ function Location(props: SectionProps): JSX.Element {
   );
 }
 
-function provenanceLabel(provenance: Bootstrap["location"]["provenance"]): string {
+function provenanceLabel(
+  provenance: Bootstrap["location"]["provenance"],
+): string {
   switch (provenance) {
     case "manual":
       return "chosen";
@@ -487,6 +504,58 @@ function Astrology(props: SectionProps): JSX.Element {
   );
 }
 
+/**
+ * The optional limbs of the day view.
+ *
+ * Only the three that cost something are here. Dignity, drishti, planetary war
+ * and the nakshatra lord are always on: they cost one positions call between
+ * them, and a switch for a field that is free is a decision asked of the user
+ * for nothing.
+ *
+ * A limb that is off is not computed rather than computed and hidden, so these
+ * are not display preferences - they are what the day is asked for.
+ */
+function Panchanga(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  function set(limb: keyof Settings["panchanga"], on: boolean) {
+    props.apply({
+      ...settings(),
+      panchanga: { ...settings().panchanga, [limb]: on },
+    });
+  }
+
+  return (
+    <div class="settings__section">
+      <Toggle
+        label="Yogas"
+        on={settings().panchanga.yogas}
+        onToggle={() => set("yogas", !settings().panchanga.yogas)}
+      />
+      <Toggle
+        label="Karanas"
+        on={settings().panchanga.karanas}
+        onToggle={() => set("karanas", !settings().panchanga.karanas)}
+      />
+      <Toggle
+        label="Muhurtas"
+        on={settings().panchanga.muhurtas}
+        onToggle={() => set("muhurtas", !settings().panchanga.muhurtas)}
+      />
+
+      <p class="settings__hint settings__hint--foot">
+        Shown in the day view, under Day. Rahu Kaal, Yamaganda, Gulika, Abhijit,
+        Brahma Muhurta and Durmuhurtam are the muhurtas.
+      </p>
+
+      <p class="settings__hint settings__hint--foot">
+        {/* So the absence of a switch for these does not read as an omission. */}
+        Dignity, drishti, planetary war and the nakshatra lord are always shown.
+      </p>
+    </div>
+  );
+}
+
 function MenuBar(props: SectionProps): JSX.Element {
   const settings = () => props.boot.settings;
 
@@ -505,7 +574,8 @@ function MenuBar(props: SectionProps): JSX.Element {
       <For each={props.boot.grahas}>
         {(graha) => {
           const permanent = graha.key === "chandra";
-          const on = () => permanent || settings().tray.subjects.includes(graha.key);
+          const on = () =>
+            permanent || settings().tray.subjects.includes(graha.key);
           return (
             <button
               class="settings__toggle"
@@ -585,7 +655,10 @@ function About(props: { boot: Bootstrap }): JSX.Element {
  * as one of one, so the set of ayanamsas read as eleven unrelated controls each
  * claiming to be the only option it had.
  */
-function ChoiceGroup(props: { label: string; children: JSX.Element }): JSX.Element {
+function ChoiceGroup(props: {
+  label: string;
+  children: JSX.Element;
+}): JSX.Element {
   return (
     <div class="settings__choices" role="radiogroup" aria-label={props.label}>
       {props.children}
@@ -622,6 +695,21 @@ function Choice(props: {
  * several and cannot be switched off again once chosen, which is the opposite of
  * what this does. `switch` is the role for a control with two states.
  */
+/** `Off`, `Yogas`, `2 of 3`, `All`. */
+function limbCount(settings: Settings): string {
+  const limbs = settings.panchanga;
+  const on = [
+    limbs.yogas && "Yogas",
+    limbs.karanas && "Karanas",
+    limbs.muhurtas && "Muhurtas",
+  ].filter((label): label is string => typeof label === "string");
+
+  if (on.length === 0) return "Off";
+  if (on.length === 1) return on[0]!;
+  if (on.length === 3) return "All";
+  return `${on.length} of 3`;
+}
+
 function Toggle(props: {
   label: string;
   on: boolean;
