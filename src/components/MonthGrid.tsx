@@ -27,6 +27,16 @@ interface Props {
   selected: DateKey | null;
   today: DateKey;
   southern: boolean;
+  /**
+   * Whether this is the month filling the window.
+   *
+   * Three grids are mounted at once and two of them sit off screen behind
+   * `overflow: hidden`. They are hidden from assistive technology and kept out
+   * of the tab order: 84 gridcells nobody can see, and a today that appears in
+   * two grids at once claiming `aria-current` in both, are worse than no
+   * neighbours at all.
+   */
+  active: boolean;
   onSelect: (date: DateKey) => void;
 }
 
@@ -60,7 +70,26 @@ export function WeekdayRow(props: { firstWeekday: number }): JSX.Element {
  * together while the headings stay put.
  */
 export function MonthCells(props: Props): JSX.Element {
-  const focusedDate = () => props.selected ?? props.today;
+  /**
+   * The one cell that carries the tab stop.
+   *
+   * Three cases, not two: the selection, else today, else the first day of the
+   * displayed month (DESIGN 11.3). Without the third, scrolling two months away
+   * left every cell in all three grids at `tabindex="-1"` - tab went straight
+   * out of the document and the calendar was unreachable by keyboard or
+   * VoiceOver until an arrow key made a selection.
+   *
+   * Only days inside the month are eligible, so a today that appears as a
+   * neighbouring month's trailing cell does not claim the stop in two grids.
+   */
+  const focusedDate = (): DateKey | null => {
+    const inside = (props.month.days as (MoonCell | GrahaCell)[]).filter(
+      (day) => day.in_month,
+    );
+    const candidate = props.selected ?? props.today;
+    const named = inside.find((day) => sameDate(candidate, day.date));
+    return named?.date ?? inside[0]?.date ?? null;
+  };
 
   return (
     <>
@@ -76,6 +105,7 @@ export function MonthCells(props: Props): JSX.Element {
         aria-rowcount={6}
         aria-colcount={7}
         aria-label={props.month.label}
+        aria-hidden={props.active ? undefined : "true"}
       >
         <For each={weeks(props.month.days as (MoonCell | GrahaCell)[])}>
           {(week) => (
@@ -85,7 +115,7 @@ export function MonthCells(props: Props): JSX.Element {
                   const common = {
                     selected: sameDate(props.selected, cell.date),
                     today: sameDate(props.today, cell.date),
-                    focused: sameDate(focusedDate(), cell.date),
+                    focused: props.active && sameDate(focusedDate(), cell.date),
                     onSelect: () => props.onSelect(cell.date),
                   };
 

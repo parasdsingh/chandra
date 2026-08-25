@@ -12,7 +12,7 @@
  */
 
 import type { JSX } from "solid-js";
-import { For, Show } from "solid-js";
+import { Index, Show } from "solid-js";
 
 import type {
   Combustion,
@@ -258,16 +258,16 @@ function GrahaBody(props: {
 
       <Show when={props.events.length > 0}>
         <div class="detail__block">
-          <For each={props.events}>
+          <Index each={props.events}>
             {(event) => (
               <p class="detail__event">
-                <span>{describeEvent(event)}</span>
+                <span>{describeEvent(event())}</span>
                 <span class="detail__event-time">
-                  {formatTime(event.at, props.context)}
+                  {formatTime(event().at, props.context)}
                 </span>
               </p>
             )}
-          </For>
+          </Index>
         </div>
       </Show>
     </>
@@ -400,26 +400,30 @@ interface SpanRow {
 function SpanBlock(props: { label: string; spans: SpanRow[] }): JSX.Element {
   return (
     <div class="detail__block">
-      <For each={props.spans}>
+      {/* Index, not For: the spans are rebuilt as fresh objects on every read,
+          so keying by reference disposes and recreates every row for a value
+          that has not changed. The rows are positions in a list, which is what
+          Index keys by. */}
+      <Index each={props.spans}>
         {(span, index) => (
           <>
             <p
               class="detail__row"
               role="group"
-              aria-label={`${props.label}, ${span.value}, ${span.caption}`}
+              aria-label={`${props.label}, ${span().value}, ${span().caption}`}
             >
-              <span class="detail__label">{index() === 0 ? props.label : ""}</span>
+              <span class="detail__label">{index === 0 ? props.label : ""}</span>
               <span
                 class="detail__value"
-                classList={{ "is-secondary": !span.prevailing }}
+                classList={{ "is-secondary": !span().prevailing }}
               >
-                {span.value}
+                {span().value}
               </span>
             </p>
-            <p class="detail__caption">{span.caption}</p>
+            <p class="detail__caption">{span().caption}</p>
           </>
         )}
-      </For>
+      </Index>
     </div>
   );
 }

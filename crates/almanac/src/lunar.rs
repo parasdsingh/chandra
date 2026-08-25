@@ -242,6 +242,13 @@ fn first_civil_day(
 }
 
 /// The lunar month containing `jd`.
+///
+/// Selected by the civil days the month holds, not by the syzygy that opens it.
+/// The two disagree by up to a day - the month begins at the first sunrise after
+/// the syzygy - so an instant between them belongs to the month that is still
+/// running. Choosing by the syzygy alone opened a grid in which today was a
+/// dimmed out-of-month cell, and on 31 May 2026 amanta today was not among the
+/// 42 cells at all.
 pub fn month_containing(
     engine: &Engine,
     jd: f64,
@@ -250,8 +257,25 @@ pub fn month_containing(
     zone: &jiff::tz::TimeZone,
 ) -> Result<LunarMonth> {
     let target = system.boundary_elongation();
-    let start_jd = previous_syzygy(engine, jd, target)?;
-    build(engine, start_jd, system, observer, zone)
+    let month = build(
+        engine,
+        previous_syzygy(engine, jd, target)?,
+        system,
+        observer,
+        zone,
+    )?;
+
+    // At most one month out, because the two rules never differ by more than a
+    // single civil day.
+    let date = CivilDay::new(DateKey::new(1, 1, 1)?, zone)?.date_of(jd)?;
+    let step = if date < month.first_day {
+        -1
+    } else if date > month.last_day {
+        1
+    } else {
+        return Ok(month);
+    };
+    shift(engine, &month, step, system, observer, zone)
 }
 
 /// The lunar month `offset` months away from the one containing `jd`.

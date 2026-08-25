@@ -238,16 +238,28 @@ export function Panel(props: Props): JSX.Element {
     props.boot.grahas.find((graha) => graha.key === subject()),
   );
 
+  /**
+   * Events for the selected day, read from the month that owns it.
+   *
+   * A month's events are built from its own days, so the leading and trailing
+   * cells have none in the month being displayed - they belong to the
+   * neighbours. Filtering the centre month alone showed an ingress on the 3rd in
+   * September and nothing on the same 3rd drawn at the foot of August.
+   */
   const selectedEvents = createMemo(() => {
     const date = selected();
-    const data = monthData();
-    if (!date || !data || subject() === "chandra") return [];
-    return (data as GrahaMonth).events.filter(
-      (event) =>
-        event.date.year === date.year &&
-        event.date.month === date.month &&
-        event.date.day === date.day,
-    );
+    if (!date || subject() === "chandra") return [];
+
+    for (const delta of [0, -1, 1]) {
+      const data = monthAt(delta) as GrahaMonth | undefined;
+      if (!data) continue;
+      const owns = data.days.some(
+        (day) => day.in_month && sameDate(day.date, date),
+      );
+      if (!owns) continue;
+      return data.events.filter((event) => sameDate(event.date, date));
+    }
+    return [];
   });
 
   function step(delta: number) {
@@ -349,8 +361,8 @@ export function Panel(props: Props): JSX.Element {
       ArrowDown: () => moveSelection(7),
       PageUp: () => step(-1),
       PageDown: () => step(1),
-      Home: () => selectEdge(0),
-      End: () => selectEdge(-1),
+      Home: () => selectEdge("first"),
+      End: () => selectEdge("last"),
       Enter: () => openDay(selected() ?? today()),
       " ": () => openDay(selected() ?? today()),
       t: jumpToToday,
@@ -364,10 +376,17 @@ export function Panel(props: Props): JSX.Element {
     handler();
   }
 
-  function selectEdge(index: number) {
-    const days = monthData()?.days;
+  /**
+   * First or last day of the displayed month, as DESIGN specifies.
+   *
+   * Not the first or last cell of the grid: those belong to the neighbouring
+   * months, so Home in August selected 27 July and opened a day detail under an
+   * August header.
+   */
+  function selectEdge(edge: "first" | "last") {
+    const days = monthData()?.days.filter((day) => day.in_month);
     if (!days || days.length === 0) return;
-    setSelected(days.at(index)?.date ?? null);
+    setSelected((edge === "first" ? days[0] : days[days.length - 1])!.date);
   }
 
   /**

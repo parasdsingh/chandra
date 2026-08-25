@@ -185,6 +185,11 @@ re-anchors to the same month.
 
 Fix: select the month by the same rule that defines its extent.
 
+**fixed** — `month_containing` now checks the civil date against the month it
+built and steps one month where the syzygy rule and the sunrise rule disagree.
+`every_day_opens_the_lunar_month_that_draws_it` walks every day of 2026 in both
+systems and requires today to be among the 42 cells and inside the month.
+
 ### F-08 `Home` / `End` select days outside the month — B
 `src/components/Panel.tsx:365`
 
@@ -193,6 +198,10 @@ August 2026, `Home` selects 27 July and `End` selects 6 September, then `Enter`
 opens a day detail while the header still reads August. DESIGN specifies "first /
 last day of the displayed month".
 
+**fixed** — `selectEdge` takes `"first"`/`"last"` and filters to `in_month`,
+so Home and End select the first and last day of the displayed month as DESIGN
+specifies. No front-end test harness exists to hold it.
+
 ### F-09 A lead or trail day reports no transit events — B
 `src/components/Panel.tsx:239`, `crates/almanac/src/month.rs:360`
 
@@ -200,6 +209,10 @@ Events are deliberately built from in-month days only. The front end filters tha
 list by the selected date without noticing the cell is out of month, so clicking
 the trailing `3` in August shows no ingress while September shows it. Same date,
 two answers.
+
+**fixed** — `selectedEvents` finds the month that actually owns the selected
+date among the three in hand and reads that month's events, so the same date
+reports the same ingress whichever month's grid it is clicked in.
 
 ### F-10 The `℞` mark fuses with the Guru and Rahu glyphs — B
 `crates/glyph/src/render.rs:129-190`
@@ -215,6 +228,13 @@ icon is the one drawn most often.
 
 Fix: place the mark clear of the glyph's ink, or shrink the glyph further, or
 inset the mark. Replace the corner-ink test with a connectivity test.
+
+**fixed** — the mark is placed by its inked box rather than its nominal one, so
+it sits in the corner it was meant to and clears every glyph by at least 0.77pt.
+`the_retrograde_mark_is_a_separate_shape_beside_the_glyph` replaces the
+corner-ink measurement with connected-component analysis at zero threshold: the
+marked icon must hold exactly one region more than the plain one. Against the old
+placement it fails on the first graha it reaches.
 
 ### F-11 The panel is placed against the wrong display — B
 `src-tauri/src/panel.rs:157-183`
@@ -233,6 +253,11 @@ success. `set_position` is `let _`-discarded.
 Fix: `monitor_from_point` seeded from the tray rect; do not show on a placement
 failure.
 
+**fixed** — `place` finds the monitor from the tray rectangle with
+`monitor_from_point`, uses that monitor's scale for every conversion, and returns
+a `Result`; `toggle` places before it shows and shows nothing on failure. Not
+testable here: the answer comes from the window server.
+
 ### F-12 The grid loses its tab stop, or grows two — B
 `src/components/MonthGrid.tsx:63,88`, `src/components/DayCell.tsx:131`
 
@@ -246,6 +271,11 @@ outside the displayed month, it is the first day of the displayed month".
 Converse: when today falls in the first or last week it also appears in the
 adjacent month's simultaneously-mounted grid, so two elements carry
 `tabindex=0` and `aria-current="date"`.
+
+**fixed** — `focusedDate` has the missing third case, restricted to days inside
+the month, and `MonthCells` takes an `active` flag so only the month filling the
+window carries the tab stop. The two off-screen grids are `aria-hidden`, which
+also closes F-48.
 
 ### F-13 `rise_set` and `ayanamsa` carry no provenance — B
 `crates/ephemeris/src/engine.rs:99-111`, `:294-306`
@@ -475,6 +505,9 @@ defect gets written.
   because it is drawn at roughly a third of the size". It is drawn at 61% and
   renders lighter. `render.rs`'s inset comment describes a box that is not the
   inked box.
+  **fixed** — the stroke comment now gives the real ratio and the real rendered
+  weights, 1.21pt against the glyph's 1.24pt; the inset comment is gone with the
+  constant it described, replaced by the ink-based placement of F-10.
 - **F-45** `se_body_id` is computed before the `Rahu | Ketu` early return.
   **fixed** — the node return moved above it, and above the lock it no longer
   needs to take.
@@ -486,8 +519,11 @@ defect gets written.
 - **F-47** `<For each={months()}>` allocates three fresh objects per read and
   keys by reference, so every commit disposes and rebuilds 126 cells mid-gesture.
   `<Index>` is the right primitive. Same pattern in `DayDetail`.
+  **fixed** — `Index` in the scroller and in `DayDetail`'s span and event lists.
 - **F-48** Three grids sit in the accessibility tree: 18 rows, 126 gridcells, 84
   of them off-screen behind `overflow: hidden` with no `aria-hidden`.
+  **fixed** — the two off-screen grids are `aria-hidden` and their cells are out
+  of the tab order, by the same `active` flag F-12 needed.
 - **F-49** `role="radio"` on a boolean toggle, and no `role="radiogroup"` around
   the `Choice` groups.
 - **F-50** `an_unknown_zone_falls_back_to_greenwich` builds a `Resolved` locally

@@ -134,6 +134,15 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
         return;
     }
 
+    // Placed before anything is shown or announced. A panel that could not be
+    // positioned would appear wherever it last was, which on a second display is
+    // the wrong screen entirely; saying nothing and showing it anyway made a
+    // positioning failure indistinguishable from success.
+    if let Err(error) = place(&window, tray_rect) {
+        eprintln!("chandra: {error}");
+        return;
+    }
+
     set_current_subject(app, subject);
 
     // The page is told, and never reloaded.
@@ -151,8 +160,6 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
     // the window takes focus, which is a pull and so cannot be missed. Both call
     // the same function with the same value, so arriving twice is arriving once.
     let _ = window.emit_to(PANEL_LABEL, OPEN_EVENT, subject.key());
-
-    place(&window, tray_rect);
 
     // On macOS the app must be shown as well as the window: hiding only the
     // window leaves the app present in Mission Control and Cmd-Tab, and showing
@@ -181,13 +188,30 @@ pub fn hide(app: &AppHandle) {
 
 /// Centres the panel under the tray item, 6px below the menu bar, fully on
 /// screen (`docs/DESIGN.md` 2.2).
-fn place(window: &WebviewWindow, tray_rect: Rect) {
+///
+/// The monitor is the one the clicked item is on, found from the item's own
+/// rectangle. `current_monitor` answers for the panel instead, which is the
+/// display it was last shown on: on a Retina laptop beside a 1x external screen
+/// that both picked the wrong display and divided a physical rectangle by the
+/// wrong scale, then clamped the result into the wrong bounds. It never
+/// self-corrected, because the answer it gave became the input to the next one.
+fn place(window: &WebviewWindow, tray_rect: Rect) -> Result<()> {
     const EDGE_MARGIN: f64 = 12.0;
     const MENU_BAR_GAP: f64 = 6.0;
 
-    let Ok(Some(monitor)) = window.current_monitor() else {
-        return;
-    };
+    // The click event carries a physical rectangle, so 1.0 is the identity here.
+    // There is no better estimate for a logical one until the monitor is known,
+    // and that is the thing being looked up.
+    let anchor = tray_rect.position.to_physical::<f64>(1.0);
+    let monitor = window
+        .monitor_from_point(anchor.x, anchor.y)
+        .map_err(|error| AppError::Engine(format!("cannot identify the display: {error}")))?
+        .ok_or_else(|| {
+            AppError::Engine(format!(
+                "no display contains the tray item at {}, {}",
+                anchor.x, anchor.y
+            ))
+        })?;
     let scale = monitor.scale_factor();
     let monitor_position = monitor.position().to_logical::<f64>(scale);
     let monitor_size = monitor.size().to_logical::<f64>(scale);
@@ -206,7 +230,9 @@ fn place(window: &WebviewWindow, tray_rect: Rect) {
     // bar height without measuring or assuming one.
     let y = (monitor.work_area().position.y as f64) / scale + MENU_BAR_GAP;
 
-    let _ = window.set_position(LogicalPosition::new(x, y));
+    window
+        .set_position(LogicalPosition::new(x, y))
+        .map_err(|error| AppError::Engine(format!("cannot position the panel: {error}")))
 }
 
 /// Asks macOS for the device's coordinates, waits for an answer, and records it.

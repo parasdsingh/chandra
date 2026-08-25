@@ -1323,3 +1323,51 @@ fn a_month_computed_under_one_ayanamsa_is_never_served_under_another() {
         }
     }
 }
+
+/// The month a day opens is the month whose grid draws it.
+///
+/// Two routes decide "which month is this day in": the syzygy the anchor falls
+/// after, and the first-sunrise-after-syzygy rule that fixes the month's civil
+/// extent. They differ by up to a day, and where they do the panel opened on a
+/// month that did not contain today - drawn as a dimmed leading cell, or on
+/// 31 May 2026 amanta absent from all 42.
+#[test]
+fn every_day_opens_the_lunar_month_that_draws_it() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    for system in [System::Amanta, System::Purnimanta] {
+        for month in 1..=12i8 {
+            for day in 1..=chandra_almanac::time::days_in_month(2026, month).expect("month length")
+            {
+                let date = DateKey::new(2026, month, day as i8).expect("date");
+                let view = almanac
+                    .moon_month(MonthCursor {
+                        anchor_unix_ms: (chandra_ephemeris::jd_to_unix_seconds(noon_jd((
+                            2026, month, day as i8,
+                        ))) * 1000.0) as i64,
+                        offset: 0,
+                        system,
+                        first_weekday: 0,
+                    })
+                    .expect("month");
+
+                let cell = view
+                    .days
+                    .iter()
+                    .find(|cell| cell.date == date)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "{system:?} {date:?}: today is not among the 42 cells of {}",
+                            view.label
+                        )
+                    });
+                assert!(
+                    cell.in_month,
+                    "{system:?} {date:?}: today is drawn as a neighbouring month's cell in {}",
+                    view.label
+                );
+            }
+        }
+    }
+}

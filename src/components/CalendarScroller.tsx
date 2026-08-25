@@ -29,7 +29,7 @@
  */
 
 import type { JSX } from "solid-js";
-import { batch, createSignal, For, onCleanup, Show } from "solid-js";
+import { batch, createSignal, Index, onCleanup, Show } from "solid-js";
 
 import type { DateKey, GrahaInfo, GrahaMonth, MoonMonth } from "../ipc/types";
 import { MonthCells, WeekdayRow } from "./MonthGrid";
@@ -336,10 +336,14 @@ export function CalendarScroller(props: Props): JSX.Element {
           class="scroller__strip"
           style={{ transform: `translateY(${shift()}px)` }}
         >
-          <For each={months()}>
+          {/* Index, not For. `months()` builds three fresh objects every read
+              and For keys by reference, so each commit disposed and rebuilt all
+              126 cells in the middle of a gesture. Index keys by position,
+              which is what these three slots are. */}
+          <Index each={months()}>
             {(entry) => (
-              <div class="scroller__month" style={{ top: `${entry.offset}px` }}>
-                <Show when={entry.month}>
+              <div class="scroller__month" style={{ top: `${entry().offset}px` }}>
+                <Show when={entry().month}>
                   {(month) => (
                     <MonthCells
                       firstWeekday={props.firstWeekday}
@@ -349,6 +353,7 @@ export function CalendarScroller(props: Props): JSX.Element {
                       selected={props.selected}
                       today={props.today}
                       southern={props.southern}
+                      active={entry().offset === 0}
                       onSelect={(date) => {
                         // A drag that ends over a cell must not also select it.
                         if (moved) return;
@@ -359,7 +364,7 @@ export function CalendarScroller(props: Props): JSX.Element {
                 </Show>
               </div>
             )}
-          </For>
+          </Index>
         </div>
       </div>
     </div>

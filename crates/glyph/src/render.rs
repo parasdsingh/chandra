@@ -128,9 +128,18 @@ pub fn moon_icon(
 /// share the slot with it.
 const GLYPH_WITH_MARK_POINTS: f32 = 16.5;
 
-/// Size and position of the retrograde mark inside the slot.
+/// Size of the retrograde mark inside the slot.
 const MARK_POINTS: f32 = 10.0;
-const MARK_ORIGIN: f32 = SLOT_POINTS - MARK_POINTS - 0.5;
+
+/// Clearance between the mark's ink and the edge of the slot.
+///
+/// The mark is placed by its ink, not by its nominal box: `℞` fills a little
+/// over half its own design grid, so an origin computed from the box left it
+/// 1.8pt short of the corner it is meant to occupy - and hard against the glyph
+/// beside it. Guru's baseline bar and Rahu's right tail both ran into the mark's
+/// top bar, and the two rendered as a single shape rather than as a symbol with
+/// an annotation.
+const MARK_CLEARANCE: f32 = 0.8;
 
 /// Renders a graha's template glyph, marked `℞` while it is retrograde.
 ///
@@ -182,10 +191,18 @@ pub fn graha_icon(
 
     if retrograde {
         let mark = path::parse(glyphs::RETROGRADE)?;
+        let mark_ink = mark
+            .compute_tight_bounds()
+            .ok_or(path::PathError::Empty)?
+            .outset(RETROGRADE_STROKE / 2.0, RETROGRADE_STROKE / 2.0)
+            .ok_or(path::PathError::Empty)?;
+
         let mark_scale = MARK_POINTS / DESIGN_GRID * scale as f32;
-        let offset = MARK_ORIGIN * scale as f32;
-        let placement =
-            Transform::from_scale(mark_scale, mark_scale).post_translate(offset, offset);
+        let corner = (SLOT_POINTS - MARK_CLEARANCE) * scale as f32;
+        let placement = Transform::from_scale(mark_scale, mark_scale).post_translate(
+            corner - mark_ink.right() * mark_scale,
+            corner - mark_ink.bottom() * mark_scale,
+        );
         pixmap.stroke_path(&mark, &paint, &mark_stroke(), placement, None);
     }
 
@@ -399,26 +416,60 @@ mod tests {
         }
     }
 
-    /// Alpha-weighted ink inside a square region of a 44x44 icon.
-    fn ink_in(icon: &Icon, from_x: u32, from_y: u32, size: u32) -> f64 {
-        let mut ink = 0.0;
-        for y in from_y..from_y + size {
-            for x in from_x..from_x + size {
-                ink += icon.rgba[((y * icon.width + x) * 4 + 3) as usize] as f64 / 255.0;
+    /// Regions of ink connected to each other, at 8-connectivity.
+    ///
+    /// Ink measured inside a corner box cannot tell an annotation from a blob:
+    /// two shapes that touch still put ink in the corner, and total coverage
+    /// says less still, because a shrunk glyph loses more area than the mark
+    /// adds. Whether the mark is a separate shape is the actual question, so it
+    /// is the one asked.
+    fn components(icon: &Icon) -> usize {
+        // Any pixel the rasteriser touched at all, so a single bridging pixel
+        // of anti-aliasing is a failure rather than a rounding detail.
+        const INK: u8 = 0;
+
+        let width = icon.width as i64;
+        let height = icon.height as i64;
+        let inked: Vec<bool> = icon.rgba.chunks_exact(4).map(|p| p[3] > INK).collect();
+        let mut seen = vec![false; inked.len()];
+        let mut found = 0;
+
+        for start in 0..inked.len() {
+            if !inked[start] || seen[start] {
+                continue;
+            }
+            found += 1;
+            seen[start] = true;
+
+            let mut pending = vec![start];
+            while let Some(index) = pending.pop() {
+                let (x, y) = ((index as i64) % width, (index as i64) / width);
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        let (nx, ny) = (x + dx, y + dy);
+                        if nx < 0 || ny < 0 || nx >= width || ny >= height {
+                            continue;
+                        }
+                        let neighbour = (ny * width + nx) as usize;
+                        if inked[neighbour] && !seen[neighbour] {
+                            seen[neighbour] = true;
+                            pending.push(neighbour);
+                        }
+                    }
+                }
             }
         }
-        ink
+        found
     }
 
-    /// The retrograde mark must annotate the glyph, not replace it.
+    /// The retrograde mark must annotate the glyph, not merge with it.
     ///
     /// A menu bar icon has 22 points and one job: say which graha this is. The
-    /// mark is an annotation on that, drawn in the lower right corner the glyph
-    /// gives up by shrinking. Total coverage is not the test - the Sun's disc
-    /// loses more area by shrinking than the mark adds - so the corner is
-    /// measured directly.
+    /// mark is an annotation on that, drawn in the corner the glyph gives up by
+    /// shrinking, and it has to read as a second shape rather than as a growth
+    /// on the first.
     #[test]
-    fn the_retrograde_mark_annotates_the_glyph_without_replacing_it() {
+    fn the_retrograde_mark_is_a_separate_shape_beside_the_glyph() {
         for graha in Graha::ALL {
             let plain = graha_icon(graha, 2, Tint::Template, false).expect("render");
             let marked = graha_icon(graha, 2, Tint::Template, true).expect("render");
@@ -426,9 +477,10 @@ mod tests {
             assert_ne!(plain.rgba, marked.rgba, "{} is unmarked", graha.name());
             assert_eq!((marked.width, marked.height), (44, 44));
 
-            assert!(
-                ink_in(&marked, 26, 26, 18) > ink_in(&plain, 26, 26, 18) + 8.0,
-                "{}: the mark did not land in the lower right corner",
+            assert_eq!(
+                components(&marked),
+                components(&plain) + 1,
+                "{}: the mark and the glyph rasterise as one shape",
                 graha.name()
             );
             assert!(
@@ -443,15 +495,24 @@ mod tests {
             for pixel in marked.rgba.chunks_exact(4) {
                 assert_eq!([pixel[0], pixel[1], pixel[2]], [0, 0, 0]);
             }
-        }
 
-        // Nothing of the mark falls outside the slot: the outermost row and
-        // column must stay clear, or macOS clips it against its neighbour.
-        let marked = graha_icon(Graha::Shani, 2, Tint::Template, true).expect("render");
-        for index in 0..44u32 {
-            let edge = |x: u32, y: u32| marked.rgba[((y * 44 + x) * 4 + 3) as usize];
-            assert_eq!(edge(43, index), 0, "ink on the right edge");
-            assert_eq!(edge(index, 43), 0, "ink on the bottom edge");
+            // Nothing of the mark falls outside the slot: the outermost row and
+            // column must stay clear, or macOS clips it against its neighbour.
+            for index in 0..44u32 {
+                let edge = |x: u32, y: u32| marked.rgba[((y * 44 + x) * 4 + 3) as usize];
+                assert_eq!(
+                    edge(43, index),
+                    0,
+                    "{}: ink on the right edge",
+                    graha.name()
+                );
+                assert_eq!(
+                    edge(index, 43),
+                    0,
+                    "{}: ink on the bottom edge",
+                    graha.name()
+                );
+            }
         }
     }
 

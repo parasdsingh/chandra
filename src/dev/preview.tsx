@@ -148,6 +148,7 @@ export function Preview(): JSX.Element {
               selected={{ year: 2026, month: 8, day: 21 }}
               today={{ year: 2026, month: 8, day: 21 }}
               southern={false}
+              active
               onSelect={() => {}}
             />
           </div>
@@ -166,6 +167,7 @@ export function Preview(): JSX.Element {
               selected={null}
               today={{ year: 2026, month: 8, day: 21 }}
               southern={false}
+              active
               onSelect={() => {}}
             />
           </div>
@@ -260,6 +262,7 @@ export function Preview(): JSX.Element {
               selected={{ year: 2025, month: 2, day: 24 }}
               today={{ year: 2025, month: 2, day: 10 }}
               southern={false}
+              active
               onSelect={() => {}}
             />
           </div>

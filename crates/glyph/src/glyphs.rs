@@ -26,9 +26,12 @@ pub const RETROGRADE: &str = concat!(
 
 /// Stroke width for the retrograde mark, in design units.
 ///
-/// Heavier than a glyph's because it is drawn at roughly a third of the size: at
-/// [`STROKE_WIDTH`] the mark rendered as a grey smudge in the menu bar rather
-/// than as a letter.
+/// Larger than [`STROKE_WIDTH`] because the mark is drawn smaller: 10pt against
+/// the marked glyph's 16.5pt, so its grid unit is 0.42pt against the glyph's
+/// 0.69. The two land within a hundredth of a point of each other on screen -
+/// 1.21pt and 1.24pt - which is the point. At [`STROKE_WIDTH`] the mark would
+/// come out at 0.75pt and read as a grey smudge beside a symbol twice its
+/// weight.
 pub const RETROGRADE_STROKE: f32 = 2.9;
 
 /// How a glyph's path is painted.
