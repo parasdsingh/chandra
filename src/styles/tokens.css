@@ -45,6 +45,15 @@
   /* Meaning. Exactly two hues in the entire app. */
   --accent: #d8b36a; /* TODAY ONLY */
 
+  /* Combustion. The one colour in the app that depicts rather than encodes: a
+     body inside the Sun's rays is drawn as the glare it is lost in, and glare is
+     warm because glare is warm. Pushed to orange rather than amber so it cannot
+     be mistaken for --accent, which sits about 25 degrees away in hue and can
+     appear in the same 40px cell. It carries no meaning on its own - every
+     combust day says so in words in the day view - so it is free to sit below
+     the contrast floor a text colour would have to clear. */
+  --glare: #e2603a;
+
   /* Graphics */
   --marker: #c8c8ce;
   --disc-lit: #d4d4d9;
@@ -69,6 +78,10 @@
   --type-title: 600 15px / 20px var(--font-stack);
   --track-title: -0.1px;
   --type-numeral: 450 13px / 16px var(--font-stack);
+  /* The day view's fields. Larger than body, because a value and the hour it
+     ends are what the day is opened to read, and at 13px they were the same
+     size as everything around them. */
+  --type-value: 400 15px / 20px var(--font-stack);
   --type-body: 400 13px / 18px var(--font-stack);
   --type-label: 400 12px / 16px var(--font-stack);
   --type-caption: 400 11px / 14px var(--font-stack);

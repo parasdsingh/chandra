@@ -280,6 +280,7 @@
 
 .day-cell__numeral {
   position: relative;
+  z-index: 1;
   font: var(--type-numeral);
   color: var(--text-primary);
   height: 16px;
@@ -297,6 +298,7 @@
 
 .day-cell__content {
   position: relative;
+  z-index: 1;
   margin-top: var(--s-1);
   height: 14px;
   display: flex;
@@ -435,24 +437,86 @@
   transform: rotate(45deg);
 }
 
-/* Combustion is a span, so it is a rule under the numeral rather than another
-   marker competing for the marker row. */
-/* Combustion lasts all day, so it is a rule rather than a mark. Sitting under
-   the glyph at most of the cell's width it reads at a glance; the 12px hairline
-   it replaced sat against the numeral and was effectively invisible. Inset, so
-   it never runs into the retrograde rule at the cell's edge. */
+/* Combustion is the day burning at its foot, the same wash the day view uses so
+   one state has one appearance on both surfaces.
+
+   A field rather than a mark: it lies behind everything, costs no room in a cell
+   that has none, and a run of combust days reads as one warm stretch instead of
+   as five separate marks. It replaced a flame drawn in outline, which at 40px
+   was a shape to decode rather than a thing to feel. Nothing here is the sole
+   carrier - the day view says "combust" in words - so this is free to be quiet. */
 .day-cell__combust {
   position: absolute;
-  bottom: 4px;
-  left: 9px;
-  right: 9px;
-  height: 1.5px;
-  border-radius: 1px;
-  background: var(--marker);
-  opacity: 0.9;
+  inset: 0;
+  border-radius: var(--r-cell);
+  pointer-events: none;
+  /* Behind the day it belongs to. It is drawn last so that it can be, and
+     without this it would wash over the numeral and the glyph. */
+  z-index: 0;
+  background: radial-gradient(
+    130% 62% at 50% 112%,
+    rgba(226, 96, 58, 0.5) 0%,
+    rgba(226, 96, 58, 0.2) 42%,
+    rgba(226, 96, 58, 0) 72%
+  );
+}
+
+/* Behind the neighbouring month's dimming, not in front of it: an out-of-month
+   day that glowed as brightly as one inside it would read as the more important
+   of the two. */
+.day-cell.is-outside .day-cell__combust {
+  opacity: 0.45;
 }
 
 /* ---------- detail ---------- */
+
+/* A field: a small label, the value, and the hour it gives way.
+
+   Nothing is aligned to a column but the right-hand time, so the stack reads as
+   a list of statements rather than as a table. The value and the time are set at
+   the same size deliberately: the hour is half of what the field says, and at
+   caption size it was the smallest thing on the surface. */
+.field {
+  margin-bottom: var(--s-4);
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field__key {
+  font: var(--type-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 2px;
+}
+
+.field__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.field__value {
+  font: var(--type-value);
+  color: var(--text-primary);
+}
+
+.field__time {
+  font: var(--type-value);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* What follows in the same day. Named rather than left to be discovered by
+   opening tomorrow, which costs one line and answers the question the boundary
+   time raises. */
+.field__next {
+  font: var(--type-body);
+  color: var(--text-secondary);
+}
 
 .detail {
   height: 100%;
@@ -486,89 +550,10 @@
   color: var(--text-tertiary);
   text-transform: uppercase;
   height: 14px;
+  /* The day's name, then the fields. Without this the first field's own label
+     sat immediately under it and the two read as one run of small capitals. */
+  margin-bottom: var(--s-4);
 }
-
-.detail__headline {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  height: var(--s-7);
-  margin-top: var(--s-2);
-}
-
-.detail__phase {
-  font: var(--type-headline);
-  letter-spacing: var(--track-headline);
-  color: var(--text-primary);
-}
-
-.detail__illum {
-  font: var(--type-body);
-  color: var(--text-secondary);
-}
-
-.detail__block {
-  margin-top: var(--s-4);
-}
-
-.detail__row {
-  margin: 0;
-  height: var(--s-7);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.detail__label {
-  font: var(--type-label);
-  color: var(--text-secondary);
-}
-
-/* Right alignment is what makes the tabular figures pay off: every digit column
-   lines up down the block. */
-.detail__value {
-  font: var(--type-body);
-  color: var(--text-primary);
-  text-align: right;
-}
-
-.detail__value.is-absent {
-  color: var(--text-tertiary);
-}
-
-/* A continuation span: present, but not the one the day is named after. */
-.detail__value.is-secondary {
-  color: var(--text-secondary);
-}
-
-.detail__caption,
-.detail__note {
-  margin: 0;
-  font: var(--type-caption);
-  letter-spacing: var(--track-caption);
-  color: var(--text-tertiary);
-  text-align: right;
-  height: 18px;
-}
-
-.detail__note {
-  height: 14px;
-}
-
-.detail__event {
-  margin: 0;
-  height: 18px;
-  display: flex;
-  justify-content: space-between;
-  font: var(--type-caption);
-  letter-spacing: var(--track-caption);
-  color: var(--text-secondary);
-}
-
-.detail__event-time {
-  color: var(--text-tertiary);
-}
-
 /* Stated as a fact, in words, where the number is read. No amber, no triangle,
    no border (docs/DESIGN.md 9.4). */
 .detail__provenance {

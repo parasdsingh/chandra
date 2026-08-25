@@ -134,13 +134,13 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
         return;
     }
 
-    // Placed before anything is shown or announced. A panel that could not be
-    // positioned would appear wherever it last was, which on a second display is
-    // the wrong screen entirely; saying nothing and showing it anyway made a
-    // positioning failure indistinguishable from success.
+    // Positioned before it is shown, so it never appears in the wrong place and
+    // then jumps. A failure here is reported and then ignored: the panel opens
+    // where it last was, which is wrong on a second display but is a great deal
+    // better than a tray item that does nothing at all. Refusing to show it made
+    // one bad monitor lookup uninstall the app's only surface.
     if let Err(error) = place(&window, tray_rect) {
         eprintln!("chandra: {error}");
-        return;
     }
 
     set_current_subject(app, subject);
@@ -199,13 +199,42 @@ fn place(window: &WebviewWindow, tray_rect: Rect) -> Result<()> {
     const EDGE_MARGIN: f64 = 12.0;
     const MENU_BAR_GAP: f64 = 6.0;
 
-    // The click event carries a physical rectangle, so 1.0 is the identity here.
-    // There is no better estimate for a logical one until the monitor is known,
-    // and that is the thing being looked up.
+    // Which display the tray item is on, not the one the panel was left on: an
+    // item clicked on a second screen must open its panel there.
+    //
+    // The lookup is fed two candidate points because the units do not line up.
+    // `tray-icon` builds the rect by multiplying by the status item's backing
+    // scale, so what arrives is physical; `tao` implements the lookup as
+    // `CGRectContainsPoint(CGDisplayBounds(...))` and treats those bounds as
+    // logical. On a 2x display the physical point is therefore twice as far
+    // right as the bounds it is tested against, lands outside the only screen,
+    // and the lookup finds nothing at all - which is what stopped the panel
+    // opening on this Mac. The status item's own scale is not reachable from
+    // here, so the panel's is the best estimate available, and trying the raw
+    // point first keeps a 1x display exact.
     let anchor = tray_rect.position.to_physical::<f64>(1.0);
+    let estimate = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| monitor.scale_factor())
+        .unwrap_or(1.0);
+
     let monitor = window
         .monitor_from_point(anchor.x, anchor.y)
-        .map_err(|error| AppError::Engine(format!("cannot identify the display: {error}")))?
+        .ok()
+        .flatten()
+        .or_else(|| {
+            window
+                .monitor_from_point(anchor.x / estimate, anchor.y / estimate)
+                .ok()
+                .flatten()
+        })
+        // The panel's own display, then the primary one. Both are wrong on a
+        // second screen, and both are better than the alternative, which is a
+        // tray item that does nothing.
+        .or_else(|| window.current_monitor().ok().flatten())
+        .or_else(|| window.primary_monitor().ok().flatten())
         .ok_or_else(|| {
             AppError::Engine(format!(
                 "no display contains the tray item at {}, {}",
@@ -312,4 +341,34 @@ fn set_current_subject(app: &AppHandle, subject: Graha) {
         .0
         .lock()
         .expect("subject lock") = Some(subject);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The tray rect arrives physical; the lookup compares against logical.
+    ///
+    /// On a 2x display the raw point is off the right-hand edge of the only
+    /// screen, so the lookup finds nothing and the panel never opens. Dividing
+    /// by the scale brings it back inside. This pins the arithmetic; which
+    /// display the window server actually returns needs a window server.
+    #[test]
+    fn a_physical_tray_point_is_outside_logical_bounds_on_a_retina_display() {
+        // A 1512pt wide Retina laptop: the item sits at logical x 1300.
+        let logical_x = 1300.0_f64;
+        let scale = 2.0_f64;
+        let physical_x = logical_x * scale;
+        let screen_width = 1512.0_f64;
+
+        assert!(
+            physical_x > screen_width,
+            "the raw point must fall outside the display, which is the defect"
+        );
+        assert!(
+            physical_x / scale <= screen_width,
+            "dividing by the scale must bring it back inside"
+        );
+        assert_eq!(physical_x / scale, logical_x);
+    }
 }

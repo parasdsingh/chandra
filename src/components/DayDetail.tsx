@@ -1,42 +1,43 @@
 /**
  * The expanded day detail.
  *
- * The moon view stays inside the v1 field list (docs/DECISIONS.md D-010): phase,
- * illumination, rise and set, nakshatra, rashi, and distance from the Sun, which
- * is here because the grid marks combustion and a mark the day cannot explain is
- * worse than no mark.
+ * One shape for all nine subjects and both calendars: a stack of fields, each a
+ * small label, the value, and the hour it gives way. What differs between
+ * subjects is which fields exist, never how they are drawn.
  *
- * Every state the grid draws is also named in words here. Degraded readings - no
- * moonrise, circumpolar, a Moshier position - are stated as facts, with no
- * warning colour and no icon: they are normal, not faults.
+ * The four numbers this view used to lead with - illuminated percentage,
+ * distance from the Sun, speed, longitude - are gone. They were the only reason
+ * the Moon's view and a graha's had different shapes, and none of them was what
+ * anyone opened the day to read.
+ *
+ * Rise and set belong to the subject. Surya's day names sunrise and sunset,
+ * Chandra's names moonrise and moonset, and a graha's names its own. There is no
+ * separate sunrise row on every subject's day: sunrise is Surya's rise.
+ *
+ * Degraded readings - no moonrise, a boundary that did not resolve, a Moshier
+ * position - are stated as facts, with no warning colour and no icon: they are
+ * normal, not faults.
  */
 
 import type { JSX } from "solid-js";
 import { Index, Show } from "solid-js";
 
 import type {
-  Combustion,
   DayPanchanga,
   DayDetail as Detail,
   GrahaDay,
   MoonDay,
-  Moment,
+  NakshatraSpan,
+  RashiSpan,
   TithiSpan,
   TransitEvent,
 } from "../ipc/types";
 import type { FormatContext } from "../lib/format";
 import {
-  formatBoundary,
-  formatDegrees,
-  formatIllumination,
-  formatSeparation,
-  formatSpan,
-  formatSpeed,
   formatTime,
+  formatUntil,
   formatWeekday,
   phaseLabel,
-  spokenDegrees,
-  spokenSeparation,
 } from "../lib/format";
 import { describeEvent } from "./MonthGrid";
 
@@ -64,11 +65,9 @@ function Body(props: Props): JSX.Element {
     <Show when={props.detail}>
       {(detail) => (
         <>
-          {/* Weekday only: the header already carries the date, and printing it
-              twice in a 320px panel is the clutter the layout exists to avoid. */}
-          {/* The vara completes the second limb at no cost: one word, in the
-              row that already names the weekday. Only in a lunar month, where
-              it is part of what the day is called. */}
+          {/* The header already carries the date, so this names the day rather
+              than repeating it: the weekday, and in a lunar month the vara,
+              which is what the day is actually called. */}
           <div class="detail__date">
             <Show when={props.isToday}>
               <span class="detail__today">TODAY</span>
@@ -80,19 +79,12 @@ function Body(props: Props): JSX.Element {
             </Show>
           </div>
 
-          <Show
-            when={detail().kind === "moon"}
-            fallback={
-              <GrahaBody
-                detail={detail() as GrahaDay}
-                events={props.events}
-                grahaName={props.grahaName}
-                context={props.context}
-              />
-            }
-          >
-            <MoonBody detail={detail() as MoonDay} context={props.context} />
-          </Show>
+          <Subject
+            detail={detail()}
+            events={props.events}
+            grahaName={props.grahaName}
+            context={props.context}
+          />
 
           <Show when={detail().source === "moshier"}>
             <p class="detail__provenance">
@@ -105,167 +97,138 @@ function Body(props: Props): JSX.Element {
   );
 }
 
-function MoonBody(props: { detail: MoonDay; context: FormatContext }): JSX.Element {
-  const circumpolar = () => !props.detail.moonrise && !props.detail.moonset;
-
+/** A field: what it is, what it says, and when that stops being true. */
+function Field(props: {
+  label: string;
+  value: JSX.Element;
+  when?: string;
+  then?: string;
+  spoken?: string;
+}): JSX.Element {
   return (
-    <>
-      <div class="detail__headline">
-        <span class="detail__phase">{phaseLabel(props.detail.phase)}</span>
-        <span class="detail__illum">
-          {formatIllumination(props.detail.illumination)}
-        </span>
-      </div>
-
-      {/* The grid states a tithi number; this is where it is named in words,
-          with the boundaries that decide it. A number nobody can check is worse
-          than no number at all. */}
-      <TithiBlock panchanga={props.detail.panchanga} context={props.context} />
-
-      {/* A missing rise or set is stated on its own row, in the value column.
-          Rendering a dash plus a caption underneath added a line and changed the
-          shape of the block depending on the day. */}
-      <div class="detail__block">
-        <SunriseRow
-          panchanga={props.detail.panchanga}
-          context={props.context}
-        />
-        <Show
-          when={!circumpolar()}
-          fallback={
-            <Row label="Moon" value="does not rise or set today" muted />
-          }
-        >
-          <RiseRow
-            label="Moonrise"
-            moment={props.detail.moonrise}
-            absent="no rise today"
-            context={props.context}
-          />
-          <RiseRow
-            label="Moonset"
-            moment={props.detail.moonset}
-            absent="no set today"
-            context={props.context}
-          />
+    <div
+      class="field"
+      role="group"
+      aria-label={`${props.label}, ${props.spoken ?? ""}`}
+    >
+      <div class="field__key">{props.label}</div>
+      <div class="field__line">
+        <span class="field__value">{props.value}</span>
+        <Show when={props.when}>
+          {(when) => <span class="field__time">{when()}</span>}
         </Show>
       </div>
-
-      <CombustionBlock combustion={props.detail.combustion} />
-
-      {/* The label names the field once, on the first row. A second span in the
-          same day is a continuation of that field, not a new unlabelled field,
-          and is dimmed so the one prevailing at sunrise reads first. */}
-      <SpanBlock
-        label="Nakshatra"
-        spans={props.detail.nakshatras.map((span) => ({
-          value: `${span.name} · Pada ${span.pada}`,
-          caption: formatSpan(span.entry, span.exit, props.context),
-          prevailing: span.prevailing,
-        }))}
-      />
-
-      <SpanBlock
-        label="Rashi"
-        spans={props.detail.rashis.map((span) => ({
-          value: span.name,
-          caption: formatSpan(span.entry, span.exit, props.context),
-          prevailing: span.prevailing,
-        }))}
-      />
-    </>
+      <Show when={props.then}>
+        {(next) => <div class="field__next">then {next()}</div>}
+      </Show>
+    </div>
   );
 }
 
-function GrahaBody(props: {
-  detail: GrahaDay;
+/**
+ * Every field of a day, for whichever subject it belongs to.
+ *
+ * The spans - tithi, nakshatra, rashi - are read the same way: the one in force
+ * at the reference instant is the value, the hour it ends is the time, and the
+ * one that follows is named underneath. A day holds at most two of each, so
+ * naming the successor costs one line and saves opening tomorrow.
+ */
+function Subject(props: {
+  detail: Detail;
   events: TransitEvent[];
   grahaName: string;
   context: FormatContext;
 }): JSX.Element {
+  const moon = () => (props.detail.kind === "moon" ? (props.detail as MoonDay) : null);
+  const graha = () =>
+    props.detail.kind === "graha" ? (props.detail as GrahaDay) : null;
+  const panchanga = () => props.detail.panchanga;
+
+  const rise = () => (moon() ? moon()!.moonrise : graha()!.rise);
+  const set = () => (moon() ? moon()!.moonset : graha()!.set);
+
+  /** The subject's own rise, named for the subject. */
+  const riseLabel = () => {
+    if (moon()) return "Moonrise";
+    return graha()!.graha === "surya" ? "Sunrise" : "Rise";
+  };
+
   return (
     <>
-      <div class="detail__headline">
-        <span class="detail__phase">{props.grahaName}</span>
-        {/* The mark every ephemeris uses, next to the name it applies to.
-            Carried three more ways below: the Motion row in words, the minus
-            sign on the speed, and the event row when a station falls today. */}
-        <Show when={props.detail.retrograde}>
-          <span class="chip" aria-label="Retrograde">
-            ℞
-          </span>
-        </Show>
-      </div>
+      {/* The phase names what a Gregorian day shows of the Moon. In a lunar
+          month the tithi says the same thing more precisely, so it does not
+          appear twice. */}
+      <Show when={moon() && !panchanga()}>
+        <Field label="Phase" value={phaseLabel(moon()!.phase)} spoken={phaseLabel(moon()!.phase)} />
+      </Show>
 
-      <div class="detail__block">
-        <Row
-          label="Longitude"
-          value={formatDegrees(props.detail.degrees_in_rashi)}
-          spoken={spokenDegrees(props.detail.degrees_in_rashi)}
-        />
-        {/* Named in words as well as by the sign on the speed and the chip in
-            the headline. A minus sign at 13px is not a state anyone should have
-            to infer. */}
-        <Row
-          label="Motion"
-          value={props.detail.retrograde ? "Retrograde" : "Direct"}
-        />
-        <Row label="Speed" value={formatSpeed(props.detail.speed)} />
-      </div>
+      <Show when={panchanga()}>
+        {(day) => (
+          <Spans label="Tithi" spans={tithiRows(day(), props.context)} />
+        )}
+      </Show>
 
-      <TithiBlock panchanga={props.detail.panchanga} context={props.context} />
-
-      <div class="detail__block">
-        <SunriseRow
-          panchanga={props.detail.panchanga}
-          context={props.context}
-        />
-        <RiseRow
-          label="Rise"
-          moment={props.detail.rise}
-          absent="no rise today"
-          context={props.context}
-        />
-        <RiseRow
-          label="Set"
-          moment={props.detail.set}
-          absent="no set today"
-          context={props.context}
-        />
-      </div>
-
-      <CombustionBlock combustion={props.detail.combustion} />
-
-      {/* Every graha stands in a nakshatra and a rashi, so the day view is the
-          same shape for all nine and for the Moon. */}
-      <SpanBlock
+      <Spans
         label="Nakshatra"
-        spans={props.detail.nakshatras.map((span) => ({
-          value: `${span.name} · Pada ${span.pada}`,
-          caption: formatSpan(span.entry, span.exit, props.context),
-          prevailing: span.prevailing,
-        }))}
+        spans={nakshatraRows(props.detail.nakshatras, props.context)}
       />
 
-      <SpanBlock
-        label="Rashi"
-        spans={props.detail.rashis.map((span) => ({
-          value: span.name,
-          caption: formatSpan(span.entry, span.exit, props.context),
-          prevailing: span.prevailing,
-        }))}
+      <Spans label="Rashi" spans={rashiRows(props.detail.rashis, props.context)} />
+
+      {/* Named in words as well as by the mark on the grid. A minus sign on a
+          speed is not a state anyone should have to infer - and the speed itself
+          is gone. */}
+      <Show when={graha()}>
+        {(body) => (
+          <Field
+            label="Motion"
+            value={
+              <>
+                {body().retrograde ? "Retrograde" : "Direct"}
+                <Show when={body().retrograde}>
+                  <span class="chip" aria-hidden="true">℞</span>
+                </Show>
+              </>
+            }
+            spoken={body().retrograde ? "retrograde" : "direct"}
+          />
+        )}
+      </Show>
+
+      {/* Rise and set on one line: they are two ends of the same fact, and a
+          body that does not set is stated rather than left blank. */}
+      <Field
+        label={riseLabel()}
+        value={rise() ? formatTime(rise()!, props.context) : "does not rise"}
+        when={set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"}
+        spoken={`${rise() ? formatTime(rise()!, props.context) : "does not rise"}, ${
+          set() ? `sets ${formatTime(set()!, props.context)}` : "does not set"
+        }`}
       />
+
+      {/* Combustion is drawn on the surface, so this is the words that carry it
+          for anyone the drawing does not reach (DESIGN 11.3). The separation in
+          degrees is not here: the orb is the fact, the reading behind it is not
+          what the day was opened for. */}
+      <Show when={props.detail.combustion.combust}>
+        <Field
+          label="Combust"
+          value={`inside the ${props.detail.combustion.orb}° orb`}
+          spoken={`combust, inside the ${props.detail.combustion.orb} degree orb`}
+        />
+      </Show>
 
       <Show when={props.events.length > 0}>
-        <div class="detail__block">
+        <div class="field">
+          <div class="field__key">Today</div>
           <Index each={props.events}>
             {(event) => (
-              <p class="detail__event">
-                <span>{describeEvent(event())}</span>
-                <span class="detail__event-time">
+              <div class="field__line">
+                <span class="field__value">{describeEvent(event())}</span>
+                <span class="field__time">
                   {formatTime(event().at, props.context)}
                 </span>
-              </p>
+              </div>
             )}
           </Index>
         </div>
@@ -274,213 +237,78 @@ function GrahaBody(props: {
   );
 }
 
-/**
- * Distance from the Sun, and combustion when it applies.
- *
- * Shown for every subject that has an orb, combust or not, so the block keeps
- * one shape and the reading that decides combustion is always on screen. The
- * Sun and the nodes have no orb, so for them the block is absent entirely
- * rather than present and permanently negative.
- *
- * No warning colour: combustion is an ordinary position, not a fault. Nothing
- * in the panel is coloured to mean a state - `--accent` marks today and nothing
- * else - so the reading is in the words.
- */
-function CombustionBlock(props: { combustion: Combustion }): JSX.Element {
-  return (
-    <Show when={props.combustion.orb !== null}>
-      <div class="detail__block">
-        <Row
-          label="From Sun"
-          value={formatSeparation(props.combustion.separation)}
-          spoken={spokenSeparation(props.combustion.separation)}
-        />
-        <Show when={props.combustion.combust}>
-          <p class="detail__caption">
-            Combust — inside the {props.combustion.orb}° orb
-          </p>
-        </Show>
-      </div>
-    </Show>
-  );
-}
-
-/**
- * The tithis touching the day, in the order they occupy it.
- *
- * Not sorted with the prevailing one first, which the row above this used to
- * claim: a day's tithis run in time order, and reordering them would break the
- * one thing the boundaries in the captions are for, which is reading straight
- * down as a sequence. The prevailing one is marked by weight instead - the
- * others are dimmed - so it still reads first.
- *
- * Reuses the same block the nakshatra and rashi rows use, so the three read as
- * one list: label on the first row, continuations dimmed, boundaries in the
- * caption. The caption also carries why a number was skipped or repeated, which
- * is the only place in the app those two words appear (DESIGN 11.3).
- */
-function TithiBlock(props: {
-  panchanga: DayPanchanga | null;
-  context: FormatContext;
-}): JSX.Element {
-  return (
-    <Show when={props.panchanga}>
-      {(panchanga) => (
-        <SpanBlock
-          label="Tithi"
-          spans={panchanga().tithis.map((span) => ({
-            value: `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}`,
-            caption: tithiCaption(span, props.context),
-            prevailing: span.prevailing,
-          }))}
-        />
-      )}
-    </Show>
-  );
-}
-
-/**
- * A tithi's boundaries, and what makes it unusual.
- *
- * An unresolved boundary says so rather than printing a guessed time: the other
- * side is still real and still shown, and no state is inferred from its absence.
- */
-function tithiCaption(span: TithiSpan, context: FormatContext): string {
-  const window =
-    span.entry && span.exit
-      ? formatSpan(span.entry, span.exit, context)
-      : span.entry
-        ? `${formatBoundary(span.entry, context)} → time unavailable`
-        : span.exit
-          ? `time unavailable → ${formatBoundary(span.exit, context)}`
-          : "times unavailable";
-
-  // `null` means the question could not be put - an unresolved boundary, or a
-  // latitude where the Sun rose on none of the three days - and says nothing.
-  // Reading it as zero captioned an ordinary tithi as one no day is named after.
-  const note =
-    span.sunrises === 0
-      ? "kshaya, no sunrise"
-      : span.sunrises === 2
-        ? "two sunrises"
-        : "";
-
-  return note ? `${window} · ${note}` : window;
-}
-
-/**
- * Sunrise, the instant the day's tithi, nakshatra and rashi are all read at.
- *
- * Without it the numbers in the grid cannot be checked against anything. Where
- * the Sun does not rise the row says so and names local noon, which is the
- * substitute actually used - not a blank and not a dash.
- */
-function SunriseRow(props: {
-  panchanga: DayPanchanga | null;
-  context: FormatContext;
-}): JSX.Element {
-  return (
-    <Show when={props.panchanga}>
-      {(panchanga) => (
-        <Show
-          when={panchanga().sunrise}
-          fallback={
-            <Row label="Sunrise" value="does not rise; read at noon" muted />
-          }
-        >
-          {(sunrise) => (
-            <Row
-              label="Sunrise"
-              value={formatBoundary(sunrise(), props.context)}
-            />
-          )}
-        </Show>
-      )}
-    </Show>
-  );
-}
-
 interface SpanRow {
   value: string;
-  caption: string;
+  until: string;
   prevailing: boolean;
 }
 
-function SpanBlock(props: { label: string; spans: SpanRow[] }): JSX.Element {
-  return (
-    <div class="detail__block">
-      {/* Index, not For: the spans are rebuilt as fresh objects on every read,
-          so keying by reference disposes and recreates every row for a value
-          that has not changed. The rows are positions in a list, which is what
-          Index keys by. */}
-      <Index each={props.spans}>
-        {(span, index) => (
-          <>
-            <p
-              class="detail__row"
-              role="group"
-              aria-label={`${props.label}, ${span().value}, ${span().caption}`}
-            >
-              <span class="detail__label">{index === 0 ? props.label : ""}</span>
-              <span
-                class="detail__value"
-                classList={{ "is-secondary": !span().prevailing }}
-              >
-                {span().value}
-              </span>
-            </p>
-            <p class="detail__caption">{span().caption}</p>
-          </>
-        )}
-      </Index>
-    </div>
-  );
-}
+/**
+ * One span field.
+ *
+ * The prevailing span is the value, and what follows it *in time* is named on
+ * the `then` line. The spans arrive in the order they occupy the day, so the
+ * successor is the next index - not merely the next one that is not prevailing,
+ * which on any day whose reference instant falls in the second span names the
+ * one already gone. The Moon moving Dhanu to Makara read "Makara, then Dhanu".
+ */
+function Spans(props: { label: string; spans: SpanRow[] }): JSX.Element {
+  const index = () => {
+    const at = props.spans.findIndex((span) => span.prevailing);
+    return at < 0 ? 0 : at;
+  };
+  const current = () => props.spans[index()];
+  const next = () => props.spans[index() + 1];
 
-function Row(props: {
-  label: string;
-  value: string;
-  spoken?: string;
-  muted?: boolean;
-}): JSX.Element {
   return (
-    <p
-      class="detail__row"
-      role="group"
-      aria-label={`${props.label}, ${props.spoken ?? props.value}`}
-    >
-      <span class="detail__label">{props.label}</span>
-      <span class="detail__value" classList={{ "is-absent": props.muted }}>
-        {props.value}
-      </span>
-    </p>
+    <Show when={current()}>
+      {(span) => (
+        <Field
+          label={props.label}
+          value={span().value}
+          when={span().until}
+          then={next()?.value}
+          spoken={`${span().value}, until ${span().until}`}
+        />
+      )}
+    </Show>
   );
 }
 
 /**
- * A rise or set row.
+ * A tithi's rows, carrying why a number was skipped or repeated.
  *
- * When the event does not occur, the value column carries the reason instead of
- * a time. There is no dash and no extra caption line: the block keeps the same
- * shape whether or not the Moon rose.
+ * `sunrises` is `null` when the question could not be put - an unresolved
+ * boundary, or a latitude where the Sun rose on none of the three days - and
+ * says nothing. Reading it as zero captioned an ordinary tithi as one no day is
+ * named after.
  */
-function RiseRow(props: {
-  label: string;
-  moment: Moment | null;
-  absent: string;
-  context: FormatContext;
-}): JSX.Element {
-  const text = () =>
-    props.moment ? formatBoundary(props.moment, props.context) : props.absent;
+function tithiRows(panchanga: DayPanchanga, context: FormatContext): SpanRow[] {
+  return panchanga.tithis.map((span: TithiSpan) => {
+    const note =
+      span.sunrises === 0 ? " · kshaya" : span.sunrises === 2 ? " · two sunrises" : "";
+    return {
+      value: `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}${note}`,
+      until: span.exit ? formatUntil(span.exit, context) : "time unavailable",
+      prevailing: span.prevailing,
+    };
+  });
+}
 
-  return (
-    <p class="detail__row" role="group" aria-label={`${props.label}, ${text()}`}>
-      <span class="detail__label">{props.label}</span>
-      <span class="detail__value" classList={{ "is-absent": !props.moment }}>
-        {text()}
-      </span>
-    </p>
-  );
+function nakshatraRows(spans: NakshatraSpan[], context: FormatContext): SpanRow[] {
+  return spans.map((span) => ({
+    value: `${span.name} · Pada ${span.pada}`,
+    until: formatUntil(span.exit, context),
+    prevailing: span.prevailing,
+  }));
+}
+
+function rashiRows(spans: RashiSpan[], context: FormatContext): SpanRow[] {
+  return spans.map((span) => ({
+    value: span.name,
+    until: formatUntil(span.exit, context),
+    prevailing: span.prevailing,
+  }));
 }
 
 const ERROR_TEXT: Record<string, { headline: string; cause: string }> = {

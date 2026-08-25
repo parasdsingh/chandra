@@ -39,27 +39,20 @@ export function formatDayMonth(moment: Moment, context: FormatContext): string {
 }
 
 /**
- * A boundary instant, qualified with its date only when it falls on another day.
+ * When a span gives way, as one value.
  *
- * Spans carry true instants and are never clamped to the day, so an unqualified
- * time would silently read as belonging to the day on screen.
+ * One number, chosen by scale: a boundary today is a clock time, and a boundary
+ * further off is a date. "Until 9 October" is the fact; the 8:51 PM that goes
+ * with it is noise at that distance. The day either side keeps its time, because
+ * a tithi ending at two in the morning is still a time to a reader.
  */
-export function formatBoundary(moment: Moment, context: FormatContext): string {
-  const time = formatTime(moment, context);
-  if (moment.day_offset === 0) return time;
-  return `${time} (${formatDayMonth(moment, context)})`;
-}
-
-export function formatSpan(
-  entry: Moment,
-  exit: Moment,
-  context: FormatContext,
-): string {
-  const from =
-    entry.day_offset === 0
-      ? formatTime(entry, context)
-      : `${formatDayMonth(entry, context)} ${formatTime(entry, context)}`;
-  return `${from} → ${formatBoundary(exit, context)}`;
+export function formatUntil(exit: Moment, context: FormatContext): string {
+  const time = formatTime(exit, context);
+  if (exit.day_offset === 0) return time;
+  if (Math.abs(exit.day_offset) === 1) {
+    return `${time}, ${formatDayMonth(exit, context)}`;
+  }
+  return formatDayMonth(exit, context);
 }
 
 /** `20 August 2026`, for the day view's header. */
@@ -134,76 +127,6 @@ const PHASE_LABELS: Record<PhaseKey, string> = {
 };
 
 export const phaseLabel = (phase: PhaseKey): string => PHASE_LABELS[phase];
-
-/** `68.4% lit`. One decimal: two is false precision, none loses the day-to-day change. */
-export function formatIllumination(fraction: number): string {
-  return `${(fraction * 100).toFixed(1)}% lit`;
-}
-
-/**
- * `18° 42′ 07″`, zero-padded so the columns align.
- *
- * Two places for the degrees, not three: this is a position *within* a rashi and
- * so is 0 to 29, and padding to three printed a leading zero on every longitude
- * in the app.
- */
-export function formatDegrees(parts: [number, number, number]): string {
-  const [degrees, minutes, seconds] = parts;
-  return `${pad(degrees)}° ${pad(minutes)}′ ${pad(Math.floor(seconds))}″`;
-}
-
-function pad(value: number): string {
-  return value.toString().padStart(2, "0");
-}
-
-/**
- * An angle split into whole degrees and arcminutes, with the carry applied.
- *
- * Rounding 59.7 arcminutes up has to carry into the degree rather than print 60,
- * and that arithmetic was written out twice - once for the printed form and once
- * for the spoken one, which is two places for one rule to be wrong in.
- */
-function degreesAndMinutes(degrees: number): [number, number] {
-  const whole = Math.floor(degrees);
-  const minutes = Math.round((degrees - whole) * 60);
-  return minutes === 60 ? [whole + 1, 0] : [whole, minutes];
-}
-
-/**
- * A separation from the Sun: `7° 12′`.
- *
- * Arcseconds are dropped. It is compared against an orb quoted in whole degrees,
- * so a third place would be precision the reading has no use for.
- */
-export function formatSeparation(degrees: number): string {
-  const [whole, minutes] = degreesAndMinutes(degrees);
-  return `${whole}° ${pad(minutes)}′`;
-}
-
-/** Spoken form for a separation, for assistive technology. */
-export function spokenSeparation(degrees: number): string {
-  const [whole, minutes] = degreesAndMinutes(degrees);
-  return minutes === 0
-    ? `${whole} degrees`
-    : `${whole} degrees ${minutes} minutes`;
-}
-
-/** Spoken form for assistive technology, where `°′″` are not read usefully. */
-export function spokenDegrees(parts: [number, number, number]): string {
-  const [degrees, minutes, seconds] = parts;
-  return `${degrees} degrees ${minutes} minutes ${Math.floor(seconds)} seconds`;
-}
-
-/**
- * `−0.0142 °/day`, with a real minus sign.
- *
- * U+2212 rather than a hyphen: at 13px a hyphen is easy to miss, and the sign is
- * the difference between direct and retrograde motion.
- */
-export function formatSpeed(speed: number): string {
-  const sign = speed < 0 ? "−" : "+";
-  return `${sign}${Math.abs(speed).toFixed(4)} °/day`;
-}
 
 /** Weekday initials for the grid header, from the locale, starting on `firstDay`. */
 export function weekdayLabels(firstDay: number): string[] {
