@@ -13,11 +13,11 @@
 //! 10.9 and 15.4 degrees a day and never loses ground - so unlike a rashi or a
 //! nakshatra there is no retrograde case and the index only ever ascends.
 
-use chandra_ephemeris::{Engine, Graha, Source};
+use chandra_ephemeris::{Engine, Source};
 use serde::{Deserialize, Serialize};
 
+use crate::angles::{self, Angle, Divisions};
 use crate::error::{Error, Result};
-use crate::roots::{self, Bracket};
 use crate::time::{CivilDay, Moment};
 
 /// Degrees of elongation per tithi.
@@ -249,8 +249,7 @@ pub struct TithiSpan {
 
 /// The Moon's elongation from the Sun, `[0, 360)`.
 pub fn elongation(engine: &Engine, jd: f64) -> Result<f64> {
-    let bodies = engine.positions(jd, &[Graha::Chandra, Graha::Surya])?;
-    Ok((bodies[0].longitude - bodies[1].longitude).rem_euclid(360.0))
+    angles::at(engine, jd, Angle::Difference)
 }
 
 /// The tithi in force at an instant.
@@ -258,16 +257,6 @@ pub fn at(engine: &Engine, jd: f64) -> Result<Tithi> {
     Ok(Tithi::from_elongation(elongation(engine, jd)?))
 }
 
-/// How far out to search for a boundary that lies outside the day.
-///
-/// A tithi is at most about 26 hours, so a day's first tithi began less than
-/// that before the day did. Two and a half days is comfortably clear of the
-/// worst case without letting the wrapped difference change sign twice.
-const SEARCH_DAYS: f64 = 2.5;
-
-/// Scan step. The Moon moves at most about 15 degrees a day, so an hour cannot
-/// step over a 12 degree boundary and back.
-const SCAN_STEP_DAYS: f64 = 1.0 / 24.0;
 
 /// Every tithi touching `day`, in the order it occupies them.
 ///
@@ -282,89 +271,28 @@ pub fn spans_in_day(
     reference_jd: f64,
     sunrises: &[f64],
 ) -> Result<Vec<TithiSpan>> {
-    let samples = sample(engine, day.start_jd, day.end_jd)?;
+    // The scan, the boundary refinement and the prevailing test are the same
+    // ones a karana and a yoga need, and live in `angles`. What is left here is
+    // the part that is about tithis rather than about angles: the paksha, the
+    // name, and the sunrise count the kshaya and vriddhi states are read off.
+    let raw = angles::spans_in_day(engine, day, reference_jd, Divisions::TITHI)?;
 
-    let mut spans = Vec::new();
-    let mut run_start = 0usize;
-
-    for position in 1..=samples.len() {
-        let ends_here =
-            position == samples.len() || samples[position].tithi != samples[run_start].tithi;
-        if !ends_here {
-            continue;
-        }
-
-        let tithi = samples[run_start].tithi;
-
-        let entry = if run_start == 0 {
-            search(engine, day.start_jd, tithi.start_degrees(), Backward)?
-        } else {
-            refine_between(
-                engine,
-                &samples[run_start - 1],
-                &samples[run_start],
-                tithi.start_degrees(),
-            )?
-        };
-
-        let exit = if position == samples.len() {
-            search(engine, day.end_jd, tithi.end_degrees(), Forward)?
-        } else {
-            refine_between(
-                engine,
-                &samples[position - 1],
-                &samples[position],
-                tithi.end_degrees(),
-            )?
-        };
-
-        // Decided on the refined boundaries, not on the samples they were found
-        // between. The scan grid is an hour wide, and a boundary crossed inside
-        // that hour before sunrise would otherwise be attributed to the wrong
-        // side of it. The sample comparison survives only as the fallback for a
-        // boundary that did not resolve, where there is nothing finer to use.
-        let prevailing = match (entry, exit) {
-            (Some(entry), Some(exit)) => reference_jd >= entry && reference_jd < exit,
-            _ => {
-                reference_jd >= samples[run_start].jd
-                    && (position == samples.len() || reference_jd < samples[position].jd)
-            }
-        };
-
-        spans.push(TithiSpan {
-            index: tithi.index(),
-            number: tithi.number(),
-            paksha: tithi.paksha(),
-            name: tithi.name().to_string(),
-            entry: entry.map(|jd| day.moment(jd)).transpose()?,
-            exit: exit.map(|jd| day.moment(jd)).transpose()?,
-            sunrises: count_sunrises(entry, exit, sunrises),
-            prevailing,
-            source: Source::weakest(samples[run_start..position].iter().map(|s| s.source)),
-        });
-
-        run_start = position;
-    }
-
-    if spans.is_empty() {
-        return Err(Error::NoCrossing {
-            what: "tithi boundary",
-            graha: "Chandra",
-            near: day.start_jd,
-            window_days: day.length(),
-        });
-    }
-
-    // Exactly one span is prevailing. A reference sitting exactly on a sample
-    // boundary can miss every comparison, so the last span takes it as a defined
-    // fallback rather than leaving the day with none.
-    if !spans.iter().any(|span| span.prevailing) {
-        if let Some(last) = spans.last_mut() {
-            last.prevailing = true;
-        }
-    }
-
-    Ok(spans)
+    raw.into_iter()
+        .map(|span| {
+            let tithi = Tithi::from_index(span.index)?;
+            Ok(TithiSpan {
+                index: tithi.index(),
+                number: tithi.number(),
+                paksha: tithi.paksha(),
+                name: tithi.name().to_string(),
+                entry: span.entry.map(|jd| day.moment(jd)).transpose()?,
+                exit: span.exit.map(|jd| day.moment(jd)).transpose()?,
+                sunrises: count_sunrises(span.entry, span.exit, sunrises),
+                prevailing: span.prevailing,
+                source: span.source,
+            })
+        })
+        .collect()
 }
 
 /// Sunrises inside `[entry, exit)`, or `None` where there is no count to give.
@@ -390,82 +318,6 @@ fn count_sunrises(entry: Option<f64>, exit: Option<f64>, sunrises: &[f64]) -> Op
             .count()
             .min(u8::MAX as usize) as u8,
     )
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Sample {
-    jd: f64,
-    elongation: f64,
-    tithi: Tithi,
-    source: Source,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Direction {
-    Forward,
-    Backward,
-}
-use Direction::{Backward, Forward};
-
-fn sample(engine: &Engine, start: f64, end: f64) -> Result<Vec<Sample>> {
-    let mut samples = Vec::new();
-    let mut jd = start;
-    loop {
-        let bodies = engine.positions(jd, &[Graha::Chandra, Graha::Surya])?;
-        let elongation = (bodies[0].longitude - bodies[1].longitude).rem_euclid(360.0);
-        samples.push(Sample {
-            jd,
-            elongation,
-            tithi: Tithi::from_elongation(elongation),
-            source: Source::weakest([bodies[0].source, bodies[1].source]),
-        });
-        if jd >= end {
-            break;
-        }
-        jd = (jd + SCAN_STEP_DAYS).min(end);
-    }
-    Ok(samples)
-}
-
-fn crossing(engine: &Engine, target: f64) -> impl Fn(f64) -> Option<f64> + '_ {
-    move |jd| {
-        elongation(engine, jd)
-            .ok()
-            .map(|e| roots::signed_delta(e, target))
-    }
-}
-
-fn refine_between(engine: &Engine, from: &Sample, to: &Sample, target: f64) -> Result<Option<f64>> {
-    let bracket = Bracket {
-        lo: from.jd,
-        hi: to.jd,
-        f_lo: roots::signed_delta(from.elongation, target),
-        f_hi: roots::signed_delta(to.elongation, target),
-    };
-    Ok(roots::refine(bracket, crossing(engine, target)))
-}
-
-/// The boundary at `target` nearest to `from`, in the given direction.
-fn search(engine: &Engine, from: f64, target: f64, direction: Direction) -> Result<Option<f64>> {
-    let f = crossing(engine, target);
-    let (start, end) = match direction {
-        Forward => (from, from + SEARCH_DAYS),
-        Backward => (from - SEARCH_DAYS, from),
-    };
-
-    let found = roots::brackets(start, end, SCAN_STEP_DAYS, &f)
-        .into_iter()
-        // Elongation only increases, so the crossing is always negative to
-        // positive. The wrapped difference also changes sign half a revolution
-        // away, and that is a different tithi entirely.
-        .filter(|bracket| !(bracket.f_lo > 0.0 && bracket.f_hi < 0.0))
-        .filter_map(|bracket| roots::refine(bracket, &f))
-        .collect::<Vec<_>>();
-
-    Ok(match direction {
-        Forward => found.into_iter().next(),
-        Backward => found.into_iter().next_back(),
-    })
 }
 
 #[cfg(test)]

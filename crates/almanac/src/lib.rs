@@ -7,14 +7,18 @@
 mod almanac;
 mod cache;
 
+pub mod angles;
 pub mod day;
 pub mod error;
 pub mod events;
 pub mod lunar;
 pub mod month;
+pub mod muhurta;
+pub mod panchanga;
 pub mod phase;
 pub mod roots;
 pub mod spans;
+pub mod standing;
 pub mod time;
 pub mod tithi;
 pub mod zodiac;

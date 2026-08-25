@@ -5,7 +5,7 @@ the nakshatra lord. That roughly doubles what a day holds, on a surface D-025
 has just made readable, so this document settles the shape before any of it is
 built.
 
-Status: **architecture, not yet approved.**
+Status: **approved. Being built.**
 
 ---
 
@@ -145,7 +145,7 @@ called it.
 | Gulika | day in 8 parts, part chosen by vara |
 | Abhijit | the 8th of 15 equal parts of the day |
 | Brahma Muhurta | the 14th of 15 equal parts of the night |
-| Durmuhurtam | day in 15 parts, one or two chosen by vara — **table unverified, see §7** |
+| Durmuhurtam | day in 15 parts, one or two chosen by vara — table in §7 |
 
 Where the Sun does not rise or set, the muhurtas are absent rather than computed
 against a substitute instant. A window defined as a fraction of daylight has no
@@ -217,13 +217,42 @@ one positions call between them, and the user named them as always-on.
 
 ---
 
-## 7. Open — needs a source before it is written
+## 7. The Durmuhurtam table
 
-**The Durmuhurtam table.** Rahu Kaal, Yamaganda and Gulika have one settled
-vara-to-part mapping and it is not in dispute. Durmuhurtam's is: which of the 15
-day parts are inauspicious differs between published panchangas, and several
-varas carry two windows rather than one.
+Taken from a published source rather than written from memory, and the source is
+cited in the code. Two of the values I would have written from memory were
+wrong — Friday's second window and Saturday's — which is what the rule against
+hardcoding guesses is for.
 
-Writing a table from memory would be hardcoding a guess, which is exactly what
-this project does not do. Either it is taken from a named source and cited in
-the code, or Durmuhurtam ships in a later pass and the other five go now.
+The source states the windows as an offset in hours and minutes after sunrise,
+on the assumption of a twelve-hour day. One day muhurta is then 48 minutes, so
+an offset divided by 48 minutes gives the muhurta index directly, and the index
+is what is implemented: it stays correct at a latitude where the day is not
+twelve hours, which the clock offsets do not.
+
+| Vara | Source offset | Muhurta |
+|---|---|---|
+| Sunday | 10h24m after sunrise | day 14 |
+| Monday | 6h24m, then 8h48m after sunrise | day 9, day 12 |
+| Tuesday | 2h24m after sunrise; 5h36m after **sunset** | day 4, night 8 |
+| Wednesday | 5h36m after sunrise | day 8 |
+| Thursday | 4h00m, then 8h48m after sunrise | day 6, day 12 |
+| Friday | 2h24m, then 8h48m after sunrise | day 4, day 12 |
+| Saturday | from sunrise, lasting 1h36m | day 1, day 2 |
+
+Tuesday's second window is the only one in the night, and is the reason the
+muhurta type carries which half of the day it divides rather than assuming the
+day half.
+
+The table corroborates itself against a fact from a different source:
+Abhijit is the 8th day muhurta and is held not to apply on a Wednesday — and
+Wednesday's Durmuhurtam is the 8th day muhurta. The two rules are the same
+observation.
+
+Sources:
+- <https://www.oursubhakaryam.com/what_is_durmuhurtam_in_telugu_panchangam.html>
+  — the vara offsets.
+- <https://www.sanatanveda.com/astrology/simple-way-of-calculating-muhurta/>
+  — 15 day muhurtas and 15 night muhurtas, Abhijit as the 8th of the day.
+- <https://en.wikipedia.org/wiki/Brahmamuhurta> — Brahma Muhurta as the 14th
+  muhurta of the night.
