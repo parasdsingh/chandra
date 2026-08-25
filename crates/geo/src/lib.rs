@@ -29,5 +29,11 @@ pub(crate) fn distance_km(lat_a: f64, lon_a: f64, lat_b: f64, lon_b: f64) -> f64
     let d_lon = lon_b - lon_a;
     let h = (d_lat / 2.0).sin().powi(2) + lat_a.cos() * lat_b.cos() * (d_lon / 2.0).sin().powi(2);
 
-    2.0 * EARTH_RADIUS_KM * h.sqrt().asin()
+    // Clamped. The haversine term reaches exactly 1 at antipodes in exact
+    // arithmetic and a couple of units in the last place over it in floating
+    // point, and `asin` of anything over 1 is NaN. A NaN is not a large
+    // distance - it compares unordered - so it would drop that place out of the
+    // comparison rather than lose to it. Searched: about one near-antipodal pair
+    // in eight million produces it.
+    2.0 * EARTH_RADIUS_KM * h.clamp(0.0, 1.0).sqrt().asin()
 }

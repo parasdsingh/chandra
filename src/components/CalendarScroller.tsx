@@ -43,8 +43,19 @@ const COMMIT_DISTANCE = MONTH_HEIGHT * 0.28;
 /** Idle time after the last wheel event that counts as the end of a gesture. */
 const WHEEL_END_MS = 110;
 
-/** Resistance at the ends of the loaded range, so the strip cannot be flung past it. */
-const OVERSCROLL_LIMIT = MONTH_HEIGHT;
+/**
+ * Furthest a single move may carry the strip.
+ *
+ * WebKit coalesces wheel events under load, so a whole flick can arrive as one
+ * delta, and running the calendar several months on one event is not a gesture.
+ * Exactly three months, so that banking always drains the displacement below one
+ * month: bounding the number of banks instead left a residual of a full month
+ * whenever the limit was reached, and a strip sitting exactly at its neighbour's
+ * resting position has a settle distance of zero. `animate(0)` returns without
+ * doing anything, so nothing ever brought it back and the calendar stayed a
+ * month off its own offset.
+ */
+const MAX_TRAVEL = MONTH_HEIGHT * 3;
 
 /**
  * Release speed, in pixels per millisecond, that commits regardless of distance.
@@ -146,18 +157,17 @@ export function CalendarScroller(props: Props): JSX.Element {
    */
   function move(travel: number) {
     const previous = shift();
-    let value = previous + travel;
+
+    // Bounded before the banking, not after it, so the banking always finishes
+    // and the strip is never left a whole month from rest.
+    let value = Math.max(-MAX_TRAVEL, Math.min(MAX_TRAVEL, previous + travel));
     let banked = 0;
 
-    // Bounded: a single event that asked for several months at once is not a
-    // gesture, and running the calendar past the months that are loaded would
-    // only draw empty grids.
-    for (let step = 0; step < 3 && Math.abs(value) >= MONTH_HEIGHT; step += 1) {
+    while (Math.abs(value) >= MONTH_HEIGHT) {
       const direction = value < 0 ? 1 : -1;
       value += direction * MONTH_HEIGHT;
       banked += direction;
     }
-    value = Math.max(-OVERSCROLL_LIMIT, Math.min(OVERSCROLL_LIMIT, value));
     odometer += value - previous - banked * MONTH_HEIGHT;
 
     // Halfway: past this the neighbour occupies more of the window than the

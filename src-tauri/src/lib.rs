@@ -29,6 +29,20 @@ use crate::state::AppState;
 /// the timer fire on the day it just left.
 const MIDNIGHT_SLACK: Duration = Duration::from_secs(5);
 
+/// Longest the midnight watcher parks for in one go.
+///
+/// `thread::sleep` does not advance while the machine is asleep, so a laptop
+/// shut over midnight returns from a single long sleep hours after the boundary
+/// it was waiting for and keeps yesterday's disc in the menu bar until the rest
+/// of that sleep has elapsed awake - which can be another whole day. Looking at
+/// the clock periodically bounds that to this interval.
+///
+/// Not polling in the sense D-017 rules out: what happens on each wake is two
+/// date computations costing microseconds, and the redraw still happens only
+/// when the displayed day has actually rolled over, which is the one trigger
+/// D-017 names.
+const MIDNIGHT_CHECK_INTERVAL: Duration = Duration::from_secs(600);
+
 pub fn run() {
     tauri::Builder::default()
         .manage(panel::CurrentSubject::default())
@@ -105,32 +119,55 @@ pub fn run() {
         });
 }
 
-/// Redraws the tray shortly after every local midnight.
+/// Redraws the tray when the local date changes.
 ///
 /// The moon disc shows the illumination at local noon of the current date, so it
-/// changes exactly once a day (`docs/DESIGN.md` 7.1). A thread that sleeps until
-/// the boundary costs nothing while it waits, which keeps idle CPU at zero as
-/// D-017 requires; polling on a short interval would not.
+/// changes exactly once a day (`docs/DESIGN.md` 7.1). The thread waits for that
+/// boundary rather than recomputing on a timer, and compares dates rather than
+/// trusting that it woke when it meant to: a sleep does not run while the
+/// machine is suspended, and one that meant to end at midnight can return long
+/// after it.
 fn watch_for_midnight(app: tauri::AppHandle) {
-    std::thread::spawn(move || loop {
-        let wait = duration_until_local_midnight().unwrap_or(Duration::from_secs(3600));
-        std::thread::sleep(wait + MIDNIGHT_SLACK);
+    std::thread::spawn(move || {
+        // The tray was drawn for today as the app started.
+        let mut drawn_for = jiff::Zoned::now().date();
 
-        // Same rule as everywhere else: the status item is an AppKit object and
-        // must only be touched on the main thread.
-        let handle = app.clone();
-        let dispatched = app.run_on_main_thread(move || {
-            if let Err(error) = tray::refresh_icons(&handle) {
-                // A failed redraw leaves yesterday's disc in the menu bar, which
-                // is wrong but not fatal, so the loop continues to the next day.
-                eprintln!("chandra: could not redraw the menu bar: {error}");
+        loop {
+            std::thread::sleep(next_midnight_check());
+
+            let today = jiff::Zoned::now().date();
+            if today == drawn_for {
+                continue;
             }
-        });
-        if dispatched.is_err() {
-            // The app is shutting down; nothing left to redraw.
-            return;
+            drawn_for = today;
+
+            // Same rule as everywhere else: the status item is an AppKit object
+            // and must only be touched on the main thread.
+            let handle = app.clone();
+            let dispatched = app.run_on_main_thread(move || {
+                if let Err(error) = tray::refresh_icons(&handle) {
+                    // A failed redraw leaves yesterday's disc in the menu bar,
+                    // which is wrong but not fatal, so the loop continues.
+                    eprintln!("chandra: could not redraw the menu bar: {error}");
+                }
+            });
+            if dispatched.is_err() {
+                // The app is shutting down; nothing left to redraw.
+                return;
+            }
         }
     });
+}
+
+/// How long to wait before looking at the clock again.
+///
+/// Until just after the next local midnight, or [`MIDNIGHT_CHECK_INTERVAL`],
+/// whichever comes first.
+fn next_midnight_check() -> Duration {
+    duration_until_local_midnight()
+        .map(|until| until + MIDNIGHT_SLACK)
+        .unwrap_or(MIDNIGHT_CHECK_INTERVAL)
+        .min(MIDNIGHT_CHECK_INTERVAL)
 }
 
 /// Time from now until the next local midnight.
@@ -161,6 +198,18 @@ mod tests {
             wait.as_secs() <= 26 * 3600,
             "waiting {} hours is not a next midnight",
             wait.as_secs() / 3600
+        );
+    }
+
+    /// The watcher must never park past the point where it could notice a
+    /// machine that was asleep over the boundary.
+    #[test]
+    fn the_watcher_looks_at_the_clock_at_least_every_interval() {
+        let wait = next_midnight_check();
+        assert!(wait > Duration::ZERO, "a zero wait would spin");
+        assert!(
+            wait <= MIDNIGHT_CHECK_INTERVAL,
+            "parked for {wait:?}, past the point a resumed machine would be noticed"
         );
     }
 }

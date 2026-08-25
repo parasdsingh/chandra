@@ -669,6 +669,16 @@ defect gets written.
   chevrons that were removed; §9.2's cold-month skeleton is not implemented and
   cannot be since layout moved to the back end; the `Today,` spoken prefix and
   the Home/End and focus rules do not match the code.
+  **fixed, all of it.** ARCHITECTURE §3.3 lists the nine commands that exist and
+  says what replaced ts-rs and why; §5 describes the keys and the generation
+  counter that carries the configuration; §7 and §10 were corrected with F-24.
+  ISSUES I-038 keeps its history and records what actually resolved it. DESIGN
+  §5.7 is now "Changing month" and says why a picker cannot serve a calendar with
+  no year-and-number, §8.1 and §11.2 lose the rows that described it, §5.2's
+  header loses the chevrons and the label button, §9.2 says why the skeleton
+  cannot exist now that layout is laid out by the back end, §10.1 and §10.3 match
+  the key map and the focus order the code has, and §11.4 drops the `Today,`
+  prefix and says why `aria-current` is enough.
 - **F-52** `shift_gregorian` overflows on a huge offset — debug panic, release
   wrap to a nonsense year. Not reachable through the UI.
   **fixed** — counted in `i64` and the year clamped, so an impossible request
@@ -676,9 +686,43 @@ defect gets written.
 - **F-53** `geo::distance_km` can produce NaN for antipodal points and
   `nearest_place` then silently skips the entry; degenerate inputs return
   confident wrong answers rather than `None`.
+  **fixed, both halves.** The NaN is real and was reproduced: the haversine term
+  rounds above 1 for some antipodal pairs, and one near-antipodal pair in about
+  eight million searched produces `asin` of a value over 1. The term is clamped.
+  `nearest_place` refuses a coordinate that is not one - a NaN or a value off the
+  globe, either of which a location service can hand over - rather than comparing
+  NaNs that are all equal to each other and returning the table's first row as
+  confidently as a real answer.
 - **F-54** `watch_for_midnight` uses `thread::sleep` across system sleep, so a
   Mac asleep through midnight may keep yesterday's disc. D-017 rules out polling;
   a wake notification is the fix.
+  **fixed, differently.** The defect is real and worse than "may": the sleep does
+  not advance while the machine is suspended, so a laptop shut at 23:00 with a
+  one-hour wait pending returns to it an hour of *awake* time after resuming, and
+  a longer pending wait can hold yesterday's disc for another whole day.
+
+  A wake notification would mean `NSWorkspaceDidWakeNotification`, which is
+  AppKit: either a new dependency or a hand-written observer class in unsafe
+  Objective-C that this environment cannot exercise. Writing FFI I cannot run,
+  where being wrong means crashing on wake, is worse than the defect. Instead the
+  watcher parks for at most ten minutes at a time and compares the local date
+  against the one the tray was drawn for. That is not the polling D-017 rules
+  out: a wake costs two date computations, and the redraw still happens only when
+  the displayed day has rolled over, which is the one trigger D-017 names. No new
+  decision is needed for it.
 - **F-55** *(speculative)* `animate(0)` can leave the strip wedged one month off
   after a single wheel delta beyond ~720 px, which WebKit's coalescing makes
   plausible.
+  **fixed; not speculative.** Traced through the arithmetic and reproduced by
+  running it. A delta of 1000 px banks the three months the loop allows, leaves
+  a residual of 280, and the overscroll clamp - which equals a whole month - cuts
+  it to exactly 240. `settle` then reads a travel of 240, decides to go onward,
+  and asks `animate` for `240 - 240`: zero, which returns without doing anything.
+  The strip sits one whole month from rest for good, showing a month its own
+  offset denies.
+
+  The bound now applies to the displacement before the banking rather than to the
+  number of banks, so banking always drains it below one month and at most three
+  are ever taken. No test: the front end has no test harness, so this was checked
+  by extracting the two versions of `move` and `settle` and running them over a
+  range of deltas.

@@ -173,14 +173,25 @@ Every command is `async`, returns `Result<T, AppError>`, and runs the engine cal
 
 | Command | Returns |
 |---|---|
-| `month_view(subject, year, month)` | `MonthView` |
-| `day_detail(subject, date)` | `DayDetail` |
-| `current_state()` | tray subjects + today's summary |
-| `settings_get()` / `settings_set(patch)` | `Settings` |
-| `location_resolve()` | `ResolvedLocation` + which chain step answered |
-| `city_search(query)` | `Vec<City>` |
+| `bootstrap()` | `Bootstrap`: settings, resolved location, subject, picker lists, glyphs |
+| `moon_month(anchor_unix_ms, offset, first_weekday)` | `MoonMonth` |
+| `graha_month(graha, anchor_unix_ms, offset, first_weekday)` | `GrahaMonth` |
+| `day_detail(graha, year, month, day)` | `DayDetail` |
+| `snapshot(unix_ms)` | `Snapshot`: what the menu bar draws |
+| `update_settings(settings)` | `Bootstrap`, re-read after applying |
+| `search_cities(query, limit)` | `Vec<Place>` |
+| `request_device_location()` | `Resolved`, whatever the attempt left in force |
+| `close_panel()` | `()` |
 
-TypeScript types are generated from the Rust types (`ts-rs`) so the IPC boundary cannot drift.
+A month is addressed by an anchor instant and an offset, not by a year and a number: a lunar
+month runs between syzygies and has neither. `first_weekday` travels in the request because the
+grid is laid out here and that is the one presentation fact this layer cannot derive (D-021).
+
+`src/ipc/types.ts` is hand-written. Generating it from the Rust types was the original plan and
+is not what happened; instead `src-tauri/tests/contract.rs` serialises a real value of every
+payload type, reduces it to its field names and leaf types, and compares that against a
+committed fixture. A field added, removed or renamed in Rust fails that test and the diff names
+exactly what to change in TypeScript.
 
 ---
 
@@ -216,12 +227,19 @@ Measured baseline (R-04): `swe_calc_ut` = 7.9 us; a 31-day 15-minute Moon grid =
 | Panel open, warm | serve from LRU cache | < 5 ms |
 | Panel open, cold month | adaptive bracketing, not brute grid | < 30 ms |
 | Month switch | prev/next prefetched while idle | perceived instant |
-| Tray icon refresh | only on day rollover; timer aligned to next local midnight | ~0% idle CPU |
+| Tray icon refresh | only on day rollover; the watcher looks at the clock at most ten minutes apart, because a sleeping machine does not advance a `thread::sleep` | ~0% idle CPU |
 | Memory | LRU bounded to 24 month-views per subject | bounded |
 | Startup | engine init is lazy; tray icon drawn from cached illumination first | < 200 ms to visible |
 
-Cache key is `(subject, year, month, ayanamsa, node_type, lat, lon, tz)`. Any settings change
-invalidates wholesale inside the same critical section that reconfigures the engine.
+Cache keys name the subject, the month system, the month's first civil day and the weekday the
+grid opens on - the month's own identity rather than the request that reached it. Three kinds
+share the cache: a month per subject, the resolved grid, and the lunar days, the last two shared
+by every subject drawn on that month.
+
+The configuration is *not* in the key. A generation counter carries it instead: any settings
+change bumps it, which hides every existing entry at once, and a value computed under one
+generation is refused if it is offered after another has begun. That is what stops a month
+computed under one ayanamsa being stored as if it were computed under the next.
 
 ---
 

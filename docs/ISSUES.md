@@ -139,12 +139,20 @@ accessor it hands a callback child only re-emits when truthiness changes.
 Replacing one bootstrap object with another never notified, and the child kept
 the value from mount.
 
-Resolved by carrying the subject in the page's own URL: the backend navigates
-the panel to `?subject=<key>` as it opens. The page reads its own URL on load, so
-nothing has to propagate. It also gives every open a clean slate, which is what
-makes reopening return to today - the reason the Today button could be dropped.
-Measured at roughly 450 ms from click to a fully drawn panel, with no blank
-frame: the webview keeps the previous page until the new one commits.
+First resolved by carrying the subject in the page's own URL: the backend
+navigated the panel to `?subject=<key>` as it opened, and the page read its own
+URL on load, so nothing had to propagate. Measured at roughly 450 ms from click
+to a fully drawn panel.
+
+**That is no longer the resolution.** Reloading the document on every open threw
+away every month already in hand: the window was empty for 100 to 200 ms and the
+calendar landed at 265 to 414 ms. The page is now never reloaded, and the subject
+is pushed twice - a `chandra://open` event as the window is shown, and a second
+announcement when it takes focus, which the platform raises after the show has
+completed. Both call the same idempotent handler with the same value, so arriving
+twice is arriving once, and neither can be the one that is missed. What the
+reload used to give implicitly - today, no selection, the calendar view, a fresh
+scroller - is now done on purpose in that handler.
 
 ### I-041 — Clicking below the panel did not close it — done
 The window was 320 x 620 while the panel drew only 332px of it, so clicks in the

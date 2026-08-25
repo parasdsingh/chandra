@@ -73,7 +73,7 @@ and focus insets.
 | Token | px | Applies to |
 |---|---|---|
 | `--r-panel` | 12 | panel, settings window content |
-| `--r-cell` | 8 | day cell fill, month picker cell |
+| `--r-cell` | 8 | day cell fill, settings row fill |
 | `--r-button` | 6 | header buttons |
 | `--r-chip` | 4 | `℞` chip |
 | `--r-focus` | 9 | focus ring on a 40px cell (`--r-cell` + 1px inset) |
@@ -257,22 +257,20 @@ menu bar item never opens a differently-sized window month to month.
 ```
  x:20         36                                 214  242      276    300
   ┌───────────┬─────────────────────────────────┬─────┬────────┬───────┐
-  │  subject  │  "Chandra · August 2026"        │  ‹  │   ›    │   ⚙   │
-  │  16 × 16  │  Title 15/600/-0.10             │24×24│ 24×24  │ 24×24 │
-  └───────────┴─────────────────────────────────┴─────┴────────┴───────┘
-   glyph        gap 8                            gap 4  gap 10
+  │  subject  │  "Chandra · August 2026"                     │   ⚙   │
+  │  16 × 16  │  Title 15/600/-0.10                          │ 24×24 │
+  └───────────┴──────────────────────────────────────────────┴───────┘
+   glyph        gap 8                                          gap 8
 ```
 
 | Element | Box | Hit area | Notes |
 |---|---|---|---|
-| Subject glyph | 16 × 16 at x = 20, vertically centred | — | live moon disc for the moon panel; the graha template glyph for graha panels, drawn in `--text-primary` |
-| Subject + month label | text button, x = 44 → 210 (166px) | 28px tall, full text width | opens the month picker (§5.7) |
-| `‹` prev | 24 × 24 at x = 214 → 238, centre 226 | 28 × 28 | |
-| `›` next | 24 × 24 at x = 242 → 266, centre 254 | 28 × 28 | |
-| `⚙` settings | 24 × 24 at x = 276 → 300, centre 288 | 28 × 28 | opens the settings window |
+| Subject glyph | 16 × 16 at x = 20, vertically centred | — | live moon disc for the moon panel; the graha template glyph for graha panels, drawn in `--text-primary`. Replaced by a `‹` back button outside the calendar |
+| Subject + month label | text, not a button | — | states the month; sets an `Adhika` qualifier apart from the name it qualifies |
+| `⚙` settings | 24 × 24 at x = 276 → 300, centre 288 | 28 × 28 | opens settings inside the panel |
 
-Hit areas are 28 × 28 centred on each 24 × 24 visual box, so `‹` and `›` hit areas abut at
-x = 240 and the `⚙` hit area overhangs the 300px content edge by 2px into the panel padding.
+The two month chevrons are gone with the picker (§5.7). The `⚙` hit area is 28 × 28 centred on
+its 24 × 24 visual box and overhangs the 300px content edge by 2px into the panel padding.
 
 Button glyphs: 1.5px stroke, round cap/join, `--text-secondary`; `--text-primary` on hover;
 opacity 0.6 while pressed.
@@ -418,29 +416,21 @@ Nothing else. No tithi, no yoga, no karana, no muhurta, no ayanamsa readout, no 
 | **Total** | **332** | **571** |
 | + provenance note (§9.4) | — | +24 → **595** |
 
-### 5.7 Month picker
+### 5.7 Changing month
 
-Opened by clicking the header label. **Replaces the grid region only; panel height stays 332.**
-This is the reason the picker is 4 × 3 and not a scrolling list.
+There is no month picker and no header chevrons. The grid scrolls: three months are stacked and
+moved together by a wheel or a drag, and the strip settles onto whichever fills the window when
+the gesture ends. `Page Up` / `Page Down` step a month, with `⇧` a year.
 
-```
-      │  ‹            2026            ›                        │  40   year stepper
-      │                                                        │  10
-      │  ┌──────┬──────┬──────┬──────┐                         │
-      │  │ Jan  │ Feb  │ Mar  │ Apr  │  60                     │
-      │  ├──────┼──────┼──────┼──────┤                         │  180
-      │  │ May  │ Jun  │ Jul  │ Aug  │  60                     │
-      │  ├──────┼──────┼──────┼──────┤                         │
-      │  │ Sep  │ Oct  │ Nov  │ Dec  │  60                     │
-      │  └──────┴──────┴──────┴──────┘                         │
-      │      └─ 4 × 70 = 280 ─┘                                │  10
-```
+The picker specified here was a 4 × 3 grid of month names inside the region, with a year
+stepper above it. It was designed for a calendar addressed by a year and a number, and a lunar
+month has neither: it runs between syzygies, so there is nothing to lay out in a grid of twelve
+and no year that contains a fixed set of them. Continuous scrolling is one gesture that works
+in both systems, and it removed the header's chevrons and its label button with it — which is
+why §10.3's focus order below is four items shorter than it was.
 
-- Month cell 70 × 60, label Body 13/400 centred.
-- Displayed month: fill `--surface-selected`, inset 4 → 62 × 52, r 8.
-- Current real month: label in `--accent`.
-- Year stepper: `‹` / `›` 24 × 24 at x = 20 and x = 276; year Title 15/600 centred, tabular.
-- The weekday row is hidden while the picker is open. The header label stays and toggles back.
+The header label is not a button. It states the month and, where the month is intercalary, sets
+the `Adhika` qualifier apart from the name it qualifies.
 
 ---
 
@@ -771,8 +761,7 @@ Flagged rather than decided, per the mid-implementation rule.
 | Day selection fill | `background-color` | 90ms | 0 | `--ease-standard` |
 | Cell hover in / out | `background-color` | 80ms / 120ms | 0 | `--ease-standard` |
 | Header button press | `opacity` 1 → 0.6 → 1 | 0ms down, 120ms up | 0 | `--ease-standard` |
-| Month picker open / close | grid region `opacity` cross | 120ms | 0 | `--ease-standard` |
-| Phase glyph appears (cold month) | `opacity` 0 → 1 | 120ms | staggered 0 per cell | `--ease-standard` |
+| Month strip settle | `translateY` to the nearest month | 140–300ms by distance | 0 | cubic ease-out, driven per frame |
 
 Notes:
 
@@ -781,11 +770,10 @@ Notes:
 - **Height change is 220ms**, the longest value in the app, because it is the only transition
   that moves the window frame itself. The panel window and the DOM node animate on the same
   curve and duration or the content visibly detaches from the frame.
-- **Month switch translates ±8px in the direction of travel** — next month enters from the
-  right, previous from the left. There is no cross-fade of two grids; the outgoing grid is
-  removed at 0ms and the incoming one animates in. Two overlapping grids of numerals is noise.
-- **Month picker open does not animate the panel height** (§5.7), which is exactly why the
-  picker was sized to fit the grid region.
+- **The month strip is not a transition.** It is driven frame by frame, because a CSS
+  transition ends by firing an event that never arrives when the target equals the current
+  value — which left the strip wedged after a plain click. A frame loop finishes because it
+  counts frames.
 
 ### 8.2 What must not animate
 
@@ -837,13 +825,20 @@ Centred, one line, sentence case, full stop. No illustration, no icon, no sugges
 | Condition | Render |
 |---|---|
 | Warm month (cache hit, < 5ms) | no loading state at all; the grid is present in the first frame |
-| Cold month (> 120ms) | grid renders **immediately** with weekday row, all 42 date numerals, today ring and selection — everything derivable without the ephemeris. Glyph slots stay empty. |
-| Glyph data arrives | each phase glyph fades in over 120ms (§8.1) |
+| Cold month (> 120ms) | the weekday row is present; the grid appears whole when it arrives |
 | Day detail pending | field rows render with labels present and values blank. No placeholder characters. |
 
 **No spinner. No progress bar. No skeleton shimmer. No dimming of the grid.** The 120ms
 threshold exists so that a 30ms cold month (ARCHITECTURE §5 target) never shows a transitional
 state at all.
+
+The partial skeleton this table used to specify — numerals and today's ring drawn immediately,
+glyphs fading in behind them — is not implemented and cannot be. The front end no longer knows
+which civil days a month holds: a lunar month runs between syzygies, so the back end lays the
+42 cells out and sends them in reading order (D-021). There are no numerals to draw before the
+month arrives. What replaced it is the months already in hand: the panel is not reloaded
+between opens and the neighbours either side are already fetched, so a cold month is rare and a
+warm one has no transitional state at all.
 
 ### 9.3 Error
 
@@ -949,14 +944,14 @@ a warning icon, or a border. Each is stated as a fact, in words, in place.
 | `Home` / `End` | first / last day of the displayed month |
 | `T` | jump to today, switching month if needed |
 | `Return` or `Space` | expand the detail for the focused day; collapse if already expanded for that day |
-| `Esc` | collapse the detail if expanded; otherwise close the panel |
+| `Esc` | close the day or settings view; otherwise clear the selection; otherwise close the panel |
 | `Tab` / `⇧Tab` | move through the focus order (§10.3) |
-| `M` | open / close the month picker |
-| `⌘,` | open the settings window |
-| `⌘W` | close the panel (or the settings window if it is key) |
+| `⌘,` | open settings |
+| `⌘W` | close the panel |
 
-Inside the month picker: `←` `→` `↑` `↓` move by month, `⇧←` / `⇧→` change year,
-`Return` selects and closes, `Esc` closes without changing the month.
+There is no month picker and no `M`. Months change by scrolling or dragging the grid, which is
+the only gesture that works the same in a lunar month, where stepping goes from one syzygy to
+the next rather than through a numbered sequence (§5.7).
 
 Not bound in v1: `⌘Q` behaves as macOS default, and no other key does anything. Unbound keys
 are silently ignored — no beep, no shake.
@@ -976,19 +971,21 @@ are silently ignored — no beep, no shake.
 ### 10.3 Focus order
 
 ```
-  1. header: subject + month label button
-  2. header: ‹ previous month
-  3. header: › next month
-  4. header: ⚙ settings
-  5. day grid                 — ONE tab stop, roving tabindex inside
-  6. detail area              — only if expanded, and only if it contains a button (§9.3)
+  1. header: ⚙ settings, or ‹ back outside the calendar
+  2. day grid                 — ONE tab stop, roving tabindex inside
+  3. detail area              — only in the day view, and only if it contains a button (§9.3)
   → wraps to 1
 ```
+
+The month label button and the two month chevrons are gone with the picker (§5.7).
 
 - The 42 day cells are **one** tab stop. Arrow keys move inside the grid, which is what
   `role="grid"` requires and what stops `Tab` from becoming a 42-press journey.
 - The roving `tabindex="0"` cell is the selected day; if no day is selected, it is today; if
-  today is outside the displayed month, it is the first day of the displayed month.
+  today is outside the displayed month, it is the first day of the displayed month. Only days
+  inside the displayed month are eligible, and only the month filling the window carries the
+  stop: three grids are mounted at once, and the two off screen are hidden from assistive
+  technology entirely.
 - The expanded detail contains no focusable content except the error button, so it is skipped
   in the common case.
 - Focus is trapped inside the panel while it is open. The panel takes key focus on open and
@@ -1018,10 +1015,7 @@ See §4.1 for the full table. Summary of the guarantees:
 | Target | Visual | Hit area |
 |---|---|---|
 | Day cell | 40 × 40 | 40 × 40 |
-| Header chevrons, settings gear | 24 × 24 | 28 × 28 |
-| Subject + month label | text | 28px tall × full text width |
-| Month picker cell | 70 × 60 | 70 × 60 |
-| Year stepper | 24 × 24 | 28 × 28 |
+| Settings gear, back chevron | 24 × 24 | 28 × 28 |
 | Settings toggle row | full row | 320 × 28 minimum |
 | Tray item | 22 × 22 pt | system-managed |
 
@@ -1055,7 +1049,7 @@ carry a redundant textual carrier in the same surface, not in a tooltip.
 | Grid | `grid`, `aria-rowcount=6`, `aria-colcount=7` | `August 2026` |
 | Week | `row` | — |
 | Moon cell | `gridcell` | `20 August, waxing gibbous, 68 percent illuminated` |
-| Moon cell, today | `gridcell`, `aria-current="date"` | `Today, 20 August, waxing gibbous, 68 percent illuminated` |
+| Moon cell, today | `gridcell`, `aria-current="date"` | `20 August, waxing gibbous, 68 percent illuminated` |
 | Graha cell, no events | `gridcell` | `20 August` |
 | Graha cell, with events | `gridcell` | `20 August, 2 events: enters Simha, retrograde station` |
 | Graha cell, retrograde | `gridcell` | `20 August, retrograde, 1 event: enters Magha` |
@@ -1065,6 +1059,9 @@ carry a redundant textual carrier in the same surface, not in a tooltip.
 | Provenance note | inside the live region | read last, after all six fields |
 | Tray item | system | `Chandra, waxing gibbous` / `Mangala` |
 
+- Today carries `aria-current="date"` and no spoken prefix. A `Today,` in front of the label
+  would say the same thing twice to a screen reader that already announces the attribute, and
+  say it in a word that no other cell's label uses.
 - The detail region is `aria-live="polite"`, so changing the selected day announces the new
   detail without the user re-navigating.
 - Times are announced as times, not digit strings: the DOM carries `<time datetime="…">`.
