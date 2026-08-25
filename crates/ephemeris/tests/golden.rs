@@ -303,8 +303,19 @@ fn bundled_data_serves_the_navigable_range_at_full_precision() {
                 .rise_set(jd, jd + 1.0, Graha::Chandra, observer)
                 .expect("rise_set")
                 .source,
-            expected,
+            Some(expected),
             "rise/set provenance for year {year}"
+        );
+        // The nodes never rise, so there is no window to attribute. An absent
+        // provenance is the honest answer, and asking the ephemeris to produce
+        // one is work done for a claim about a reading nobody took.
+        assert_eq!(
+            engine
+                .rise_set(jd, jd + 1.0, Graha::Rahu, observer)
+                .expect("rise_set")
+                .source,
+            None,
+            "a node has no rise or set to attribute"
         );
         assert_eq!(
             engine.ayanamsa(jd).expect("ayanamsa").source,

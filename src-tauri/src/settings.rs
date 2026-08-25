@@ -214,18 +214,33 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
 
     // 1 -> 2. Elevation became the observer's own correction rather than part of
     // the place, so it can be set without inventing a location that then
-    // reported itself as having come from the device. `null` keeps the elevation
-    // of whatever the chain resolves, which is what a version 1 file meant.
+    // reported itself as having come from the device.
+    //
+    // A version 1 place carried the elevation every rise and set was computed
+    // with, so it moves across rather than being left where it sat. Leaving it
+    // behind looked harmless - the place still resolved with it - right up until
+    // the user picked a different city, at which point the new place carried no
+    // elevation, the correction was still absent, and their metres vanished
+    // without a word. Carrying it over costs a device-supplied elevation being
+    // relabelled as the user's own, which they can clear; the alternative loses
+    // data silently.
     //
     // `launch_at_login` and `time_format` were removed in the same step and need
     // no clause: neither was ever settable, and serde ignores a field that is no
     // longer declared.
     if version == 1 {
-        value
+        let location = value
             .get_mut("location")
             .and_then(serde_json::Value::as_object_mut)
-            .ok_or_else(|| AppError::Settings("settings schema 1 has no location block".into()))?
-            .insert("elevation".into(), serde_json::Value::Null);
+            .ok_or_else(|| AppError::Settings("settings schema 1 has no location block".into()))?;
+
+        let carried = location
+            .get("place")
+            .and_then(|place| place.get("elevation"))
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        location.insert("elevation".into(), carried);
         value["schema_version"] = serde_json::Value::from(2u32);
         version = 2;
     }
@@ -355,7 +370,12 @@ mod tests {
 
         let settings = Settings::load(&dir).expect("migrates");
         assert_eq!(settings.schema_version, SCHEMA_VERSION);
-        assert_eq!(settings.location.elevation, None, "no correction was set");
+        assert_eq!(
+            settings.location.elevation,
+            Some(920.0),
+            "the elevation every rise and set was computed with comes across, or \
+             it is lost the moment a different city is picked"
+        );
         assert_eq!(
             settings.location.place.as_ref().map(|p| p.elevation),
             Some(920.0),

@@ -124,11 +124,14 @@ pub struct RiseSet {
     pub set: Option<f64>,
     /// Which theory served this body over this window (D-006).
     ///
+    /// `None` for the nodes, which have no rise or set to attribute. A value
+    /// here would be a statement about a reading that was never taken.
+    ///
     /// `swe_rise_trans` reports a status code rather than a flag word, so it
     /// cannot answer for itself. This is read from a position call for the same
     /// body at the same instant - the quantity the rise search integrates - so
     /// it is observed rather than inferred from the date.
-    pub source: Source,
+    pub source: Option<Source>,
 }
 
 /// A scalar reading, with the theory that produced it.
@@ -311,25 +314,29 @@ impl Engine {
         graha: Graha,
         observer: Observer,
     ) -> Result<RiseSet> {
-        let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
-        let body = se_body_id(graha, inner.config.node_type);
-
-        // One position call for the body, purely to read the flags Swiss
-        // Ephemeris returns. It is asked for even when there can be no rise, so
-        // the provenance of the window is always stated rather than assumed.
-        let flags = SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_SIDEREAL;
-        let (_, returned) = calc_raw(jd_ut_start, body, flags, graha.name())?;
-        let source = Source::from_returned_flags(returned);
-
-        // The nodes are geometric points with no disc and never cross the
-        // horizon in the sense a rise/set calculation means.
+        // The nodes are geometric points with no disc, and never cross the
+        // horizon in the sense a rise and set calculation means. Answered before
+        // the lock is taken and before anything is computed: there is no window
+        // to search and so nothing whose provenance could be stated. Asking the
+        // ephemeris first, only to throw the answer away, is work done to
+        // produce a claim about a result that does not exist.
         if matches!(graha, Graha::Rahu | Graha::Ketu) {
             return Ok(RiseSet {
                 rise: None,
                 set: None,
-                source,
+                source: None,
             });
         }
+
+        let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        let body = se_body_id(graha, inner.config.node_type);
+
+        // One position call for the body, purely to read the flags Swiss
+        // Ephemeris returns. It is asked for even when the body does not rise,
+        // so the provenance of the window is always stated rather than assumed.
+        let flags = SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_SIDEREAL;
+        let (_, returned) = calc_raw(jd_ut_start, body, flags, graha.name())?;
+        let source = Some(Source::from_returned_flags(returned));
 
         let rise = calc_rise_event(jd_ut_start, body, SE_CALC_RISE, observer, graha)?;
         let set = calc_rise_event(jd_ut_start, body, SE_CALC_SET, observer, graha)?;

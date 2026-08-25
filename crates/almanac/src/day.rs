@@ -216,7 +216,12 @@ pub fn moon_day(
         moonset: rise_set.set.map(|jd| day.moment(jd)).transpose()?,
         combustion: combustion_at(engine, Graha::Chandra, day.noon_jd())?,
         source: day_source(
-            [noon.source, rise_set.source, nakshatra_source, rashi_source],
+            [
+                Some(noon.source),
+                rise_set.source,
+                Some(nakshatra_source),
+                Some(rashi_source),
+            ],
             panchanga.as_ref(),
         ),
         panchanga,
@@ -231,9 +236,15 @@ pub fn moon_day(
 /// nakshatra read as accounting for span provenance while ignoring it entirely,
 /// so a day whose spans were resolved from Moshier positions reported itself as
 /// exact.
-fn day_source(parts: [Source; 4], panchanga: Option<&DayPanchanga>) -> Source {
+/// The weakest theory behind anything the day shows.
+///
+/// A part may be absent - the nodes have no rise or set, so there is no window
+/// whose provenance could be reported - and an absent part contributes nothing
+/// rather than a default. Folding in a `Swieph` that stands for "no reading"
+/// would let a missing answer strengthen the day's claim about itself.
+fn day_source(parts: [Option<Source>; 4], panchanga: Option<&DayPanchanga>) -> Source {
     Source::weakest(
-        parts.into_iter().chain(
+        parts.into_iter().flatten().chain(
             panchanga
                 .into_iter()
                 .flat_map(|p| p.tithis.iter().map(|span| span.source)),
@@ -267,10 +278,10 @@ pub fn graha_day(
         combustion: combustion_at(engine, graha, day.noon_jd())?,
         source: day_source(
             [
-                position.source,
+                Some(position.source),
                 rise_set.source,
-                nakshatra_source,
-                rashi_source,
+                Some(nakshatra_source),
+                Some(rashi_source),
             ],
             panchanga.as_ref(),
         ),
