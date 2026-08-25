@@ -321,9 +321,15 @@
   color: inherit;
 }
 
+/* The other calendar's date, in the corner. It is an anchor to the world the
+   user lives in, not what the cell is about, so it does not take the line that
+   carries the glyph. */
 .day-cell__gregorian {
-  font: var(--type-micro);
-  letter-spacing: var(--track-micro);
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font: 600 9px / 1 var(--font-stack);
+  letter-spacing: 0.3px;
   color: var(--text-tertiary);
   white-space: nowrap;
 }
@@ -333,30 +339,18 @@
 }
 
 /* A tithi that began and ended between two sunrises: the grid's numbers jump at
-   this cell. The whole tithi is compressed inside one day, so at day scale it
-   behaves as an instant and takes a marker.
-
-   Top left, not the usual top right: on a graha calendar the right-hand slot is
-   an ingress or a station, and the same dot in the same corner meaning either
-   the calendar skipped a day or the graha changed sign would be unreadable.
-   Left is the calendar; right is the subject. */
+   this cell. Set on the numeral like a footnote mark rather than in a corner -
+   both corners are spoken for, the date on one side and an ingress on the other,
+   and a dot that meant "the calendar skipped a day" in the same place a dot
+   meant "the graha changed sign" would be unreadable. */
 .day-cell__kshaya {
   position: absolute;
-  top: 5px;
-  left: 6px;
-  width: 4px;
-  height: 4px;
+  top: -1px;
+  right: -5px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: var(--marker);
-}
-
-/* Directly under the tithi, where DESIGN 6.3 puts it. At the cell's foot it
-   would underline the Gregorian date instead of marking the day. */
-.day-cell.is-lunar .day-cell__combust {
-  top: 21px;
-  bottom: auto;
-  left: 13px;
-  right: 13px;
 }
 
 /* A tithi holding two sunrises names two days. Full-bleed on both, so the pair
@@ -370,17 +364,6 @@
   height: 1px;
   background: var(--marker);
   opacity: 0.55;
-}
-
-/* In lunar mode the mark runs with the tithi rather than reaching for a corner
-   the ingress marker already owns. Raised half a line, the way an ephemeris sets
-   it. */
-.day-cell__retro-mark.is-inline {
-  position: relative;
-  left: auto;
-  bottom: auto;
-  top: -4px;
-  margin-left: 1px;
 }
 
 .phase-glyph {
@@ -467,18 +450,6 @@
   border-radius: 1px;
   background: var(--marker);
   opacity: 0.9;
-}
-
-/* A retrograde period reads as one continuous line running across whole weeks.
-   The mark beside the glyph says which days; this says they are one stretch. */
-.day-cell__retro {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--marker);
-  opacity: 0.5;
 }
 
 /* ---------- detail ---------- */

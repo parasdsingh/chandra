@@ -142,77 +142,53 @@ export function DayCell(props: Props): JSX.Element {
               {(prefix) => <span class="day-cell__paksha">{prefix()}</span>}
             </Show>
             {tithiLabel(lunar()).value}
-            {/* In lunar mode the mark runs with the label, so a wide numeral
-                pushes it along instead of both reaching for the same corner.
-                The corner is the marker slot, and an ingress lives there. */}
-            <Show when={retrograde()}>
-              <span class="day-cell__retro-mark is-inline" aria-hidden="true">
-                ℞
-              </span>
+            {/* A tithi that began and ended inside this day is one the grid
+                never names, so the numbers jump here. Marked like a footnote,
+                on the numeral that jumps, because the corners are spoken for -
+                the date on one side, an ingress on the other. */}
+            <Show when={lunar().kshaya.length > 0}>
+              <span class="day-cell__kshaya" />
             </Show>
           </span>
         )}
       </Show>
 
+      {/* The other calendar's date. In the corner, where it can be read without
+          taking the line that says what the day is about. */}
+      <Show when={tithi()}>
+        <span class="day-cell__gregorian">{gregorian()}</span>
+      </Show>
+
       <span class="day-cell__content">
         <Show
-          when={tithi()}
-          fallback={
-            <Show when={props.kind === "moon"} fallback={<GrahaMark {...props} />}>
-              <PhaseGlyph
-                illumination={(props as MoonProps).data.illumination}
-                waxing={(props as MoonProps).data.is_waxing}
-                southern={(props as MoonProps).southern}
-                size={14}
-                dim={!inMonth()}
-              />
-            </Show>
-          }
+          when={props.kind === "moon"}
+          fallback={<GrahaMark {...props} />}
         >
-          {/* In lunar mode the second line is the Gregorian date. The subject's
-              own symbol is not repeated here: the header already carries it, and
-              every state it used to anchor is drawn on the cell itself. */}
-          <span class="day-cell__gregorian">{gregorian()}</span>
+          <PhaseGlyph
+            illumination={(props as MoonProps).data.illumination}
+            waxing={(props as MoonProps).data.is_waxing}
+            southern={(props as MoonProps).southern}
+            size={14}
+            dim={!inMonth()}
+          />
         </Show>
       </span>
 
-      {/* In solar mode the mark sits beside the glyph, placed out of the flow so
-          the glyph stays on the column's centre line whether or not the day is
+      {/* Beside the glyph, in both calendars, placed out of the flow so the
+          glyph stays on the column's centre line whether or not the day is
           retrograde. A colour cannot do this job: it has to be learnt, and it is
           the first thing a grayscale or colour-blind rendering loses. */}
-      <Show when={!tithi() && retrograde()}>
+      <Show when={retrograde()}>
         <span class="day-cell__retro-mark" aria-hidden="true">
           ℞
         </span>
       </Show>
 
       {/* Combustion is a span. A rule says "all day", where a marker would read
-          as an instant.
-
-          Not drawn for the Moon in a lunar month: the Moon is combust exactly
-          around Amavasya, which the numeral already names, and a rule under the
-          Gregorian line read as an underline on the date rather than as a state
-          (DESIGN 1.3, no duplicated ink). */}
-      <Show when={props.data.combust && !(props.kind === "moon" && tithi())}>
+          as an instant. Drawn for every subject in both calendars: a state that
+          appears in one calendar and not the other is a state nobody can learn. */}
+      <Show when={props.data.combust}>
         <span class="day-cell__combust" />
-      </Show>
-
-      {/* A retrograde period becomes one continuous line running across whole
-          weeks: visible at a glance, invisible when not looked for.
-
-          Only in solar mode. In a lunar month the cell's bottom edge carries the
-          vriddhi rule, and two full-width rules in one slot would say two things
-          with one shape. The mark beside the tithi already appears on every day
-          of the stretch, so the stretch is still legible. */}
-      <Show when={!tithi() && retrograde()}>
-        <span class="day-cell__retro" />
-      </Show>
-
-      {/* A tithi that began and ended inside this day is one the grid never
-          names, so the numbers jump at this cell. Unmarked that would read as a
-          bug; marked, it reads as the calendar it is. */}
-      <Show when={(tithi()?.kshaya.length ?? 0) > 0}>
-        <span class="day-cell__kshaya" />
       </Show>
 
       {/* A tithi holding two sunrises names two days. The rule runs full width
