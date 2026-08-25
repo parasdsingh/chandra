@@ -50,6 +50,7 @@ lint: ## Formatting and lint checks
 	cargo fmt --all -- --check
 	cargo clippy --workspace --all-targets -- -D warnings
 	npx tsc --noEmit
+	sh tools/check-tokens.sh
 
 fmt: ## Format everything
 	cargo fmt --all

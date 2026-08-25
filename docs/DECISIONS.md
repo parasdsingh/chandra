@@ -417,8 +417,8 @@ that.
 - **Removed: illuminated percentage, distance from the Sun, speed, longitude.** They were the
   only reason the Moon's view and a graha's had different shapes.
 - **Rise and set belong to the subject.** Surya's day names sunrise and sunset, Chandra's
-  moonrise and moonset, a graha's its own. There is no separate sunrise row on every subject's
-  day.
+  moonrise and moonset, and every other graha's names itself — `Shani rise`. There is no
+  separate sunrise row on every subject's day.
 - **Every drawn state is named in words on the same surface** — this is D-019's principle
   unchanged — and spoken labels say what was measured: `combust at noon`, not `combust`.
 - The phase name appears in solar mode only; in a lunar month the tithi says the same thing

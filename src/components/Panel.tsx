@@ -618,8 +618,8 @@ export function Panel(props: Props): JSX.Element {
               }
             >
               {/* The month in the window is the one that failed - the grid has
-                  nothing left to stay live for, which is the case DESIGN 9.3's
-                  "the grid stays navigable" does not cover. */}
+                  nothing left to stay live for, so the error takes its place
+                  (DESIGN 9.3). */}
               {(problem) => (
                 <ErrorBlock code={problem().code} message={problem().message} />
               )}

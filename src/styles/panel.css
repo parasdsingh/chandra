@@ -546,7 +546,7 @@
   margin: var(--s-3) 0 0;
   font: var(--type-caption);
   letter-spacing: var(--track-caption);
-  color: var(--annotate);
+  color: var(--text-secondary);
 }
 
 .chip {

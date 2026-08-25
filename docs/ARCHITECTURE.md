@@ -1,6 +1,7 @@
 # Architecture
 
-Status: **awaiting approval.** No implementation code is written until this is accepted.
+Status: **built.** Describes the shipped system; where this document and the code disagree, the
+code is right and this document is the defect.
 Product name **Chandra**, bundle id `com.parasdsingh.chandra`, front end **SolidJS + Vite + TS**.
 Rationale for every choice below is in [DECISIONS.md](DECISIONS.md); measured evidence is in
 [RESEARCH.md](RESEARCH.md).
