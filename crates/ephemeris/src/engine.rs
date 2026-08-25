@@ -165,26 +165,26 @@ impl Engine {
         let engine = Self {
             inner: Mutex::new(Inner { config }),
         };
-        engine.apply_config(config)?;
+        {
+            let _guard = engine.inner.lock().map_err(|_| Error::Poisoned)?;
+            set_sid_mode(config);
+        }
         Ok(engine)
     }
 
     /// Changes the ayanamsa or node type.
+    ///
+    /// One critical section, as D-005 requires. The node type is read from
+    /// `Inner` and the ayanamsa from a Swiss Ephemeris global; releasing the
+    /// lock between the two writes lets a reader in on a pairing that was never
+    /// selected, and the two differ by more than a degree.
     ///
     /// Callers must discard any cached results computed under the previous
     /// configuration; every sidereal longitude in the app depends on it.
     pub fn reconfigure(&self, config: SiderealConfig) -> Result<()> {
         let mut inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
         inner.config = config;
-        drop(inner);
-        self.apply_config(config)
-    }
-
-    fn apply_config(&self, config: SiderealConfig) -> Result<()> {
-        let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
-        // SAFETY: called under the engine lock. `t0` and `ayan_t0` are ignored
-        // for every predefined mode and only consulted for SE_SIDM_USER.
-        unsafe { se::swe_set_sid_mode(config.ayanamsa.se_mode(), 0.0, 0.0) };
+        set_sid_mode(config);
         Ok(())
     }
 
@@ -249,16 +249,24 @@ impl Engine {
         })
     }
 
-    /// Rise and set of a graha for the civil day beginning at `jd_ut_start`.
+    /// Rise and set of a graha inside `[jd_ut_start, jd_ut_end)`.
+    ///
+    /// The window is given rather than assumed to be a day long. A civil day is
+    /// 23 or 25 hours across a daylight saving change and only the caller knows
+    /// which: taking it to be 1.0 discards a real event on the long day and
+    /// reports one on both sides of the short one.
     ///
     /// Uses Swiss Ephemeris default geometry: the upper limb touching the
     /// horizon, with atmospheric refraction. That is the convention published
     /// rise and set tables use, so times here match an almanac
     /// (`docs/DECISIONS.md` D-004).
-    pub fn rise_set(&self, jd_ut_start: f64, graha: Graha, observer: Observer) -> Result<RiseSet> {
-        let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
-        let body = se_body_id(graha, inner.config.node_type);
-
+    pub fn rise_set(
+        &self,
+        jd_ut_start: f64,
+        jd_ut_end: f64,
+        graha: Graha,
+        observer: Observer,
+    ) -> Result<RiseSet> {
         // The nodes are geometric points with no disc and never cross the
         // horizon in the sense a rise/set calculation means.
         if matches!(graha, Graha::Rahu | Graha::Ketu) {
@@ -268,17 +276,20 @@ impl Engine {
             });
         }
 
+        let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        let body = se_body_id(graha, inner.config.node_type);
+
         let rise = calc_rise_event(jd_ut_start, body, SE_CALC_RISE, observer, graha)?;
         let set = calc_rise_event(jd_ut_start, body, SE_CALC_SET, observer, graha)?;
 
-        // Discard events that land outside the day being asked about. Swiss
-        // Ephemeris searches forward without bound, so a body that does not rise
-        // today would otherwise report tomorrow's rise as today's.
-        let within_day = |t: Option<f64>| t.filter(|&t| t < jd_ut_start + 1.0);
+        // Swiss Ephemeris searches forward without bound, so a body that does
+        // not rise inside the window would otherwise report the next day's rise
+        // as this one's.
+        let within = |t: Option<f64>| t.filter(|&t| t < jd_ut_end);
 
         Ok(RiseSet {
-            rise: within_day(rise),
-            set: within_day(set),
+            rise: within(rise),
+            set: within(set),
         })
     }
 
@@ -325,6 +336,14 @@ impl Drop for Engine {
         unsafe { se::swe_close() };
         ENGINE_EXISTS.store(false, Ordering::SeqCst);
     }
+}
+
+/// Points Swiss Ephemeris' sidereal mode at `config`. Caller must hold the
+/// engine lock.
+fn set_sid_mode(config: SiderealConfig) {
+    // SAFETY: called under the engine lock. `t0` and `ayan_t0` are ignored for
+    // every predefined mode and only consulted for SE_SIDM_USER.
+    unsafe { se::swe_set_sid_mode(config.ayanamsa.se_mode(), 0.0, 0.0) };
 }
 
 /// Maps a graha to the Swiss Ephemeris body used to compute it.

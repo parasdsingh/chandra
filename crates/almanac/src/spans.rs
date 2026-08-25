@@ -139,8 +139,11 @@ pub fn divisions_in_day(
             )?
         };
 
-        let prevailing = reference_jd >= samples[run_start].jd
-            && (position == samples.len() || reference_jd < samples[position].jd);
+        // Decided on the refined boundaries, not on the samples they were found
+        // between. The scan step is a whole day for Guru, Shani and the nodes,
+        // so a boundary crossed between midnight and sunrise would otherwise
+        // name the day after the division the graha had already left.
+        let prevailing = reference_jd >= entry_jd && reference_jd < exit_jd;
 
         spans.push(Span {
             index,

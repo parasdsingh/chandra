@@ -37,6 +37,7 @@ pub fn run() {
             None,
         ))
         .manage(panel::CurrentSubject::default())
+        .manage(panel::PanelMaterial::default())
         .invoke_handler(tauri::generate_handler![
             commands::bootstrap,
             commands::moon_month,

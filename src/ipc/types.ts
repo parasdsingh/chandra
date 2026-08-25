@@ -340,6 +340,12 @@ export interface Bootstrap {
   /** Which subject the panel is showing; the tray sets it before opening. */
   subject: GrahaKey;
   subjects: GrahaKey[];
+  /**
+   * Whether the system's popover material is behind the panel. The panel paints
+   * a scrim over that material, so where it is absent there is nothing to
+   * darken and the panel must paint an opaque ground itself.
+   */
+  panel_material: boolean;
   library_version: string;
   ayanamsas: Choice[];
   node_types: Choice[];

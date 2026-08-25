@@ -38,6 +38,21 @@
   animation: panel-in var(--d-panel-open) var(--ease-panel);
 }
 
+/* When there is no material there is nothing for the scrim to darken. The
+   window is transparent, so the desktop would come through at 72% and every
+   contrast figure the palette is built on would be void: the panel paints the
+   ground itself instead. `prefers-reduced-transparency` is a user asking for
+   the same thing deliberately, and gets the same answer. */
+.panel.is-opaque {
+  background: var(--ground);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel {
+    background: var(--ground);
+  }
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;

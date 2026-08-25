@@ -43,7 +43,50 @@ export function todayIn(timeZone: string): DateKey {
   };
 }
 
-/** Local noon on a date, as epoch milliseconds, for use as a month anchor. */
-export function noonAnchor(date: DateKey): number {
-  return Date.UTC(date.year, date.month - 1, date.day, 12);
+/**
+ * Local noon on a date in a given zone, as epoch milliseconds.
+ *
+ * The zone is not decoration. The back end resolves this instant to a civil date
+ * in the observer's zone, so 12:00 UTC is already tomorrow at UTC+12 and beyond:
+ * on the last day of a month the panel would open on the next one, with today
+ * shown as a dimmed leading cell. In a lunar month the anchor can land on the
+ * far side of a syzygy.
+ *
+ * Noon rather than midnight because it is the furthest an instant can be from
+ * either edge of the day, so no offset change can carry it onto another date.
+ */
+export function noonAnchor(date: DateKey, timeZone: string): number {
+  const utcNoon = Date.UTC(date.year, date.month - 1, date.day, 12);
+  // Twice: the offset is first measured at a guess that may be up to fourteen
+  // hours away from the answer, and a daylight saving change inside that gap
+  // would make the first measurement the wrong one.
+  const once = utcNoon - zoneOffsetMs(utcNoon, timeZone);
+  return utcNoon - zoneOffsetMs(once, timeZone);
+}
+
+/** How far a zone runs ahead of UTC at an instant, in milliseconds. */
+function zoneOffsetMs(instant: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(instant));
+
+  const value = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? "0");
+
+  const asIfUtc = Date.UTC(
+    value("year"),
+    value("month") - 1,
+    value("day"),
+    value("hour"),
+    value("minute"),
+    value("second"),
+  );
+  return asIfUtc - instant;
 }

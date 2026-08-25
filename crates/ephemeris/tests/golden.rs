@@ -222,7 +222,10 @@ fn rise_and_set_match_swetest() {
             0.0,
         );
 
-        let got = engine.rise_set(jd, graha, observer).expect("rise_set");
+        // The reference vectors are for the 24 hour UT day beginning at `jd`.
+        let got = engine
+            .rise_set(jd, jd + 1.0, graha, observer)
+            .expect("rise_set");
 
         for (label, actual, expected) in [
             ("rise", got.rise, case["rise_jd"].as_f64()),
@@ -290,4 +293,168 @@ fn missing_data_directory_is_an_error_not_a_silent_downgrade() {
     let _held = engine();
     let missing = PathBuf::from("/nonexistent/chandra/ephe");
     assert!(Engine::new(&missing, SiderealConfig::default()).is_err());
+}
+
+/// A configuration change is one critical section, not two (D-005).
+///
+/// The node type lives in this crate's own state and the ayanamsa in a Swiss
+/// Ephemeris global. Writing them under separate locks lets a reader in on a
+/// pairing the user never selected, and the four pairings are more than a degree
+/// apart: the reading stays plausible while being wrong, which is the failure
+/// this crate exists to make impossible.
+#[test]
+fn a_configuration_change_is_never_half_applied() {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+    let guard = engine();
+    let engine = &*guard;
+
+    // 2023-02-24, where the true and mean nodes are far enough apart to tell
+    // one reading from the other.
+    const JD: f64 = 2_460_000.5;
+    const READERS: usize = 4;
+    const FLIPS: usize = 4000;
+
+    let selected = [
+        SiderealConfig {
+            ayanamsa: Ayanamsa::Lahiri,
+            node_type: NodeType::True,
+        },
+        SiderealConfig {
+            ayanamsa: Ayanamsa::Suryasiddhanta,
+            node_type: NodeType::Mean,
+        },
+    ];
+
+    // Every pairing of the two ayanamsas with the two node types, so a reading
+    // that takes one setting from each side of a flip is recognisable rather
+    // than merely unexpected.
+    let mut pairings = Vec::new();
+    for ayanamsa in [Ayanamsa::Lahiri, Ayanamsa::Suryasiddhanta] {
+        for node_type in [NodeType::True, NodeType::Mean] {
+            let config = SiderealConfig {
+                ayanamsa,
+                node_type,
+            };
+            engine.reconfigure(config).expect("reconfigure");
+            let longitude = engine.position(JD, Graha::Rahu).expect("rahu").longitude;
+            pairings.push((config, longitude));
+        }
+    }
+    for (index, (left, a)) in pairings.iter().enumerate() {
+        for (right, b) in &pairings[index + 1..] {
+            assert!(
+                (a - b).abs() > 0.1,
+                "{left:?} and {right:?} are indistinguishable at JD {JD}, so this test \
+                 could not see a mixed state"
+            );
+        }
+    }
+
+    let readings = AtomicUsize::new(0);
+    let mixed = AtomicUsize::new(0);
+    let flipping = AtomicBool::new(true);
+
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            for step in 0..FLIPS {
+                engine.reconfigure(selected[step % 2]).expect("reconfigure");
+            }
+            engine.reconfigure(selected[0]).expect("reconfigure");
+            flipping.store(false, Ordering::SeqCst);
+        });
+
+        for _ in 0..READERS {
+            scope.spawn(|| {
+                while flipping.load(Ordering::SeqCst) {
+                    let longitude = engine.position(JD, Graha::Rahu).expect("rahu").longitude;
+                    readings.fetch_add(1, Ordering::Relaxed);
+
+                    let matches_a_selection = pairings
+                        .iter()
+                        .filter(|(config, _)| selected.contains(config))
+                        .any(|(_, expected)| (expected - longitude).abs() < 1e-9);
+                    if !matches_a_selection {
+                        mixed.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            });
+        }
+    });
+
+    let total = readings.load(Ordering::Relaxed);
+    assert!(
+        total > FLIPS,
+        "only {total} readings overlapped {FLIPS} changes; the race was never exercised"
+    );
+    assert_eq!(
+        mixed.load(Ordering::Relaxed),
+        0,
+        "of {total} readings, some were computed under a pairing that was never selected"
+    );
+}
+
+/// Rise and set are searched over the window the caller asked for.
+///
+/// A civil day is 23 or 25 hours across a daylight saving change, and this crate
+/// has no way to know which - only the zone does. Assuming 1.0 loses a real
+/// moonrise in the twenty-fifth hour of a long day and reports one in the
+/// twenty-fourth hour of a short day, which by then belongs to tomorrow.
+#[test]
+fn rise_and_set_are_searched_over_the_window_the_caller_asked_for() {
+    let engine = engine();
+    engine
+        .reconfigure(SiderealConfig::default())
+        .expect("reconfigure");
+
+    // New York, the zone the two transitions are checked in upstream.
+    let observer = Observer::new(40.7128, -74.0060, 10.0);
+    let base = chandra_ephemeris::julian_day(2026, 1, 1, 5.0 / 24.0);
+
+    let mut only_in_the_long_day = 0;
+    let mut lost_from_the_short_day = 0;
+
+    for offset in 0..60 {
+        let start = base + offset as f64;
+        let ordinary = engine
+            .rise_set(start, start + 1.0, Graha::Chandra, observer)
+            .expect("rise_set");
+        let long = engine
+            .rise_set(start, start + 25.0 / 24.0, Graha::Chandra, observer)
+            .expect("rise_set");
+        let short = engine
+            .rise_set(start, start + 23.0 / 24.0, Graha::Chandra, observer)
+            .expect("rise_set");
+
+        // A wider window never loses an event a narrower one found, and every
+        // event reported falls inside the window it was asked for.
+        for (narrow, wide) in [(short, ordinary), (ordinary, long)] {
+            if let Some(rise) = narrow.rise {
+                assert_eq!(wide.rise, Some(rise), "a wider window lost a rise");
+            }
+            if let Some(set) = narrow.set {
+                assert_eq!(wide.set, Some(set), "a wider window lost a set");
+            }
+        }
+        for (window, result) in [
+            (start + 23.0 / 24.0, short),
+            (start + 1.0, ordinary),
+            (start + 25.0 / 24.0, long),
+        ] {
+            assert!(result.rise.is_none_or(|jd| jd < window));
+            assert!(result.set.is_none_or(|jd| jd < window));
+        }
+
+        only_in_the_long_day += usize::from(long.rise.is_some() && ordinary.rise.is_none());
+        lost_from_the_short_day += usize::from(ordinary.rise.is_some() && short.rise.is_none());
+    }
+
+    assert!(
+        only_in_the_long_day > 0,
+        "no moonrise in these two months fell in a twenty-fifth hour, so the long day is untested"
+    );
+    assert!(
+        lost_from_the_short_day > 0,
+        "no moonrise fell in a twenty-fourth hour, so the short day is untested"
+    );
 }

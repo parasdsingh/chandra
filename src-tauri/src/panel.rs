@@ -59,37 +59,64 @@ pub fn create(app: &AppHandle) -> Result<WebviewWindow> {
     // one (D-011), and the light variant of the material would put near-white
     // text on a near-white backdrop.
     let _ = window.set_theme(Some(tauri::Theme::Dark));
-    apply_material(&window);
+
+    app.state::<PanelMaterial>()
+        .0
+        .store(apply_material(&window), std::sync::atomic::Ordering::SeqCst);
+
     Ok(window)
 }
 
-/// Gives the panel the system's popover material.
+/// Whether the system's popover material is actually behind the panel.
+///
+/// Not cosmetic. The panel window is transparent and the panel itself paints a
+/// scrim, so with no material there is nothing for the scrim to darken and the
+/// desktop shows through it. The front end has to be told, because it is the
+/// half that can paint an opaque ground instead.
+#[derive(Default)]
+pub struct PanelMaterial(std::sync::atomic::AtomicBool);
+
+/// Whether the panel is sitting on the system's popover material.
+pub fn has_material(app: &AppHandle) -> bool {
+    app.state::<PanelMaterial>()
+        .0
+        .load(std::sync::atomic::Ordering::SeqCst)
+}
+
+/// Gives the panel the system's popover material, reporting whether it took.
 ///
 /// macOS draws its own menu bar popovers on a translucent, blurred backdrop.
 /// A flat fill sits oddly among them, so the panel uses the same public
 /// AppKit material. The window is already transparent and the panel paints only
 /// a thin scrim over this, so the blur is what shows through.
 #[cfg(target_os = "macos")]
-fn apply_material(window: &WebviewWindow) {
+fn apply_material(window: &WebviewWindow) -> bool {
     use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
 
     // Popover is the material the system uses for exactly this kind of window.
     // The radius matches the panel's own corner radius, so the material does not
     // show as square corners behind rounded content.
-    if let Err(error) = apply_vibrancy(
+    match apply_vibrancy(
         window,
         NSVisualEffectMaterial::Popover,
         Some(NSVisualEffectState::Active),
         Some(PANEL_RADIUS),
     ) {
-        // Not fatal: without the material the panel falls back to its own scrim,
-        // which is legible, just less at home next to the system's popovers.
-        eprintln!("chandra: could not apply the panel material: {error}");
+        Ok(()) => true,
+        Err(error) => {
+            // Not fatal, but not silent either: the panel has to stop being a
+            // scrim and paint its own ground, which is what the answer is for.
+            eprintln!("chandra: could not apply the panel material: {error}");
+            false
+        }
     }
 }
 
+/// No vibrancy outside macOS, so the panel always paints its own ground.
 #[cfg(not(target_os = "macos"))]
-fn apply_material(_window: &WebviewWindow) {}
+fn apply_material(_window: &WebviewWindow) -> bool {
+    false
+}
 
 /// Shows the panel for a subject, or hides it if it is already showing that one.
 ///

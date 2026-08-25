@@ -30,6 +30,10 @@ pub struct Bootstrap {
     /// Which subject the panel is currently showing.
     pub subject: Graha,
     pub subjects: Vec<Graha>,
+    /// Whether the system's popover material is behind the panel. The panel is
+    /// a scrim over that material, so where it is absent the front end has to
+    /// paint an opaque ground instead of letting the desktop through.
+    pub panel_material: bool,
     pub library_version: String,
     /// Names for the settings pickers, so the front end holds no duplicate list
     /// that could fall out of step with the ephemeris.
@@ -65,6 +69,7 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
         location: state.location(),
         subject: panel::subject_or_default(&app),
         subjects: state.tray_subjects(),
+        panel_material: panel::has_material(&app),
         library_version: state.almanac.library_version().map_err(AppError::from)?,
         ayanamsas: Ayanamsa::ALL
             .into_iter()

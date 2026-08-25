@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use chandra_almanac::lunar::MonthSystem as System;
 use chandra_almanac::month::{DayDetail, GrahaCell, GrahaMonth, MoonCell, MoonMonth};
@@ -279,6 +279,68 @@ fn moonrise_and_moonset_stay_inside_the_day_they_are_reported_for() {
         days_with_no_rise >= 1,
         "expected at least one day without a moonrise in a full month"
     );
+}
+
+/// A day is not always twenty-four hours, and the rise search must follow it.
+///
+/// Asia/Kolkata has no daylight saving, so the month above cannot see this at
+/// all. The invariant that catches it is the spacing: moonrise drifts about
+/// fifty minutes a day, and on the day it drifts past midnight no rise is
+/// reported - but the gap between the rises either side of that day is still one
+/// interval, not two. A day clamped to twenty-four hours drops a real rise in the
+/// twenty-fifth hour of a long day, doubling the gap, and reports one twice
+/// across a short day, collapsing it.
+#[test]
+fn a_daylight_saving_day_reports_every_moonrise_exactly_once() {
+    let almanac = almanac();
+    reset(&almanac);
+    almanac
+        .set_location(Location {
+            observer: Observer::new(40.7128, -74.0060, 10.0),
+            zone_name: "America/New_York".into(),
+        })
+        .expect("relocate");
+
+    // The two 2026 transitions: 8 March springs forward, 1 November falls back.
+    for (month, days) in [(3, 31), (11, 30)] {
+        let mut rises: Vec<i64> = Vec::new();
+        for day in 1..=days {
+            let DayDetail::Moon(moon) = almanac
+                .day_detail(
+                    Graha::Chandra,
+                    DateKey::new(2026, month, day).unwrap(),
+                    System::Solar,
+                )
+                .expect("detail")
+            else {
+                panic!("moon detail");
+            };
+
+            if let Some(rise) = moon.moonrise {
+                assert_eq!(
+                    rise.day_offset, 0,
+                    "2026-{month}-{day}: rise outside its day"
+                );
+                rises.push(rise.unix_ms);
+            }
+            if let Some(set) = moon.moonset {
+                assert_eq!(set.day_offset, 0, "2026-{month}-{day}: set outside its day");
+            }
+        }
+
+        const HOUR_MS: i64 = 3_600_000;
+        for pair in rises.windows(2) {
+            let gap = pair[1] - pair[0];
+            assert!(
+                (20 * HOUR_MS..27 * HOUR_MS).contains(&gap),
+                "2026-{month}: {:.2} hours between consecutive moonrises, so one was dropped \
+                 or counted twice",
+                gap as f64 / HOUR_MS as f64
+            );
+        }
+    }
+
+    reset(&almanac);
 }
 
 #[test]
@@ -1042,56 +1104,64 @@ fn a_jump_or_a_repeat_in_the_tithi_numbers_is_always_marked() {
 /// The cell reads the tithi at sunrise; the day view resolves the spans that
 /// touch the day and marks one prevailing. Two routines, one answer - or the
 /// number in the grid means nothing.
+///
+/// A year of months, not one. The disagreement is a boundary falling between
+/// the reference instant and the nearest sample of the hourly scan grid, which
+/// is rare enough that August 2026 happens to contain none of them: the single
+/// month this used to walk passed while the thing it guards was broken.
 #[test]
 fn the_cell_and_the_day_it_opens_name_the_same_tithi() {
     let almanac = almanac();
     reset(&almanac);
 
-    let month = almanac
-        .moon_month(MonthCursor {
-            system: System::Amanta,
-            ..solar(2026, 8)
-        })
-        .expect("month");
+    for offset in 0..13 {
+        let month = almanac
+            .moon_month(MonthCursor {
+                system: System::Amanta,
+                offset,
+                ..solar(2026, 8)
+            })
+            .expect("month");
 
-    for cell in inside(&month) {
-        let tithi = cell.tithi.as_ref().expect("tithi");
-        let DayDetail::Moon(day) = almanac
-            .day_detail(Graha::Chandra, cell.date, System::Amanta)
-            .expect("detail")
-        else {
-            panic!("moon detail");
-        };
-        let panchanga = day.panchanga.expect("a lunar day carries a panchanga");
-        let prevailing = panchanga
-            .tithis
-            .iter()
-            .find(|span| span.prevailing)
-            .expect("exactly one span prevails");
+        for cell in inside(&month) {
+            let tithi = cell.tithi.as_ref().expect("tithi");
+            let DayDetail::Moon(day) = almanac
+                .day_detail(Graha::Chandra, cell.date, System::Amanta)
+                .expect("detail")
+            else {
+                panic!("moon detail");
+            };
+            let panchanga = day.panchanga.expect("a lunar day carries a panchanga");
+            let prevailing = panchanga
+                .tithis
+                .iter()
+                .find(|span| span.prevailing)
+                .expect("exactly one span prevails");
 
-        assert_eq!(
-            prevailing.index, tithi.index,
-            "{:?}: cell and day disagree about the tithi",
-            cell.date
-        );
-        assert_eq!(prevailing.number, tithi.number);
-        assert_eq!(prevailing.paksha, tithi.paksha);
-        assert_eq!(prevailing.name, tithi.name);
+            assert_eq!(
+                prevailing.index, tithi.index,
+                "{:?}: cell and day disagree about the tithi",
+                cell.date
+            );
+            assert_eq!(prevailing.number, tithi.number);
+            assert_eq!(prevailing.paksha, tithi.paksha);
+            assert_eq!(prevailing.name, tithi.name);
 
-        // Every span's boundaries are ordered, and the day's spans are
-        // contiguous: one ends where the next begins.
-        for span in &panchanga.tithis {
-            if let (Some(entry), Some(exit)) = (span.entry, span.exit) {
-                assert!(entry.unix_ms < exit.unix_ms, "{:?} {span:?}", cell.date);
+            // Every span's boundaries are ordered, and the day's spans are
+            // contiguous: one ends where the next begins.
+            for span in &panchanga.tithis {
+                if let (Some(entry), Some(exit)) = (span.entry, span.exit) {
+                    assert!(entry.unix_ms < exit.unix_ms, "{:?} {span:?}", cell.date);
+                }
             }
-        }
-        for pair in panchanga.tithis.windows(2) {
-            if let (Some(exit), Some(entry)) = (pair[0].exit, pair[1].entry) {
-                assert!(
-                    (exit.unix_ms - entry.unix_ms).abs() < 1000,
-                    "{:?}: a gap between consecutive tithis",
-                    cell.date
-                );
+            for pair in panchanga.tithis.windows(2) {
+                if let (Some(exit), Some(entry)) = (pair[0].exit, pair[1].entry) {
+                    assert!(
+                        (exit.unix_ms - entry.unix_ms).abs() < 1000,
+                        "{:?}: a gap between consecutive tithis",
+                        cell.date
+                    );
+                }
             }
         }
     }
@@ -1108,4 +1178,148 @@ fn the_cell_and_the_day_it_opens_name_the_same_tithi() {
         panic!("moon detail");
     };
     assert!(day.panchanga.is_none());
+}
+
+/// A day's own longitude and its own prevailing span must name one division.
+///
+/// The day view prints the longitude at the reference instant and, beside it,
+/// the nakshatra and rashi it marks prevailing. Those come from two routines:
+/// one reads the position directly, the other picks a span. When they disagree
+/// the panel states a longitude in Krittika and labels it Bharani.
+///
+/// The slow bodies are the ones that matter. Guru, Shani and the nodes are
+/// scanned at a whole day, so a boundary crossed between midnight and sunrise
+/// sits inside a single sample interval and cannot be resolved by comparing the
+/// reference against the samples.
+#[test]
+fn a_graha_day_and_its_prevailing_span_name_the_same_division() {
+    use chandra_almanac::zodiac::{pada, Nakshatra, Rashi};
+
+    let almanac = almanac();
+    reset(&almanac);
+
+    for graha in [Graha::Guru, Graha::Shani, Graha::Rahu, Graha::Ketu] {
+        // A year, because a slow body crosses only a handful of boundaries in
+        // one and the defect needs a crossing to show at all.
+        for month in 1..=12i8 {
+            for day in 1..=chandra_almanac::time::days_in_month(2024, month).expect("month length")
+            {
+                let date = DateKey::new(2024, month, day as i8).expect("date");
+                let DayDetail::Graha(detail) = almanac
+                    .day_detail(graha, date, System::Solar)
+                    .expect("detail")
+                else {
+                    panic!("graha detail");
+                };
+
+                let nakshatra = detail
+                    .nakshatras
+                    .iter()
+                    .find(|span| span.prevailing)
+                    .expect("exactly one nakshatra prevails");
+                assert_eq!(
+                    nakshatra.nakshatra,
+                    Nakshatra::from_longitude(detail.longitude),
+                    "{graha:?} {date:?}: longitude {} is not in {}",
+                    detail.longitude,
+                    nakshatra.name
+                );
+                assert_eq!(
+                    nakshatra.pada,
+                    pada(detail.longitude),
+                    "{graha:?} {date:?}: pada belongs to another nakshatra"
+                );
+
+                let rashi = detail
+                    .rashis
+                    .iter()
+                    .find(|span| span.prevailing)
+                    .expect("exactly one rashi prevails");
+                assert_eq!(
+                    rashi.rashi,
+                    Rashi::from_longitude(detail.longitude),
+                    "{graha:?} {date:?}: longitude {} is not in {}",
+                    detail.longitude,
+                    rashi.name
+                );
+            }
+        }
+    }
+}
+
+/// A month computed under one ayanamsa must never be served under another.
+///
+/// Every command runs on a blocking pool, so a settings change genuinely
+/// overlaps a month being assembled. The cache is keyed on the month, not on the
+/// configuration, and correctness rests entirely on the generation counter: a
+/// reader that captured no generation before it started stamps its result with
+/// whatever generation is current when it finishes, and a month computed partly
+/// under Raman then sits in the cache as a Lahiri one and never expires.
+#[test]
+fn a_month_computed_under_one_ayanamsa_is_never_served_under_another() {
+    const MONTHS: i32 = 8;
+
+    let almanac = almanac();
+    reset(&almanac);
+
+    let shared = &*almanac;
+    let cursor = |offset: i32| MonthCursor {
+        offset,
+        ..solar(2026, 8)
+    };
+    let lahiri = SiderealConfig {
+        ayanamsa: Ayanamsa::Lahiri,
+        node_type: NodeType::True,
+    };
+    let raman = SiderealConfig {
+        ayanamsa: Ayanamsa::Raman,
+        node_type: NodeType::True,
+    };
+
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            for offset in 0..MONTHS {
+                let _ = shared.graha_month(Graha::Budha, cursor(offset));
+            }
+        });
+
+        // The reader is assembling months for tens of milliseconds. Changing
+        // the ayanamsa inside that window is exactly what the settings pane
+        // does, and the change lands between two of its ephemeris calls.
+        std::thread::sleep(Duration::from_millis(10));
+        shared.set_sidereal(raman).expect("sidereal");
+        std::thread::sleep(Duration::from_millis(5));
+        shared.set_sidereal(lahiri).expect("sidereal");
+    });
+
+    let served: Vec<_> = (0..MONTHS)
+        .map(|offset| {
+            almanac
+                .graha_month(Graha::Budha, cursor(offset))
+                .expect("graha month")
+        })
+        .collect();
+
+    // What those months are, from a cache that is certainly cold.
+    almanac.set_sidereal(raman).expect("sidereal");
+    reset(&almanac);
+    let expected: Vec<_> = (0..MONTHS)
+        .map(|offset| {
+            almanac
+                .graha_month(Graha::Budha, cursor(offset))
+                .expect("graha month")
+        })
+        .collect();
+
+    for (month, reference) in served.iter().zip(expected.iter()) {
+        for (cell, truth) in month.days.iter().zip(reference.days.iter()) {
+            assert!(
+                (cell.longitude - truth.longitude).abs() < 1e-9,
+                "{:?}: served {} where Lahiri gives {}",
+                cell.date,
+                cell.longitude,
+                truth.longitude
+            );
+        }
+    }
 }

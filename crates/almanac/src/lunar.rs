@@ -227,10 +227,10 @@ fn first_civil_day(
     // At most two steps: sunrise is within a day of any instant.
     for _ in 0..3 {
         let day = CivilDay::new(date, zone)?;
-        let sunrise = engine
-            .rise_set(day.start_jd, Graha::Surya, observer)?
-            .rise
-            .unwrap_or_else(|| day.noon_jd());
+        // The same instant the cell and the day view read the day at. Taking
+        // the raw rise instead admitted the *next* day's sunrise on a day the
+        // Sun does not rise, and started the month a day early.
+        let sunrise = crate::day::reference_instant(engine, &day, observer)?;
 
         if sunrise >= syzygy_jd {
             return Ok(date);

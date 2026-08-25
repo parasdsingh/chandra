@@ -229,13 +229,10 @@ struct Anchor {
 
 /// Sunrise, or local noon where the Sun does not rise.
 ///
-/// The same rule `day.rs::reference_instant` uses, so a cell and the day it
-/// opens can never name different tithis.
+/// Reads it through `day::sunrise_of`, the one place the rule lives, so a cell
+/// and the day it opens can never name different tithis.
 fn sunrise_anchor(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<Anchor> {
-    let sunrise = engine
-        .rise_set(day.start_jd, Graha::Surya, observer)?
-        .rise
-        .filter(|&jd| jd >= day.start_jd && jd < day.end_jd);
+    let sunrise = crate::day::sunrise_of(engine, day, observer)?;
 
     let instant = sunrise.unwrap_or_else(|| day.noon_jd());
     Ok(Anchor {

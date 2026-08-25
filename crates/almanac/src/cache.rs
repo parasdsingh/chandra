@@ -42,7 +42,24 @@ impl<K: Eq + Hash + Clone, V: Clone> Lru<K, V> {
         Some(entry.2.clone())
     }
 
-    pub fn insert(&mut self, key: K, value: V) {
+    /// The generation a value is being computed under.
+    ///
+    /// A caller reads this before it starts, and hands it back to [`insert`]
+    /// when it finishes. Computation happens outside this lock, so without it a
+    /// month computed under one ayanamsa and finished after the change to
+    /// another would be stamped with the new generation and never expire.
+    ///
+    /// [`insert`]: Self::insert
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Stores a value computed under `generation`, or discards it if the
+    /// configuration has moved on since.
+    pub fn insert(&mut self, key: K, value: V, generation: u64) {
+        if generation != self.generation {
+            return;
+        }
         self.clock += 1;
 
         if self.entries.len() >= self.capacity && !self.entries.contains_key(&key) {
@@ -96,7 +113,7 @@ mod tests {
     #[test]
     fn returns_what_was_stored() {
         let mut cache: Lru<u32, &str> = Lru::new(4);
-        cache.insert(1, "one");
+        cache.insert(1, "one", cache.generation());
         assert_eq!(cache.get(&1), Some("one"));
         assert_eq!(cache.get(&2), None);
     }
@@ -105,11 +122,11 @@ mod tests {
     fn evicts_the_least_recently_used() {
         let mut cache: Lru<u32, u32> = Lru::new(3);
         for key in 1..=3 {
-            cache.insert(key, key);
+            cache.insert(key, key, cache.generation());
         }
         // Touch 1 so 2 becomes the coldest.
         assert_eq!(cache.get(&1), Some(1));
-        cache.insert(4, 4);
+        cache.insert(4, 4, cache.generation());
 
         assert_eq!(
             cache.get(&2),
@@ -125,7 +142,7 @@ mod tests {
     fn never_exceeds_capacity() {
         let mut cache: Lru<u32, u32> = Lru::new(8);
         for key in 0..1000 {
-            cache.insert(key, key);
+            cache.insert(key, key, cache.generation());
         }
         assert!(cache.entries.len() <= 8, "held {}", cache.entries.len());
     }
@@ -133,36 +150,50 @@ mod tests {
     #[test]
     fn invalidation_hides_every_previous_entry() {
         let mut cache: Lru<u32, u32> = Lru::new(4);
-        cache.insert(1, 10);
-        cache.insert(2, 20);
+        cache.insert(1, 10, cache.generation());
+        cache.insert(2, 20, cache.generation());
         cache.invalidate_all();
 
         assert_eq!(cache.get(&1), None);
         assert_eq!(cache.get(&2), None);
         assert!(cache.is_empty());
 
-        cache.insert(1, 11);
+        cache.insert(1, 11, cache.generation());
         assert_eq!(cache.get(&1), Some(11));
     }
 
     #[test]
     fn stale_entries_are_evicted_before_live_ones() {
         let mut cache: Lru<u32, u32> = Lru::new(2);
-        cache.insert(1, 1);
+        cache.insert(1, 1, cache.generation());
         cache.invalidate_all();
-        cache.insert(2, 2);
+        cache.insert(2, 2, cache.generation());
         // Inserting a third entry must drop the stale 1, not the live 2.
-        cache.insert(3, 3);
+        cache.insert(3, 3, cache.generation());
 
         assert_eq!(cache.get(&2), Some(2));
         assert_eq!(cache.get(&3), Some(3));
     }
 
     #[test]
+    fn a_value_computed_before_an_invalidation_is_refused() {
+        // The reader captured the generation, the settings changed while it was
+        // still computing, and it now offers a value from the old world. Taking
+        // it would stamp it as current and it would never expire.
+        let mut cache: Lru<u32, u32> = Lru::new(4);
+        let started_under = cache.generation();
+        cache.invalidate_all();
+        cache.insert(1, 10, started_under);
+
+        assert_eq!(cache.get(&1), None);
+        assert!(cache.is_empty());
+    }
+
+    #[test]
     fn reinsert_updates_without_growing() {
         let mut cache: Lru<u32, u32> = Lru::new(2);
-        cache.insert(1, 1);
-        cache.insert(1, 99);
+        cache.insert(1, 1, cache.generation());
+        cache.insert(1, 99, cache.generation());
         assert_eq!(cache.get(&1), Some(99));
         assert_eq!(cache.len(), 1);
     }

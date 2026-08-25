@@ -79,6 +79,9 @@ const boot: Bootstrap = {
   },
   subject: "chandra",
   subjects: ["mangala", "shani"],
+  // The harness runs in a browser tab with no AppKit material behind it, so the
+  // panel paints its own ground here exactly as it does when vibrancy fails.
+  panel_material: false,
   library_version: "2.10.03",
   ayanamsas: [
     { key: "lahiri", label: "Lahiri (Chitrapaksha)" },

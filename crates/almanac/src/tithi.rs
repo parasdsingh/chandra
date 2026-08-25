@@ -314,8 +314,18 @@ pub fn spans_in_day(
             )?
         };
 
-        let prevailing = reference_jd >= samples[run_start].jd
-            && (position == samples.len() || reference_jd < samples[position].jd);
+        // Decided on the refined boundaries, not on the samples they were found
+        // between. The scan grid is an hour wide, and a boundary crossed inside
+        // that hour before sunrise would otherwise be attributed to the wrong
+        // side of it. The sample comparison survives only as the fallback for a
+        // boundary that did not resolve, where there is nothing finer to use.
+        let prevailing = match (entry, exit) {
+            (Some(entry), Some(exit)) => reference_jd >= entry && reference_jd < exit,
+            _ => {
+                reference_jd >= samples[run_start].jd
+                    && (position == samples.len() || reference_jd < samples[position].jd)
+            }
+        };
 
         spans.push(TithiSpan {
             index: tithi.index(),

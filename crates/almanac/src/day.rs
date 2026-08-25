@@ -116,16 +116,27 @@ pub struct GrahaDay {
 /// and local noon is used instead: it keeps the reference inside the day and
 /// keeps the calendar usable at latitudes where the traditional rule has nothing
 /// to point at.
-fn reference_instant(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<f64> {
+///
+/// The one place the question is asked. A month cell, a day view and a lunar
+/// month's first day all need it, and three copies of the rule is three chances
+/// for a cell and the day it opens to be read at different instants.
+pub(crate) fn reference_instant(
+    engine: &Engine,
+    day: &CivilDay,
+    observer: Observer,
+) -> Result<f64> {
     Ok(sunrise_of(engine, day, observer)?.unwrap_or_else(|| day.noon_jd()))
 }
 
 /// Sunrise inside this civil day, if the Sun rises at all.
-fn sunrise_of(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<Option<f64>> {
+pub(crate) fn sunrise_of(
+    engine: &Engine,
+    day: &CivilDay,
+    observer: Observer,
+) -> Result<Option<f64>> {
     Ok(engine
-        .rise_set(day.start_jd, Graha::Surya, observer)?
-        .rise
-        .filter(|&jd| jd >= day.start_jd && jd < day.end_jd))
+        .rise_set(day.start_jd, day.end_jd, Graha::Surya, observer)?
+        .rise)
 }
 
 /// The day's panchanga, in a lunar month.
@@ -192,7 +203,7 @@ pub fn moon_day(
         None => (phase::intermediate_phase(elongation_start), None),
     };
 
-    let rise_set = engine.rise_set(day.start_jd, Graha::Chandra, observer)?;
+    let rise_set = engine.rise_set(day.start_jd, day.end_jd, Graha::Chandra, observer)?;
     let nakshatras = nakshatra_spans(engine, Graha::Chandra, day, reference)?;
     let rashis = rashi_spans(engine, Graha::Chandra, day, reference)?;
 
@@ -227,7 +238,7 @@ pub fn graha_day(
 ) -> Result<GrahaDay> {
     let reference = reference_instant(engine, day, observer)?;
     let position = engine.position(reference, graha)?;
-    let rise_set = engine.rise_set(day.start_jd, graha, observer)?;
+    let rise_set = engine.rise_set(day.start_jd, day.end_jd, graha, observer)?;
 
     Ok(GrahaDay {
         date: day.date,

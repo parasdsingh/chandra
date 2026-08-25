@@ -1,7 +1,7 @@
 //! Shared application state.
 
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{Mutex, RwLock};
 
 use chandra_almanac::{Almanac, MonthCursor};
 use chandra_ephemeris::Graha;
@@ -15,6 +15,14 @@ pub struct AppState {
     settings: RwLock<Settings>,
     location: RwLock<Resolved>,
     config_dir: PathBuf,
+    /// Held for the whole of [`AppState::apply`].
+    ///
+    /// `apply` reads the current settings, decides what changed, writes the file
+    /// and then swaps the value in. Two of them running at once - the settings
+    /// pane and a CoreLocation answer arriving, which is the pairing that
+    /// actually happens - would each decide against a document the other is
+    /// about to replace, and one would overwrite the other wholesale.
+    applying: Mutex<()>,
 }
 
 impl AppState {
@@ -34,6 +42,7 @@ impl AppState {
             settings: RwLock::new(settings),
             location: RwLock::new(resolved),
             config_dir,
+            applying: Mutex::new(()),
         })
     }
 
@@ -76,29 +85,46 @@ impl AppState {
 
     /// Applies new settings, propagating whatever changed into the almanac.
     ///
+    /// Validate, persist, then mutate. Saving is the only step that can fail for
+    /// a reason outside this process, and mutating the engine before it meant a
+    /// refused save left every later computation running on a configuration the
+    /// file and the settings pane both denied.
+    ///
     /// Returns whether the tray needs rebuilding, so the caller does not have to
     /// re-derive it by comparing settings itself.
     pub fn apply(&self, next: Settings) -> Result<Applied> {
+        let _serialised = self.applying.lock().expect("apply lock");
         let previous = self.settings();
 
-        if next.sidereal != previous.sidereal {
+        // The almanac rejects a zone the tz database does not know, and it is
+        // the only rejection either mutation below can make on the document's
+        // own contents. Asking first is what lets the file be written knowing
+        // both mutations will be accepted.
+        let resolved = location::resolve_offline(&next);
+        jiff::tz::TimeZone::get(&resolved.zone)
+            .map_err(|_| AppError::Settings(format!("unknown time zone {}", resolved.zone)))?;
+
+        next.save(&self.config_dir)?;
+
+        let sidereal_changed = next.sidereal != previous.sidereal;
+        if sidereal_changed {
             self.almanac.set_sidereal(next.sidereal.into())?;
         }
 
-        let resolved = location::resolve_offline(&next);
         let location_changed = resolved != self.location();
         if location_changed {
             self.almanac.set_location(resolved.to_location())?;
             *self.location.write().expect("location lock") = resolved;
         }
 
-        next.save(&self.config_dir)?;
         let tray_changed = next.tray != previous.tray;
         *self.settings.write().expect("settings lock") = next;
 
         Ok(Applied {
             tray_changed,
-            icons_changed: tray_changed || location_changed,
+            // The ayanamsa is in here because a tray tooltip reads "{name} —
+            // {rashi}", and the rashi is exactly what an ayanamsa moves.
+            icons_changed: tray_changed || location_changed || sidereal_changed,
         })
     }
 
@@ -141,4 +167,57 @@ pub struct Applied {
     /// Existing tray icons need redrawing, for instance because the hemisphere
     /// changed and the moon disc must mirror.
     pub icons_changed: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use chandra_ephemeris::Ayanamsa;
+
+    use super::*;
+    use crate::settings::SiderealSetting;
+
+    fn ephemeris_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/ephe")
+    }
+
+    /// A settings document the engine must not adopt unless it was written.
+    ///
+    /// The engine is a process-wide singleton, so this is the only test in the
+    /// crate that may build an `AppState`.
+    #[test]
+    fn a_refused_save_leaves_the_engine_on_the_settings_that_are_on_disk() {
+        let config_dir = std::env::temp_dir().join("chandra-apply-test");
+        let _ = fs::remove_dir_all(&config_dir);
+        let _ = fs::remove_file(&config_dir);
+        fs::create_dir_all(&config_dir).expect("config dir");
+
+        let state = AppState::new(config_dir.clone(), &ephemeris_dir()).expect("state");
+        let before = state.settings();
+        assert_eq!(before.sidereal.ayanamsa, Ayanamsa::Lahiri);
+
+        // A file where the configuration directory should be: `create_dir_all`
+        // then fails, which is the first thing `save` does.
+        fs::remove_dir_all(&config_dir).expect("clear");
+        fs::write(&config_dir, "not a directory").expect("obstruct");
+
+        let next = Settings {
+            sidereal: SiderealSetting {
+                ayanamsa: Ayanamsa::Raman,
+                ..before.sidereal
+            },
+            ..before.clone()
+        };
+        assert!(state.apply(next).is_err(), "the save cannot have succeeded");
+
+        assert_eq!(
+            state.almanac.sidereal().expect("sidereal").ayanamsa,
+            Ayanamsa::Lahiri,
+            "the engine adopted a configuration that was never written"
+        );
+        assert_eq!(state.settings(), before);
+
+        let _ = fs::remove_file(&config_dir);
+    }
 }

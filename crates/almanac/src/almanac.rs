@@ -89,6 +89,12 @@ enum Cached {
     Frames(Vec<CellTithi>),
 }
 
+/// The location and its zone, always read together.
+///
+/// Cloned once at the start of a request and used for the whole of it. Reading
+/// it again part way through would let a location change land between the grid,
+/// the tithis and the zone name, and produce a month assembled from two places.
+#[derive(Clone)]
 struct Settings {
     location: Location,
     zone: TimeZone,
@@ -153,8 +159,7 @@ impl Almanac {
     }
 
     /// Resolves a cursor to the 42 cells the grid draws and its display label.
-    fn resolve(&self, cursor: MonthCursor) -> Result<Resolved> {
-        let settings = self.read_settings()?;
+    fn resolve(&self, cursor: MonthCursor, settings: &Settings) -> Result<Resolved> {
         let jd = chandra_ephemeris::unix_seconds_to_jd(cursor.anchor_unix_ms as f64 / 1000.0);
 
         if cursor.system == MonthSystem::Solar {
@@ -225,7 +230,13 @@ impl Almanac {
     /// `None` in solar mode: a Gregorian calendar does not name tithis, and
     /// computing them to throw away would spend a sunrise on every one of 42
     /// cells for nothing.
-    fn frames(&self, resolved: &Resolved, cursor: MonthCursor) -> Result<Option<Vec<CellTithi>>> {
+    fn frames(
+        &self,
+        resolved: &Resolved,
+        cursor: MonthCursor,
+        settings: &Settings,
+        generation: u64,
+    ) -> Result<Option<Vec<CellTithi>>> {
         if !cursor.system.is_lunar() {
             return Ok(None);
         }
@@ -235,37 +246,41 @@ impl Almanac {
             return Ok(Some(cached));
         }
 
-        let settings = self.read_settings()?;
         let built = month::tithi_frames(
             &self.engine,
             &resolved.grid,
             settings.location.observer,
             &settings.zone,
         )?;
-        drop(settings);
 
-        self.store(key, Cached::Frames(built.clone()))?;
+        self.store(key, Cached::Frames(built.clone()), generation)?;
         Ok(Some(built))
     }
 
     pub fn moon_month(&self, cursor: MonthCursor) -> Result<MoonMonth> {
-        let resolved = self.resolve(cursor)?;
+        // Both read before any computation starts. A reconfigure that lands
+        // while this is running bumps the generation, and the result is then
+        // discarded rather than stored under a configuration that did not
+        // produce it.
+        let settings = self.settings_snapshot()?;
+        let generation = self.generation()?;
+
+        let resolved = self.resolve(cursor, &settings)?;
         let key = CacheKey::Moon(cursor.system, resolved.first_day(), cursor.first_weekday);
         if let Some(Cached::Moon(cached)) = self.cached(key)? {
             return Ok(cached);
         }
 
-        let frames = self.frames(&resolved, cursor)?;
-        let zone_name = self.read_settings()?.location.zone_name.clone();
+        let frames = self.frames(&resolved, cursor, &settings, generation)?;
         let built = month::moon_month(
             &self.engine,
             &resolved.grid,
             frames.as_deref(),
-            &zone_name,
+            &settings.location.zone_name,
             resolved.naming,
         )?;
 
-        self.store(key, Cached::Moon(built.clone()))?;
+        self.store(key, Cached::Moon(built.clone()), generation)?;
         Ok(built)
     }
 
@@ -278,7 +293,10 @@ impl Almanac {
             ));
         }
 
-        let resolved = self.resolve(cursor)?;
+        let settings = self.settings_snapshot()?;
+        let generation = self.generation()?;
+
+        let resolved = self.resolve(cursor, &settings)?;
         let key = CacheKey::Graha(
             graha,
             cursor.system,
@@ -289,18 +307,17 @@ impl Almanac {
             return Ok(*cached);
         }
 
-        let frames = self.frames(&resolved, cursor)?;
-        let zone_name = self.read_settings()?.location.zone_name.clone();
+        let frames = self.frames(&resolved, cursor, &settings, generation)?;
         let built = month::graha_month(
             &self.engine,
             graha,
             &resolved.grid,
             frames.as_deref(),
-            &zone_name,
+            &settings.location.zone_name,
             resolved.naming,
         )?;
 
-        self.store(key, Cached::Graha(Box::new(built.clone())))?;
+        self.store(key, Cached::Graha(Box::new(built.clone())), generation)?;
         Ok(built)
     }
 
@@ -416,15 +433,23 @@ impl Almanac {
         self.settings.read().map_err(|_| poisoned())
     }
 
+    fn settings_snapshot(&self) -> Result<Settings> {
+        Ok(self.read_settings()?.clone())
+    }
+
+    fn generation(&self) -> Result<u64> {
+        Ok(self.cache.lock().map_err(|_| poisoned())?.generation())
+    }
+
     fn cached(&self, key: CacheKey) -> Result<Option<Cached>> {
         Ok(self.cache.lock().map_err(|_| poisoned())?.get(&key))
     }
 
-    fn store(&self, key: CacheKey, value: Cached) -> Result<()> {
+    fn store(&self, key: CacheKey, value: Cached, generation: u64) -> Result<()> {
         self.cache
             .lock()
             .map_err(|_| poisoned())?
-            .insert(key, value);
+            .insert(key, value, generation);
         Ok(())
     }
 

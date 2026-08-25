@@ -62,7 +62,9 @@ export function Panel(props: Props): JSX.Element {
 
   // Navigation is by anchor instant plus offset, because a lunar month has no
   // year-and-number to step through.
-  const [anchor, setAnchor] = createSignal(noonAnchor(todayIn(props.boot.location.zone)));
+  const [anchor, setAnchor] = createSignal(
+    noonAnchor(todayIn(props.boot.location.zone), props.boot.location.zone),
+  );
   const [offset, setOffset] = createSignal(0);
   const [view, setView] = createSignal<View>("calendar");
   const [section, setSection] = createSignal<SettingsSection>("root");
@@ -270,7 +272,7 @@ export function Panel(props: Props): JSX.Element {
 
     if (!inside) {
       batch(() => {
-        setAnchor(noonAnchor(next));
+        setAnchor(noonAnchor(next, timeZone()));
         setOffset(0);
       });
     }
@@ -297,7 +299,7 @@ export function Panel(props: Props): JSX.Element {
   function jumpToToday() {
     const now = today();
     batch(() => {
-      setAnchor(noonAnchor(now));
+      setAnchor(noonAnchor(now, timeZone()));
       setOffset(0);
       setSelected(now);
       setView("calendar");
@@ -383,7 +385,7 @@ export function Panel(props: Props): JSX.Element {
     batch(() => {
       setSubject(next);
       setToday(now);
-      setAnchor(noonAnchor(now));
+      setAnchor(noonAnchor(now, timeZone()));
       setOffset(0);
       setVisibleDelta(0);
       setSelected(null);
@@ -417,7 +419,14 @@ export function Panel(props: Props): JSX.Element {
 
   return (
     <div class="panel-frame">
-      <div class="panel" ref={root} tabindex="-1" role="dialog" aria-label="Chandra">
+      <div
+        class="panel"
+        classList={{ "is-opaque": !props.boot.panel_material }}
+        ref={root}
+        tabindex="-1"
+        role="dialog"
+        aria-label="Chandra"
+      >
         <Header
           subject={subject()}
           subjectName={grahaInfo()?.name ?? "Chandra"}
