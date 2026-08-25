@@ -44,6 +44,7 @@ import {
   formatUntil,
   formatWeekday,
   phaseLabel,
+  zoneDiffersFromMachine,
 } from "../lib/format";
 import { describeEvent } from "./MonthGrid";
 
@@ -205,6 +206,19 @@ function Body(props: Props): JSX.Element {
               <p class="detail__provenance">
                 Outside 1800–2399. Times here are approximate, by about a
                 second.
+              </p>
+            </Show>
+
+            {/* Every time in the app is in the observer's zone, which is the
+                right answer - a sunrise is a fact about a place. It is also
+                silently wrong-looking when that is not this Mac's zone, and
+                nothing said so. Printed only when the two differ: for almost
+                everyone they are the same, and a standing note would be noise
+                on every day. */}
+            <Show when={zoneDiffersFromMachine(props.context)}>
+              <p class="detail__provenance">
+                Times are {props.context.timeZone.replace(/_/g, " ")}, not this
+                Mac&rsquo;s clock.
               </p>
             </Show>
           </div>
@@ -686,17 +700,30 @@ const ERROR_TEXT: Record<string, { headline: string; cause: string }> = {
     headline: "Settings could not be saved.",
     cause: "",
   },
+  // The back end's catch-all: an ephemeris failure reaches it, and so does a
+  // poisoned lock, a failed dispatch to the main thread, and any almanac error
+  // with no code of its own. "Ephemeris unavailable" named one of those as the
+  // cause of all of them, which is a guess printed as a fact. The message
+  // underneath says what actually happened.
   ENGINE: {
-    headline: "Ephemeris unavailable.",
+    headline: "This could not be computed.",
     cause: "",
   },
 };
+
+/**
+ * A code the front end does not know.
+ *
+ * Its own entry rather than borrowing `ENGINE`'s: a code from a newer back end
+ * has no known cause here, and reusing another code's headline asserts one.
+ */
+const UNKNOWN_ERROR = { headline: "Something went wrong.", cause: "" };
 
 export function ErrorBlock(props: {
   code: string;
   message: string;
 }): JSX.Element {
-  const text = () => ERROR_TEXT[props.code] ?? ERROR_TEXT.ENGINE!;
+  const text = () => ERROR_TEXT[props.code] ?? UNKNOWN_ERROR;
   return (
     <div class="error-block">
       <p class="error-block__headline">{text().headline}</p>

@@ -14,6 +14,29 @@ export interface FormatContext {
 }
 
 /**
+ * Whether the times on screen are in a zone other than this machine's.
+ *
+ * Every time in the app is printed in the observer's zone, which is the right
+ * answer - a sunrise is a fact about a place. It is also silently wrong-looking
+ * when the two differ: `05:14` for a location eight hours away is not what the
+ * Mac's own clock will read, and nothing on screen said so.
+ *
+ * Asked rather than always printed, because for almost every user the two are
+ * the same zone and a standing note about it would be noise on every day.
+ */
+export function zoneDiffersFromMachine(context: FormatContext): boolean {
+  try {
+    return (
+      new Intl.DateTimeFormat().resolvedOptions().timeZone !== context.timeZone
+    );
+  } catch {
+    // A machine whose own zone cannot be resolved is not evidence that the two
+    // differ, and claiming they do would put a note on every day for nothing.
+    return false;
+  }
+}
+
+/**
  * A clock time, in the zone of the view rather than of the machine.
  *
  * The 12 or 24 hour choice is the locale's. A `time_format` setting existed in

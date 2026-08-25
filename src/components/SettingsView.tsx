@@ -357,9 +357,11 @@ function Location(props: SectionProps): JSX.Element {
           zone: city.zone,
           latitude: city.latitude,
           longitude: city.longitude,
-          // The table carries no elevation. The user's own correction lives
-          // beside the place and still applies, so it is not copied here.
-          elevation: 0,
+          // The table carries no elevation column, so this place has none -
+          // which is `null` and not zero. Written as zero it claimed sea level
+          // for every city in the world. The user's own correction lives beside
+          // the place and still applies, so it is not copied here.
+          elevation: null,
         },
       },
     });
@@ -374,8 +376,14 @@ function Location(props: SectionProps): JSX.Element {
         <span class="settings__hint">
           {props.boot.location.latitude.toFixed(3)},{" "}
           {props.boot.location.longitude.toFixed(3)} ·{" "}
-          {props.boot.location.elevation.toFixed(0)} m ·{" "}
-          {provenanceLabel(props.boot.location.provenance)}
+          {/* Not `0 m` when nobody knew. Rise and set are still computed at sea
+              level, which is the assumption to make with no height - but saying
+              `0 m` reported that assumption as a measurement, and the city
+              table has no elevation column, so it said it for every city. */}
+          {props.boot.location.elevation_known
+            ? `${props.boot.location.elevation.toFixed(0)} m`
+            : "height not set"}{" "}
+          · {provenanceLabel(props.boot.location.provenance)}
         </span>
       </div>
 

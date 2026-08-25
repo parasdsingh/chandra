@@ -22,32 +22,59 @@ pass against the old code is not finished.**
 |---|---|
 | Status | done |
 
-### 1.1 The wording audit's open items — queued
+### 1.1 The wording audit's open items — done
 
 The second pass in `AUDIT.md` — a fact about one thing printed beside a heading
-about another — closed ten and left five standing:
+about another — closed ten immediately and left five standing. All five are now
+closed.
 
 - ~~**W-03** A Moshier month draws 42 cells with no precision note.~~ Fixed: the
   grid carries it too, and both notes were reworded. They said "Moshier
   ephemeris", which is the name of a piece of arithmetic and tells a reader
   nothing; they now name the range and the magnitude, so the note reads as a
   fact rather than a warning.
-- **W-04** Clock times carry no zone, and the zone need not be the machine's.
-- **W-06** `Ephemeris unavailable.` is shown for failures with no ephemeris in
-  them, and is the fallback for any unknown code.
-- **W-07** An unknown elevation prints as `0 m`. `Resolved.elevation` is an
-  `f64` and cannot tell "not known" from "measured".
-- **W-08** `GrahaCell.retrograde` is read at local noon while the day the cell
-  opens reads its state at sunrise. A station between the two puts a retrograde
-  ring on a cell whose day says `Direct`. Fixing it changes `graha_month`'s
-  signature — deliberately not started rather than half-done.
+- ~~**W-04** Clock times carry no zone, and the zone need not be the
+  machine's.~~ Fixed: the day view says which zone the times are in, and only
+  when it is not this Mac's. For almost everyone the two are the same and a
+  standing note about it would be noise on every day.
+- ~~**W-06** `Ephemeris unavailable.` is shown for failures with no ephemeris in
+  them, and is the fallback for any unknown code.~~ Fixed twice over. `ENGINE`
+  is the back end's catch-all — a poisoned lock and a failed main-thread
+  dispatch both reach it — so it now reads "This could not be computed." and
+  lets the message underneath say what happened. An unrecognised code gets its
+  own entry rather than borrowing `ENGINE`'s, because a code from a newer back
+  end has no known cause and reusing a headline asserts one.
+- ~~**W-07** An unknown elevation prints as `0 m`.~~ Fixed at the type.
+  `PlaceSetting.elevation` is an `Option<f64>` and `Resolved` carries
+  `elevation_known` beside the number. Rise and set are still computed at sea
+  level, which is the assumption to make with no height — but the settings pane
+  says "height not set" instead of reporting that assumption as a measurement.
+  The city table has no elevation column, so it had been saying `0 m` for every
+  city in the world. Schema 6.
+- ~~**W-08** `GrahaCell.retrograde` is read at local noon while the day the cell
+  opens reads its state at sunrise.~~ Fixed: the cell reads its motion *and* its
+  longitude at the day's reference instant, which is what the day view uses.
+  The longitude was the same bug unnoticed — the grid and the day printed
+  different positions for one date.
+
+  `graha_month`'s signature changed, as expected. The sunrises are now one
+  cached primitive that both the tithi frames and the graha cells read: computed
+  per subject they cost 42 sunrise searches a month that something else had
+  already paid for, and the lunar budget test caught exactly that.
+
+  The test is checked against the code it replaces, per the note above. **Guru
+  turns direct on 11 March 2026 and that station falls between sunrise and noon
+  at Bengaluru** — found by scanning eight years for one inside that window,
+  because a month whose station falls elsewhere lets the test pass against the
+  bug. Each half of the fix was reverted separately to confirm the test fails on
+  each.
 
 Five more are suspected and unverified; they are listed at the foot of
 `AUDIT.md`.
 
 | | |
 |---|---|
-| Status | queued |
+| Status | done |
 
 ---
 

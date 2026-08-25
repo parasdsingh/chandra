@@ -364,7 +364,10 @@ export interface PlaceSetting {
   zone: string;
   latitude: number;
   longitude: number;
-  elevation: number;
+  /** Metres above sea level, where the step that resolved this place knew.
+   * `null` is not zero: the city table has no elevation column, so a place
+   * picked from search has none. */
+  elevation: number | null;
 }
 
 /** Which division a cell names when the subject enters one. */
@@ -416,7 +419,13 @@ export interface Resolved {
   zone: string;
   latitude: number;
   longitude: number;
+  /** Metres above sea level, and what the observer is built with. Zero where
+   * nothing knew - which is the right value to compute with, and the wrong one
+   * to print. See `elevation_known`. */
   elevation: number;
+  /** Whether `elevation` is a height something actually supplied. `false` means
+   * nobody knew and zero is standing in. */
+  elevation_known: boolean;
   provenance: Provenance;
 }
 

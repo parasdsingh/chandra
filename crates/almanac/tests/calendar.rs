@@ -1580,3 +1580,74 @@ fn a_solar_year_indexes_january_to_december() {
     assert_eq!(index.previous_year, index.months[0].offset - 1);
     assert_eq!(index.next_year, index.months[11].offset + 1);
 }
+
+/// The retrograde ring and the day it opens agree.
+///
+/// They used to be read at two different instants: the cell at local noon, the
+/// day at its reference instant, which is sunrise. A station falling between the
+/// two put a ring on a cell whose day view said `Direct` - and nothing caught it
+/// because no test compared them.
+///
+/// The same guarantee `the_combustion_mark_and_the_day_it_opens_agree` gives
+/// combustion, and it has to be a test rather than a comment: the two values are
+/// computed by different functions from different calls.
+#[test]
+fn the_retrograde_ring_and_the_day_it_opens_agree() {
+    let almanac = almanac();
+    reset(&almanac);
+
+    // Guru turns direct on 11 March 2026, and at Bengaluru that station falls
+    // between sunrise and local noon - so on that one day the old reading and
+    // the new one give opposite answers. Chosen by scanning eight years for a
+    // station inside that window: a month with a station on either side of it
+    // would let this test pass against the code it exists to catch.
+    let month = almanac
+        .graha_month(Graha::Guru, solar(2026, 3))
+        .expect("graha month");
+
+    let stations = month
+        .events
+        .iter()
+        .filter(|event| {
+            matches!(
+                event.kind,
+                chandra_almanac::events::EventKind::RetrogradeStation
+                    | chandra_almanac::events::EventKind::DirectStation
+            )
+        })
+        .count();
+    assert!(
+        stations > 0,
+        "March 2026 must contain a Guru station, or this test covers nothing"
+    );
+
+    let mut retrograde_days = 0;
+    for cell in inside_graha(&month) {
+        let DayDetail::Graha(day) = almanac
+            .day_detail(Graha::Guru, cell.date, limbs())
+            .expect("graha detail")
+        else {
+            panic!("graha detail");
+        };
+        assert_eq!(
+            cell.retrograde, day.retrograde,
+            "{:?}: the grid and the day disagree about the motion",
+            cell.date
+        );
+        // The longitude is read at the same instant now, so the two payloads
+        // cannot print different positions for one date either.
+        assert!(
+            (cell.longitude - day.longitude).abs() < 1e-9,
+            "{:?}: the grid says {} and the day says {}",
+            cell.date,
+            cell.longitude,
+            day.longitude
+        );
+        retrograde_days += usize::from(cell.retrograde);
+    }
+
+    assert!(
+        retrograde_days > 0 && retrograde_days < inside_graha(&month).len(),
+        "expected days on both sides of the station, got {retrograde_days}"
+    );
+}

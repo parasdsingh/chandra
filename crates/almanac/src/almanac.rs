@@ -83,6 +83,14 @@ enum CacheKey {
     Graha(Graha, MonthSystem, DateKey, u8),
     /// The lunar days of a grid, shared by every subject drawn on it.
     Frames(MonthSystem, DateKey, u8),
+    /// Sunrise on each day of a grid, `None` where the Sun does not rise.
+    ///
+    /// Shared by every subject for the same reason the frames are: it is a
+    /// property of the day and the place, and nothing about which graha is
+    /// plotted on it. The tithi frames read it, and so does every graha cell -
+    /// computed separately it cost 42 sunrise searches a month that something
+    /// else had already paid for.
+    Sunrises(MonthSystem, DateKey, u8),
     /// A cursor resolved to a grid and a label.
     ///
     /// Keyed on the cursor and not on the month, because resolving is the step
@@ -98,6 +106,7 @@ enum Cached {
     Moon(MoonMonth),
     Graha(Box<GrahaMonth>),
     Frames(Vec<CellTithi>),
+    Sunrises(Vec<Option<f64>>),
     Resolution(Box<Resolved>),
 }
 
@@ -273,15 +282,47 @@ impl Almanac {
             return Ok(Some(cached));
         }
 
+        let sunrises = self.sunrises(resolved, cursor, settings, generation)?;
         let built = month::tithi_frames(
             &self.engine,
             &resolved.grid,
+            &sunrises,
             settings.location.observer,
             &settings.zone,
         )?;
 
         self.store(key, Cached::Frames(built.clone()), generation)?;
         Ok(Some(built))
+    }
+
+    /// Sunrise on each day of the grid, from the cache where possible.
+    ///
+    /// `None` where the Sun does not rise, which is a fact about the latitude
+    /// and not a failure. Both the callers need that distinction: a tithi says
+    /// which instant it was read at, and a graha cell falls back to local noon.
+    fn sunrises(
+        &self,
+        resolved: &Resolved,
+        cursor: MonthCursor,
+        settings: &Settings,
+        generation: u64,
+    ) -> Result<Vec<Option<f64>>> {
+        let key = CacheKey::Sunrises(cursor.system, resolved.first_day(), cursor.first_weekday);
+        if let Some(Cached::Sunrises(cached)) = self.cached(key)? {
+            return Ok(cached);
+        }
+
+        let mut built = Vec::with_capacity(resolved.grid.len());
+        for (day, _) in &resolved.grid {
+            built.push(crate::day::sunrise_of(
+                &self.engine,
+                day,
+                settings.location.observer,
+            )?);
+        }
+
+        self.store(key, Cached::Sunrises(built.clone()), generation)?;
+        Ok(built)
     }
 
     /// The months of the year the cursor lands in, with the offset that reaches
@@ -472,12 +513,14 @@ impl Almanac {
         }
 
         let frames = self.frames(&resolved, cursor, &settings, generation)?;
+        let sunrises = self.sunrises(&resolved, cursor, &settings, generation)?;
         let built = month::graha_month(
             &self.engine,
             graha,
             &resolved.grid,
             frames.as_deref(),
             resolved.naming,
+            &sunrises,
         )?;
 
         self.store(key, Cached::Graha(Box::new(built.clone())), generation)?;

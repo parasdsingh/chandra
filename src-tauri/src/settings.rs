@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 5;
+pub const SCHEMA_VERSION: u32 = 6;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -146,9 +146,17 @@ pub struct PlaceSetting {
     pub zone: String,
     pub latitude: f64,
     pub longitude: f64,
-    /// Metres above sea level. Affects rise and set by roughly four minutes at
-    /// 900 m, so it is a real input rather than a decoration.
-    pub elevation: f64,
+    /// Metres above sea level, where the step that resolved this place knew.
+    ///
+    /// `None` is not zero. The city table carries no elevation column, so a
+    /// place picked from search has none; CoreLocation does supply one. As an
+    /// `f64` the two were the same value, and a city at sea level and a city
+    /// whose height nobody knows both printed `0 m` - one a measurement, the
+    /// other a guess wearing a measurement's clothes.
+    ///
+    /// Affects rise and set by roughly four minutes at 900 m, so it is a real
+    /// input rather than a decoration.
+    pub elevation: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -219,7 +227,7 @@ impl Settings {
                     zone: "Asia/Kolkata".into(),
                     latitude: 12.9716,
                     longitude: 77.5946,
-                    elevation: 920.0,
+                    elevation: Some(920.0),
                 }),
                 elevation: Some(940.0),
             },
@@ -373,6 +381,32 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         version = 5;
     }
 
+    // 5 -> 6. A place's elevation became optional, because "not known" and
+    // "measured as zero" were the same `f64` and both printed `0 m`.
+    //
+    // A version 5 place has a number, and it is kept: whatever wrote it did so
+    // deliberately, and it is the height every rise and set in the app has been
+    // computed with. A place is not rewritten as "unknown" here on the grounds
+    // that it *might* have been a default - that would discard a real
+    // measurement to correct a presentation, and the user would watch their
+    // metres disappear a second time (the same mistake the 1 -> 2 step exists
+    // to have avoided).
+    if version == 5 {
+        if let Some(place) = value
+            .get_mut("location")
+            .and_then(|location| location.get_mut("place"))
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            // Already `Option`-shaped in JSON: a number stays a number and
+            // deserialises as `Some`. Only an absent key needs writing, so a
+            // place written without one becomes an explicit null rather than
+            // relying on serde's default.
+            place.entry("elevation").or_insert(serde_json::Value::Null);
+        }
+        value["schema_version"] = serde_json::Value::from(6u32);
+        version = 6;
+    }
+
     match version {
         SCHEMA_VERSION => Ok(value),
         newer if newer > SCHEMA_VERSION => Err(AppError::Settings(format!(
@@ -419,7 +453,7 @@ mod tests {
                 zone: "Asia/Kolkata".into(),
                 latitude: 12.9716,
                 longitude: 77.5946,
-                elevation: 920.0,
+                elevation: Some(920.0),
             }),
             elevation: Some(940.0),
         };
@@ -506,7 +540,7 @@ mod tests {
         );
         assert_eq!(
             settings.location.place.as_ref().map(|p| p.elevation),
-            Some(920.0),
+            Some(Some(920.0)),
             "the place keeps the elevation it was written with"
         );
         assert_eq!(settings.sidereal.ayanamsa, Ayanamsa::Raman);

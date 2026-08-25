@@ -161,7 +161,9 @@ impl AppState {
             zone: zone.zone,
             latitude,
             longitude,
-            elevation,
+            // CoreLocation answered, so this is a height something measured -
+            // poorly, which is why the manual correction exists, but measured.
+            elevation: Some(elevation),
         });
 
         self.apply(settings).map(|_| ())

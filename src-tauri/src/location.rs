@@ -34,7 +34,20 @@ pub struct Resolved {
     pub zone: String,
     pub latitude: f64,
     pub longitude: f64,
+    /// Metres above sea level, and what is fed to the observer.
+    ///
+    /// Zero where nothing knew, which is the right value to compute with: sea
+    /// level is the assumption a rise time is made under when no height is
+    /// given. It is not the right thing to *print*, which is what
+    /// `elevation_known` is for.
     pub elevation: f64,
+    /// Whether `elevation` is a height something actually supplied.
+    ///
+    /// `false` means nobody knew and zero is standing in. The two used to be one
+    /// `f64`, so a city at sea level and a city whose height nobody knows both
+    /// printed `0 m` - one a measurement, the other a guess wearing a
+    /// measurement's clothes.
+    pub elevation_known: bool,
     pub provenance: Provenance,
 }
 
@@ -55,11 +68,12 @@ impl Resolved {
 pub fn resolve_offline(settings: &Settings) -> Resolved {
     let mut resolved = resolve_place(settings);
 
-    // The user's own correction, on top of whichever step answered. No step
-    // supplies one: `zone.tab` has no elevation column and CoreLocation's
-    // vertical fix is poor, which is why the setting exists at all.
+    // The user's own correction, on top of whichever step answered. The city
+    // table has no elevation column and CoreLocation's vertical fix is poor,
+    // which is why the setting exists at all.
     if let Some(elevation) = settings.location.elevation {
         resolved.elevation = elevation;
+        resolved.elevation_known = true;
     }
     resolved
 }
@@ -86,7 +100,12 @@ fn from_place(place: &PlaceSetting, provenance: Provenance) -> Resolved {
         zone: place.zone.clone(),
         latitude: place.latitude,
         longitude: place.longitude,
-        elevation: place.elevation,
+        // Sea level where the place carries no height, because that is the
+        // assumption a rise time is made under when none is given - but the
+        // fact that nobody knew travels alongside it rather than being lost in
+        // the zero.
+        elevation: place.elevation.unwrap_or(0.0),
+        elevation_known: place.elevation.is_some(),
         provenance,
     }
 }
@@ -112,8 +131,10 @@ fn for_zone(zone_name: &str) -> Resolved {
             latitude: place.latitude,
             longitude: place.longitude,
             // zone.tab carries no elevation. Sea level understates rise times by
-            // about four minutes at 900 m, which is why the setting exists.
+            // about four minutes at 900 m, which is why the setting exists -
+            // and why this reports itself as an assumption rather than a height.
             elevation: 0.0,
+            elevation_known: false,
             provenance: Provenance::TimeZone,
         },
         None => Resolved {
@@ -122,6 +143,7 @@ fn for_zone(zone_name: &str) -> Resolved {
             latitude: 51.4779,
             longitude: 0.0,
             elevation: 0.0,
+            elevation_known: false,
             provenance: Provenance::TimeZone,
         },
     }
@@ -354,7 +376,7 @@ mod tests {
             zone: "Asia/Kolkata".into(),
             latitude: 12.9716,
             longitude: 77.5946,
-            elevation: 920.0,
+            elevation: Some(920.0),
         }
     }
 
@@ -437,6 +459,68 @@ mod tests {
         assert_eq!(resolved.zone, uncorrected.zone);
         assert_eq!(resolved.latitude, uncorrected.latitude);
         assert_eq!(resolved.longitude, uncorrected.longitude);
+    }
+
+    /// Sea level and "nobody knew" are different answers.
+    ///
+    /// Both compute at zero, because zero is the assumption a rise time is made
+    /// under with no height given. Only one of them is a measurement, and the
+    /// settings pane prints them differently.
+    #[test]
+    fn an_unknown_elevation_is_not_a_measurement_of_zero() {
+        // The city table has no elevation column, so nothing resolved from it
+        // knows a height.
+        let from_table = for_zone("Asia/Kolkata");
+        assert_eq!(
+            from_table.elevation, 0.0,
+            "sea level is what is computed with"
+        );
+        assert!(
+            !from_table.elevation_known,
+            "and it is not a height anything supplied"
+        );
+
+        // A place carrying a measured zero - a coastal city from CoreLocation -
+        // is the same number and a different claim.
+        let measured = from_place(
+            &PlaceSetting {
+                label: "Chennai".into(),
+                zone: "Asia/Kolkata".into(),
+                latitude: 13.0827,
+                longitude: 80.2707,
+                elevation: Some(0.0),
+            },
+            Provenance::CoreLocation,
+        );
+        assert_eq!(measured.elevation, 0.0);
+        assert!(
+            measured.elevation_known,
+            "a measured zero is a height, and prints as one"
+        );
+
+        // A place picked from search carries none.
+        let searched = from_place(
+            &PlaceSetting {
+                label: "Chennai".into(),
+                zone: "Asia/Kolkata".into(),
+                latitude: 13.0827,
+                longitude: 80.2707,
+                elevation: None,
+            },
+            Provenance::Manual,
+        );
+        assert_eq!(searched.elevation, 0.0);
+        assert!(!searched.elevation_known);
+
+        // The user's own correction is always a height, whatever answered.
+        let mut settings = Settings::default();
+        settings.location.elevation = Some(0.0);
+        let corrected = resolve_offline(&settings);
+        assert_eq!(corrected.elevation, 0.0);
+        assert!(
+            corrected.elevation_known,
+            "a correction the user typed is a height they gave, even at zero"
+        );
     }
 
     #[test]

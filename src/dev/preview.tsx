@@ -73,6 +73,7 @@ const boot: Bootstrap = {
     latitude: 12.9716,
     longitude: 77.5946,
     elevation: 920,
+    elevation_known: true,
     provenance: "manual",
   },
   subject: "chandra",

@@ -88,14 +88,19 @@ pub struct GrahaCell {
     /// The same lunar day the Moon's calendar shows. A day is named the same
     /// whichever subject is being plotted on it.
     pub tithi: Option<CellTithi>,
-    /// Sidereal longitude at local noon, the instant the cell's combustion is
-    /// judged at.
+    /// Sidereal longitude at the day's reference instant.
     ///
-    /// The rashi and the nakshatra were here too and are not any more. Nothing
-    /// drew them, and they were read at noon while the day the cell opens reads
-    /// its divisions at sunrise, which D-019 requires - so the two could name
-    /// different nakshatras for one day, and 42 cells paid for the pair anyway.
+    /// Sunrise, where the Sun rises. It used to be local noon, which made it
+    /// disagree with the longitude the day view prints for the same date - two
+    /// numbers for one day, from one payload.
+    ///
+    /// The rashi and the nakshatra were here too and are not any more: nothing
+    /// drew them, and 42 cells paid for the pair anyway.
     pub longitude: f64,
+    /// Whether the motion is retrograde at the same reference instant.
+    ///
+    /// It too used to be local noon, and a station falling between sunrise and
+    /// noon put a retrograde ring on a cell whose day view said `Direct`.
     pub retrograde: bool,
     /// Within the Sun's rays at this day's reference instant.
     pub combust: bool,
@@ -133,6 +138,10 @@ pub struct MonthLabel {
 pub fn tithi_frames(
     engine: &Engine,
     grid: &[(CivilDay, bool)],
+    // Sunrise on each grid day, already found. The two days either side are
+    // resolved here because they are outside the grid and nothing else wants
+    // them.
+    sunrises: &[Option<f64>],
     observer: Observer,
     zone: &jiff::tz::TimeZone,
 ) -> Result<Vec<CellTithi>> {
@@ -145,10 +154,16 @@ pub fn tithi_frames(
     extended.extend(grid.iter().map(|(day, _)| day.clone()));
     extended.push(CivilDay::new(after, zone)?);
 
-    let anchors = extended
-        .iter()
-        .map(|day| sunrise_anchor(engine, day, observer))
-        .collect::<Result<Vec<_>>>()?;
+    let mut anchors = Vec::with_capacity(extended.len());
+    anchors.push(sunrise_anchor(engine, &extended[0], observer)?);
+    for (position, sunrise) in sunrises.iter().enumerate() {
+        anchors.push(anchor_from(engine, &extended[position + 1], *sunrise)?);
+    }
+    anchors.push(sunrise_anchor(
+        engine,
+        &extended[extended.len() - 1],
+        observer,
+    )?);
 
     let mut frames = Vec::with_capacity(grid.len());
     for position in 1..=grid.len() {
@@ -203,7 +218,11 @@ struct Anchor {
 /// and the day it opens can never name different tithis.
 fn sunrise_anchor(engine: &Engine, day: &CivilDay, observer: Observer) -> Result<Anchor> {
     let sunrise = crate::day::sunrise_of(engine, day, observer)?;
+    anchor_from(engine, day, sunrise)
+}
 
+/// The same, from a sunrise already found.
+fn anchor_from(engine: &Engine, day: &CivilDay, sunrise: Option<f64>) -> Result<Anchor> {
     let instant = sunrise.unwrap_or_else(|| day.noon_jd());
     Ok(Anchor {
         tithi: tithi::at(engine, instant)?,
@@ -284,27 +303,40 @@ pub fn graha_month(
     grid: &[(CivilDay, bool)],
     frames: Option<&[CellTithi]>,
     naming: MonthLabel,
+    // Sunrise on each grid day, in grid order, `None` where the Sun does not
+    // rise. Passed in rather than computed here because it is a property of the
+    // day and the place, not of the subject - the tithi frames want the same
+    // forty-two, and computing them twice cost 42 sunrise searches a month that
+    // something else had already paid for.
+    sunrises: &[Option<f64>],
 ) -> Result<GrahaMonth> {
     let mut cells = Vec::with_capacity(grid.len());
     let mut sources = Vec::with_capacity(grid.len());
 
     for (cell, (day, in_month)) in grid.iter().enumerate() {
-        // Both at local noon, and in one call: combustion is judged at the day's
+        // Combustion at local noon, and in one call: it is judged at the day's
         // midpoint for every subject alike (D-019), and the Sun's longitude is
         // wanted at exactly the instant the graha's was taken.
-        let bodies = engine.positions(day.noon_jd(), &[graha, Graha::Surya])?;
-        let position = bodies[0];
-        let combustion = combustion_from(graha, &position, bodies[1].longitude);
+        let at_noon = engine.positions(day.noon_jd(), &[graha, Graha::Surya])?;
+        let combustion = combustion_from(graha, &at_noon[0], at_noon[1].longitude);
+
+        // Position and motion at the day's reference instant, which is sunrise
+        // where the Sun rises. The day the cell opens reads its own there, and
+        // reading the cell's at noon meant a station between the two drew a
+        // retrograde ring on a day whose detail said `Direct` - and printed a
+        // longitude the detail disagreed with.
+        let reference = sunrises[cell].unwrap_or_else(|| day.noon_jd());
+        let at_reference = engine.position(reference, graha)?;
 
         cells.push(GrahaCell {
             date: day.date,
             in_month: *in_month,
             tithi: frames.map(|frames| frames[cell].clone()),
-            longitude: position.longitude,
-            retrograde: position.is_retrograde(),
+            longitude: at_reference.longitude,
+            retrograde: at_reference.is_retrograde(),
             combust: combustion.combust,
         });
-        sources.push(position.source);
+        sources.push(Source::weakest([at_noon[0].source, at_reference.source]));
     }
 
     // Events are found across the month itself, not the grid: a station in the
