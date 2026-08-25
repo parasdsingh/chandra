@@ -195,7 +195,24 @@ impl Default for Settings {
             },
             sidereal: SiderealSetting {
                 ayanamsa: Ayanamsa::Lahiri,
-                node_type: NodeType::True,
+                // The mean node, because that is what a panchanga uses. The
+                // siddhantic model defines Rahu as a uniformly retrograde point
+                // - "always vakri" is the definition rather than an observation
+                // - and the mean node is that definition computed. The
+                // Rashtriya Panchang, Lahiri's ephemeris and KP all publish it.
+                //
+                // The true node is the real osculating intersection of the
+                // Moon's orbital plane with the ecliptic, which is where
+                // eclipses happen. It is also a perturbation the classical
+                // model does not contain: it oscillates about the mean by up to
+                // 1.6 degrees and turns direct about twenty-five times a year
+                // (D-026). Shipping it as the default made Chandra disagree
+                // with any panchanga laid beside it.
+                //
+                // Only new installs are affected. A settings file that already
+                // names a node type keeps it: this is the value nobody chose,
+                // not a correction to one somebody did.
+                node_type: NodeType::Mean,
             },
             calendar: CalendarSetting {
                 month_system: MonthSystem::Solar,
@@ -436,7 +453,9 @@ mod tests {
         let settings = Settings::load(&dir).expect("defaults");
         assert_eq!(settings, Settings::default());
         assert_eq!(settings.sidereal.ayanamsa, Ayanamsa::Lahiri);
-        assert_eq!(settings.sidereal.node_type, NodeType::True);
+        // The mean node, which is what a panchanga uses. Why is in
+        // `a_new_install_uses_the_node_a_panchanga_uses`.
+        assert_eq!(settings.sidereal.node_type, NodeType::Mean);
         assert!(settings.tray.subjects.is_empty());
         assert!(!settings.tray.colour_mode);
     }
@@ -500,6 +519,46 @@ mod tests {
 
     /// A version 1 file must survive, with the meaning it had.
     ///
+    /// A fresh install computes Rahu and Ketu the way a panchanga does.
+    ///
+    /// The mean node, not the true one. This is a default rather than a
+    /// constant, so nothing else in the code asserts it - and it was shipped
+    /// wrong once already, which is the reason for the test.
+    #[test]
+    fn a_new_install_uses_the_node_a_panchanga_uses() {
+        assert_eq!(
+            Settings::default().sidereal.node_type,
+            NodeType::Mean,
+            "the siddhantic Rahu is uniformly retrograde, which is the mean node"
+        );
+    }
+
+    /// An existing file keeps the node type it names.
+    ///
+    /// Changing a default must not reach back into a document somebody already
+    /// has: the true node moves Rahu by up to 1.6 degrees, which can put it in a
+    /// different nakshatra, and a reading taken yesterday would silently stop
+    /// agreeing with itself.
+    #[test]
+    fn changing_the_default_does_not_rewrite_a_file_that_names_one() {
+        let dir = std::env::temp_dir().join("chandra-node-type-test");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("dir");
+
+        let mut written = Settings::default();
+        written.sidereal.node_type = NodeType::True;
+        written.save(&dir).expect("save");
+
+        let read = Settings::load(&dir).expect("load");
+        assert_eq!(
+            read.sidereal.node_type,
+            NodeType::True,
+            "the file named the true node and must keep it"
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// Version 1 carried the elevation inside the place; version 2 carries a
     /// correction beside it. `null` is what "no correction" is, so a document
     /// written by the previous build resolves to exactly the same observer.

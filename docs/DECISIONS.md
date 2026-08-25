@@ -461,3 +461,31 @@ user has chosen a model in which the nodes never turn, and drawing that is truth
 **Method note.** The 95% was never measured, and nothing in the code could have contradicted it.
 The lesson is the one at the top of `AUDIT.md` in another form: a number written into a comment to
 justify a behaviour is a claim, and a claim with no test is a guess.
+
+## D-027 — A fresh install computes Rahu and Ketu the way a panchanga does
+
+**Decision.** `Settings::default().sidereal.node_type` is `Mean`. The picker lists the mean node
+first. Existing settings files are untouched.
+
+**Why.** The siddhantic model defines Rahu as a uniformly retrograde point — "always vakri" is the
+definition rather than an observation — and the mean node is that definition computed. The
+Rashtriya Panchang, Lahiri's Indian Ephemeris and Krishnamurti Paddhati all publish it, as do most
+printed panchangas.
+
+The true node is the osculating intersection of the Moon's orbital plane with the ecliptic. It is
+the physically real one, and it is where eclipses happen. It is also a perturbation the classical
+model does not contain: it oscillates about the mean by up to 1.6° and turns direct about
+twenty-five times a year (D-026). Shipping it as the default made Chandra disagree with any
+panchanga laid beside it, on a figure the app presents as traditional.
+
+**No migration.** A file that already names a node type keeps it. Switching the true node for the
+mean moves Rahu by up to 1.6°, which is enough to change its nakshatra — a reading taken yesterday
+would silently stop agreeing with itself. This is a default for the case nobody chose, not a
+correction to a case somebody did. Anyone who wants the change makes it in
+**Settings › Astrology › Rahu and Ketu**, where the choice has always been.
+
+**Labels unchanged.** `True node` and `Mean node`, as before.
+
+**Tests.** `a_new_install_uses_the_node_a_panchanga_uses` pins the default, because it is a default
+rather than a constant and nothing else in the code asserts it — and it shipped wrong once.
+`changing_the_default_does_not_rewrite_a_file_that_names_one` pins the other half.

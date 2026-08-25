@@ -89,7 +89,10 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
                 label: a.label(),
             })
             .collect(),
-        node_types: [NodeType::True, NodeType::Mean]
+        // The default first, which is the mean node: it is what a panchanga
+        // uses, and a list whose recommended entry is second reads as if the
+        // first one were.
+        node_types: [NodeType::Mean, NodeType::True]
             .into_iter()
             .map(|n| Choice {
                 key: n.key(),

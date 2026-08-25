@@ -298,7 +298,23 @@ marker off it, and it puts it there as a word rather than as a shape.
 
 ---
 
-## 9. Not started
+## 9. Node type — done
+
+Chandra defaulted to the **true** node while panchangas overwhelmingly use the
+**mean** one. That mismatch was also what made D-026's wrong figure plausible:
+on a mean node "Rahu is always retrograde" is exactly right.
+
+Shipped as **D-027**: a fresh install gets the mean node, existing settings files
+keep whatever they name, and the picker lists the mean node first. The toggle
+itself already existed, in **Settings › Astrology › Rahu and Ketu**.
+
+| | |
+|---|---|
+| Status | done |
+
+---
+
+## 10. Not started
 
 - GitHub remote. Deferred by D-018 until a production release; still local-only.
 - CI. Described in the Makefile and the docs; no `.github/workflows` exists.
