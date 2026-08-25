@@ -103,7 +103,7 @@ position both had a lunar variant purely because the glyph was missing.
 
 ---
 
-## 5. Day view — done, except the two state treatments
+## 5. Day view — done
 
 Shipped as **D-025**: variant 02, one field stack for all nine subjects. A field
 is a small uppercase label, the value and the hour it gives way on one line, and
@@ -111,21 +111,36 @@ a `then …` successor line. Rise and set belong to the subject, so there is no
 separate sunrise row. Illuminated percentage, distance from the Sun, speed and
 longitude are gone. The phase name appears in solar mode only.
 
-### 5.1 Combustion and retrograde in the day view — queued
+### 5.1 Combustion and retrograde in the day view — done
 
-`docs/design/day-view-states.md` specifies the two treatments and neither is
-built: combustion as a warm field in the two 16px gutters the day view never
-uses, retrograde as a hairpin rail in the right gutter. Neither costs a vertical
-pixel, which matters given §7. Today both states are carried in the field stack
-in words alone — a `Combust` field and a `Motion` field.
+Both are drawn, and neither costs a vertical pixel, which is what matters
+given §7:
 
-The document's `--glare` `#F0C9A4` is superseded: the token shipped as `#e2603a`
-under D-023, and every contrast figure in that document is computed against the
-old value.
+- **Combustion** is the same warm radial wash the cell carries, at the foot of
+  the panel. One state, one appearance, wherever it appears. It sits behind the
+  fields and darkens nothing, so every contrast figure in §2 holds unchanged.
+- **Retrograde** is a dotted rail down the right gutter, turning back on itself
+  at both ends. Dotted for the reason the cell's ring is: the motion is broken,
+  so the line is. Suppressed for Rahu and Ketu, which are retrograde on roughly
+  95% of days — a mark that is true almost always is the subject's identity, not
+  its state.
+
+Both are fixed to the panel rather than scrolled with the content: they are
+properties of the day, not of any field in it.
+
+Each condition is one predicate — `isCombust`, `hasRetrogradeRail` — used by
+both the mark and the words, so the two cannot disagree. That is the guarantee
+`the_combustion_mark_and_the_day_it_opens_agree` gives the grid, held here by
+construction rather than by a test.
+
+The design document's `--glare` `#F0C9A4` was superseded before this shipped:
+the token is `#e2603a` under D-023, and the contrast figures in that document
+are computed against the old value. The hairpin drawn there is simplified to a
+rail; the shape it described needed a rim the panel does not have.
 
 | | |
 |---|---|
-| Status | queued |
+| Status | done |
 
 ---
 

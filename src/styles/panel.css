@@ -512,6 +512,7 @@
 }
 
 .detail {
+  position: relative;
   height: 100%;
   overflow-y: auto;
   scrollbar-width: none;
@@ -590,3 +591,60 @@
   color: var(--text-secondary);
 }
 
+
+/* ---------- the day's own states ---------- */
+
+/* Combustion, drawn as the glare it is.
+
+   The same wash the cell carries, so one state has one appearance wherever it
+   appears - and at the foot of the panel, where the fields are not. It sits
+   behind them and darkens nothing, so every contrast figure in the stack above
+   holds unchanged.
+
+   Fixed to the region rather than scrolling with the content: it is a property
+   of the day, not of any field in it, and a wash that slid away under a scroll
+   would read as one. */
+.detail__glare {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 96px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    120% 100% at 50% 118%,
+    color-mix(in srgb, var(--glare) 42%, transparent) 0%,
+    color-mix(in srgb, var(--glare) 16%, transparent) 45%,
+    color-mix(in srgb, var(--glare) 0%, transparent) 75%
+  );
+}
+
+/* Retrograde, drawn as the motion it is.
+
+   A dotted rail down the margin, and dotted for the reason the cell's ring is:
+   the motion is broken, so the line is. It runs down and turns back on itself,
+   which is the shape of the thing rather than a badge for it.
+
+   In the gutter the fields never reach, so it costs nothing and displaces
+   nothing. */
+.detail__rail {
+  position: fixed;
+  top: 52px;
+  bottom: 16px;
+  right: 5px;
+  width: 7px;
+  pointer-events: none;
+  z-index: 0;
+  border-top: 1px dotted var(--marker);
+  border-right: 1px dotted var(--marker);
+  border-bottom: 1px dotted var(--marker);
+  border-radius: 0 6px 6px 0;
+  opacity: 0.55;
+}
+
+/* The fields sit above both. */
+.detail > *:not(.detail__glare):not(.detail__rail) {
+  position: relative;
+  z-index: 1;
+}

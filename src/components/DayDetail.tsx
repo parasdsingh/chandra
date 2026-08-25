@@ -64,9 +64,49 @@ interface Props {
   error: { code: string; message: string } | undefined;
 }
 
+/* The two states the day carries on its surface as well as in its fields.
+   Each is one predicate used in both places, so the drawing and the words
+   cannot disagree - the guarantee `the_combustion_mark_and_the_day_it_opens_
+   agree` gives the grid, held here by construction instead of by a test. */
+
+/** Combust, and knowably so: `orb` is absent for the Sun and the nodes. */
+function isCombust(detail: Detail | undefined): boolean {
+  return detail?.combustion.orb !== null && (detail?.combustion.combust ?? false);
+}
+
+/** Retrograde, excluding the nodes.
+ *
+ * Rahu and Ketu are retrograde on roughly 95% of days, so a rail on their
+ * panels would be their identity rather than a state - two of the nine panels
+ * permanently different for no information. The `Motion` field still prints,
+ * so nothing is lost in words. */
+function hasRetrogradeRail(detail: Detail | undefined): boolean {
+  if (detail?.kind !== "graha") return false;
+  const graha = detail as GrahaDay;
+  return (
+    graha.retrograde && graha.graha !== "rahu" && graha.graha !== "ketu"
+  );
+}
+
 export function DayDetail(props: Props): JSX.Element {
   return (
-    <div class="detail" role="region" aria-live="polite" aria-label="Day detail">
+    <div
+      class="detail"
+      role="region"
+      aria-live="polite"
+      aria-label="Day detail"
+    >
+      {/* The two states the surface carries, drawn behind the fields rather than
+          added to them. Neither costs a vertical pixel, which is what lets the
+          day keep gaining fields. Both are said in words as well - a Combust
+          field and a Motion field - so nothing here is a sole carrier. */}
+      <Show when={!props.error && isCombust(props.detail)}>
+        <span class="detail__glare" aria-hidden="true" />
+      </Show>
+      <Show when={!props.error && hasRetrogradeRail(props.detail)}>
+        <span class="detail__rail" aria-hidden="true" />
+      </Show>
+
       <Show when={props.error} fallback={<Body {...props} />}>
         {(error) => <ErrorBlock code={error().code} message={error().message} />}
       </Show>
@@ -253,7 +293,7 @@ function Subject(props: {
           for anyone the drawing does not reach (DESIGN 11.3). The separation in
           degrees is not here: the orb is the fact, the reading behind it is not
           what the day was opened for. */}
-      <Show when={props.detail.combustion.combust}>
+      <Show when={isCombust(props.detail)}>
         <Field
           label="Combust"
           value={`inside the ${props.detail.combustion.orb}° orb`}
