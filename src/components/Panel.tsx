@@ -536,6 +536,15 @@ export function Panel(props: Props): JSX.Element {
     return monthAt(visibleDelta())?.label ?? "";
   };
 
+  // The window is sized by the back end from the same number; this scales what
+  // is drawn inside it.
+  createEffect(() => {
+    document.documentElement.style.setProperty(
+      "--panel-scale",
+      String(props.boot.settings.appearance.scale),
+    );
+  });
+
   return (
     <div class="panel-frame">
       <div

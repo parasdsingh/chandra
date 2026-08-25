@@ -80,6 +80,13 @@ pub fn run() {
             app.manage(state);
 
             panel::create(&handle)?;
+            // The window is built at the composed size; a stored size applies it
+            // before anything is shown, so the panel never opens at one size and
+            // resizes under the pointer.
+            panel::apply_scale(
+                &handle,
+                handle.state::<AppState>().settings().appearance.clamped(),
+            );
             tray::build(&handle)?;
             watch_for_midnight(handle.clone());
 

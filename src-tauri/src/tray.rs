@@ -33,8 +33,14 @@ fn tray_id(graha: Graha) -> String {
 pub fn build(app: &AppHandle) -> Result<()> {
     let subjects = app.state::<AppState>().tray_subjects();
 
+    // Built back to front. macOS puts each new status item to the *left* of the
+    // ones already there, so creating in canonical order would lay the row out
+    // backwards. Reversed here, the row reads Surya first and Ketu last from
+    // left to right, in the same order the settings list offers them - and the
+    // moon, created first, sits at the right-hand end where it stays put
+    // whatever else is switched on.
     build_item(app, MOON_ID.to_string(), Graha::Chandra)?;
-    for graha in subjects {
+    for graha in subjects.into_iter().rev() {
         build_item(app, tray_id(graha), graha)?;
     }
 

@@ -176,12 +176,6 @@ export function DayCell(props: Props): JSX.Element {
         <span class="day-cell__combust" />
       </Show>
 
-      {/* A tithi holding two sunrises names two days. The rule runs full width
-          on both of them, so the pair reads as one span bracketed across two
-          cells rather than as a repeated number. */}
-      <Show when={tithi()?.vriddhi}>
-        <span class="day-cell__vriddhi" />
-      </Show>
 
     </div>
   );

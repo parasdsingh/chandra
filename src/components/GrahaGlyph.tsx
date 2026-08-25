@@ -23,7 +23,7 @@ export function GrahaGlyph(props: Props): JSX.Element {
       class="graha-glyph"
       width={props.size}
       height={props.size}
-      viewBox="0 0 24 24"
+      viewBox={props.info.view_box.join(" ")}
       aria-hidden="true"
     >
       <path

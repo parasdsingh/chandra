@@ -32,6 +32,28 @@ const PANEL_HEIGHT: f64 = 332.0;
 /// Corner radius of the panel, matched by the window material behind it.
 const PANEL_RADIUS: f64 = 12.0;
 
+/// Resizes the window to the panel's drawn size.
+///
+/// The panel's layout is fixed at 320 by 332 and the page scales itself with a
+/// transform, so the window has to be told the same multiplier or the drawn
+/// panel and the window it lives in stop agreeing - which shows as a clipped
+/// corner at one end and a band of desktop at the other.
+pub fn apply_scale(app: &AppHandle, scale: f64) {
+    let Some(window) = app.get_webview_window(PANEL_LABEL) else {
+        return;
+    };
+    let _ = window.set_size(tauri::LogicalSize::new(
+        PANEL_WIDTH * scale,
+        PANEL_HEIGHT * scale,
+    ));
+    apply_material(&window);
+}
+
+/// The panel's drawn width, which is what placement has to centre.
+fn scaled_width(app: &AppHandle) -> f64 {
+    PANEL_WIDTH * app.state::<AppState>().settings().appearance.clamped()
+}
+
 /// How long to wait for CoreLocation before giving up and keeping the offline
 /// resolution. Long enough for the authorisation prompt to be answered, short
 /// enough that the settings pane does not appear stuck.
@@ -139,7 +161,7 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
     // where it last was, which is wrong on a second display but is a great deal
     // better than a tray item that does nothing at all. Refusing to show it made
     // one bad monitor lookup uninstall the app's only surface.
-    if let Err(error) = place(&window, tray_rect) {
+    if let Err(error) = place(&window, tray_rect, scaled_width(app)) {
         eprintln!("chandra: {error}");
     }
 
@@ -195,7 +217,7 @@ pub fn hide(app: &AppHandle) {
 /// that both picked the wrong display and divided a physical rectangle by the
 /// wrong scale, then clamped the result into the wrong bounds. It never
 /// self-corrected, because the answer it gave became the input to the next one.
-fn place(window: &WebviewWindow, tray_rect: Rect) -> Result<()> {
+fn place(window: &WebviewWindow, tray_rect: Rect, width: f64) -> Result<()> {
     const EDGE_MARGIN: f64 = 12.0;
     const MENU_BAR_GAP: f64 = 6.0;
 
@@ -252,8 +274,8 @@ fn place(window: &WebviewWindow, tray_rect: Rect) -> Result<()> {
     // Clamping matters: a tray item near a screen corner would otherwise put
     // part of the panel off screen.
     let minimum_x = monitor_position.x + EDGE_MARGIN;
-    let maximum_x = monitor_position.x + monitor_size.width - PANEL_WIDTH - EDGE_MARGIN;
-    let x = (tray_centre - PANEL_WIDTH / 2.0).clamp(minimum_x, maximum_x.max(minimum_x));
+    let maximum_x = monitor_position.x + monitor_size.width - width - EDGE_MARGIN;
+    let x = (tray_centre - width / 2.0).clamp(minimum_x, maximum_x.max(minimum_x));
 
     // The work area begins below the menu bar, so its top edge gives the menu
     // bar height without measuring or assuming one.
@@ -345,8 +367,6 @@ fn set_current_subject(app: &AppHandle, subject: Graha) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     /// The tray rect arrives physical; the lookup compares against logical.
     ///
     /// On a 2x display the raw point is off the right-hand edge of the only

@@ -162,6 +162,11 @@ pub fn graha_icon(
     let (data, ink) = glyphs::glyph(graha);
     let path = path::parse(data)?;
 
+    // Centred on the glyph's own ink, not on the design grid it was drawn in.
+    // Several glyphs sit off-centre in that grid, so pinning the grid to the
+    // slot put the symbol itself off-centre in the menu bar.
+    let (box_x, box_y, _, _) = glyphs::view_box(graha);
+
     // The 24 unit design grid maps onto the slot, then onto pixels. A marked
     // glyph is drawn smaller and pinned to the top left, which is where the
     // corner it gives up is.
@@ -171,7 +176,7 @@ pub fn graha_icon(
         SLOT_POINTS
     };
     let unit_scale = glyph_points / DESIGN_GRID * scale as f32;
-    let transform = Transform::from_scale(unit_scale, unit_scale);
+    let transform = Transform::from_scale(unit_scale, unit_scale).pre_translate(-box_x, -box_y);
 
     let (r, g, b) = tint.components();
     let mut paint = Paint {

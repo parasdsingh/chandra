@@ -46,14 +46,14 @@
 .settings__nav-value {
   font: var(--type-caption);
   letter-spacing: var(--track-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .settings__footnote {
   margin: var(--s-4) var(--s-2) 0;
   font: var(--type-caption);
   letter-spacing: var(--track-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 /* ---------- sections ---------- */
@@ -69,7 +69,7 @@
   font: var(--type-micro);
   letter-spacing: var(--track-micro);
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .settings__group:first-child {
@@ -139,7 +139,7 @@
 .settings__hint {
   font: var(--type-caption);
   letter-spacing: var(--track-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   padding: 0 var(--s-2);
 }
 
@@ -227,7 +227,7 @@
 }
 
 .settings__button:disabled {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 /* ---------- menu bar toggles ---------- */

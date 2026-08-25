@@ -277,6 +277,9 @@
     "source": "string"
   },
   "Settings": {
+    "appearance": {
+      "scale": "number"
+    },
     "calendar": {
       "month_system": "string"
     },

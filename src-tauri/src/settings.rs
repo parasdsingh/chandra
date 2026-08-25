@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -27,6 +27,43 @@ pub struct Settings {
     pub sidereal: SiderealSetting,
     pub calendar: CalendarSetting,
     pub tray: TraySetting,
+    pub appearance: AppearanceSetting,
+}
+
+/// How large the whole panel is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct AppearanceSetting {
+    /// Multiplier on every dimension: the window, the grid, the type, the marks.
+    ///
+    /// One number rather than a type-size setting, because a menu bar panel is a
+    /// fixed composition - 42 cells of 40px in a 320px window - and growing the
+    /// text inside a window that stayed put would only take space from the
+    /// calendar. Clamped on the way in by [`AppearanceSetting::clamped`].
+    pub scale: f64,
+}
+
+impl AppearanceSetting {
+    /// Smallest and largest the panel may be drawn.
+    ///
+    /// Below 0.8 the 10px labels stop being legible; above 1.4 a 320 by 332
+    /// panel grown to 448 by 465 starts to read as a window rather than as a
+    /// menu bar popover, and on a laptop screen it crowds the menu bar it hangs
+    /// from.
+    pub const MINIMUM: f64 = 0.8;
+    pub const MAXIMUM: f64 = 1.4;
+
+    /// The scale, forced into range.
+    ///
+    /// A settings file is editable by hand and a bad value here would build a
+    /// window of zero or of several thousand pixels, so the value is clamped
+    /// where it is read rather than trusted where it was written.
+    pub fn clamped(self) -> f64 {
+        if self.scale.is_finite() {
+            self.scale.clamp(Self::MINIMUM, Self::MAXIMUM)
+        } else {
+            1.0
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,6 +154,7 @@ impl Default for Settings {
                 subjects: Vec::new(),
                 colour_mode: false,
             },
+            appearance: AppearanceSetting { scale: 1.0 },
         }
     }
 }
@@ -243,6 +281,17 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         location.insert("elevation".into(), carried);
         value["schema_version"] = serde_json::Value::from(2u32);
         version = 2;
+    }
+
+    // 2 -> 3. The panel gained a size. A file written before it means the size
+    // it was drawn at, which is 1.0.
+    if version == 2 {
+        value
+            .as_object_mut()
+            .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
+            .insert("appearance".into(), serde_json::json!({ "scale": 1.0 }));
+        value["schema_version"] = serde_json::Value::from(3u32);
+        version = 3;
     }
 
     match version {

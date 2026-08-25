@@ -60,6 +60,10 @@ pub struct GrahaInfo {
     pub path: &'static str,
     pub filled: bool,
     pub stroke_width: f32,
+    /// `x y width height`, centred on the glyph's own ink rather than on the
+    /// design grid. Several glyphs are drawn off-centre in the grid, so a ring
+    /// concentric with the box was not concentric with the symbol.
+    pub view_box: [f32; 4],
 }
 
 #[tauri::command]
@@ -96,6 +100,7 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
             .into_iter()
             .map(|g| {
                 let (path, ink) = chandra_glyph::glyphs::glyph(g);
+                let (x, y, width, height) = chandra_glyph::glyphs::view_box(g);
                 GrahaInfo {
                     key: g.key(),
                     name: g.name(),
@@ -103,6 +108,7 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
                     path,
                     filled: ink == chandra_glyph::glyphs::Ink::Fill,
                     stroke_width: chandra_glyph::glyphs::STROKE_WIDTH,
+                    view_box: [x, y, width, height],
                 }
             })
             .collect(),
@@ -178,6 +184,14 @@ pub async fn update_settings(app: AppHandle, settings: Settings) -> Result<Boots
     // mutex and writes and renames a file, and the module's own contract is that
     // none of that happens on the runtime's threads.
     let applied = blocking(app.clone(), move |state| state.apply(settings)).await?;
+
+    // A window resize is AppKit's business too, and for the same reason must be
+    // dispatched rather than called from the runtime this command runs on.
+    if applied.scale_changed {
+        let handle = app.clone();
+        let scale = handle.state::<AppState>().settings().appearance.clamped();
+        let _ = app.run_on_main_thread(move || panel::apply_scale(&handle, scale));
+    }
 
     // Status items are AppKit objects: creating, removing or redrawing one off
     // the main thread crashes the process. Commands run on the async runtime,

@@ -64,6 +64,7 @@ const boot: Bootstrap = {
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta" },
     tray: { subjects: ["mangala", "shani"], colour_mode: false },
+  appearance: { scale: 1 },
   },
   location: {
     label: "Bengaluru",

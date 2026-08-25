@@ -310,6 +310,10 @@ export interface Settings {
     subjects: GrahaKey[];
     colour_mode: boolean;
   };
+  appearance: {
+    /** Multiplier on every dimension of the panel, 0.8 to 1.4. */
+    scale: number;
+  };
 }
 
 export interface Resolved {
@@ -334,6 +338,8 @@ export interface GrahaInfo {
   path: string;
   filled: boolean;
   stroke_width: number;
+  /** `x y width height`, centred on the glyph's ink rather than on the grid. */
+  view_box: [number, number, number, number];
 }
 
 export interface Bootstrap {

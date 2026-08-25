@@ -30,6 +30,7 @@ export type SettingsSection =
   | "location"
   | "astrology"
   | "menubar"
+  | "size"
   | "about";
 
 export const SECTION_TITLES: Record<SettingsSection, string> = {
@@ -38,6 +39,7 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   location: "Location",
   astrology: "Astrology",
   menubar: "Menu bar",
+  size: "Size",
   about: "About",
 };
 
@@ -65,6 +67,9 @@ export function SettingsView(props: Props): JSX.Element {
       </Show>
       <Show when={props.section === "menubar"}>
         <MenuBar boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "size"}>
+        <Size boot={props.boot} apply={props.apply} />
       </Show>
       <Show when={props.section === "about"}>
         <About boot={props.boot} />
@@ -101,6 +106,7 @@ function Root(props: {
       value: () =>
         trayCount() === 0 ? "Moon only" : `Moon + ${trayCount()}`,
     },
+    { id: "size", value: () => sizeLabel(settings().appearance.scale) },
     { id: "about", value: () => "" },
   ];
 
@@ -119,6 +125,66 @@ function Root(props: {
         {systemLabel()} · {props.boot.location.zone}
       </p>
     </nav>
+  );
+}
+
+/**
+ * The panel's sizes, as multipliers.
+ *
+ * Steps rather than a slider: the panel is a fixed composition and only a few
+ * sizes of it look composed. The names say what the user gets rather than what
+ * the number is - nobody wants "1.15".
+ */
+const SIZES: { scale: number; label: string }[] = [
+  { scale: 0.85, label: "Compact" },
+  { scale: 1.0, label: "Default" },
+  { scale: 1.15, label: "Large" },
+  { scale: 1.3, label: "Larger" },
+];
+
+function sizeLabel(scale: number): string {
+  const nearest = SIZES.reduce((best, size) =>
+    Math.abs(size.scale - scale) < Math.abs(best.scale - scale) ? size : best,
+  );
+  return nearest.label;
+}
+
+/**
+ * Panel size.
+ *
+ * Everything moves together - the window, the grid, the type, the marks - so a
+ * bigger panel is the same design drawn larger rather than a different one. The
+ * calendar keeps its shape at every step, which is the whole reason this is one
+ * multiplier and not a type-size setting.
+ */
+function Size(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <p class="settings__hint">
+        Changes the whole panel — the window, the calendar, the type and the
+        marks together.
+      </p>
+      <div role="radiogroup" aria-label="Panel size">
+        <For each={SIZES}>
+          {(size) => (
+            <Choice
+              label={size.label}
+              selected={
+                sizeLabel(settings().appearance.scale) === size.label
+              }
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  appearance: { scale: size.scale },
+                })
+              }
+            />
+          )}
+        </For>
+      </div>
+    </div>
   );
 }
 

@@ -75,11 +75,16 @@ impl AppState {
     /// listing it here would put two moons in the menu bar
     /// (`docs/DECISIONS.md` D-019).
     pub fn tray_subjects(&self) -> Vec<Graha> {
-        self.settings()
-            .tray
-            .subjects
+        let chosen = self.settings().tray.subjects;
+
+        // Always in the canonical order, never the order they were switched on.
+        // The menu bar is a row the eye learns the shape of: a graha that jumps
+        // position because another was toggled off and on again makes the row
+        // unlearnable, and the settings list the choices are made in is in this
+        // order too.
+        Graha::ALL
             .into_iter()
-            .filter(|&graha| graha != Graha::Chandra)
+            .filter(|graha| *graha != Graha::Chandra && chosen.contains(graha))
             .collect()
     }
 
@@ -118,10 +123,12 @@ impl AppState {
         }
 
         let tray_changed = next.tray != previous.tray;
+        let scale_changed = next.appearance != previous.appearance;
         *self.settings.write().expect("settings lock") = next;
 
         Ok(Applied {
             tray_changed,
+            scale_changed,
             // The ayanamsa is in here because a tray tooltip reads "{name} —
             // {rashi}", and the rashi is exactly what an ayanamsa moves.
             icons_changed: tray_changed || location_changed || sidereal_changed,
@@ -164,6 +171,8 @@ impl AppState {
 pub struct Applied {
     /// The set of tray items changed; add or remove them.
     pub tray_changed: bool,
+    /// The panel is drawn at a different size; the window must follow it.
+    pub scale_changed: bool,
     /// Existing tray icons need redrawing, for instance because the hemisphere
     /// changed and the moon disc must mirror.
     pub icons_changed: bool,
@@ -219,5 +228,39 @@ mod tests {
         assert_eq!(state.settings(), before);
 
         let _ = fs::remove_file(&config_dir);
+    }
+}
+
+#[cfg(test)]
+mod tray_order_tests {
+    use super::*;
+
+    /// The menu bar's order is the canonical one, not the toggle order.
+    ///
+    /// Filtering the stored list would preserve whatever order the user happened
+    /// to switch things on in, so toggling one graha off and back on would move
+    /// it to the end and shuffle the row the eye had learned.
+    #[test]
+    fn the_row_reads_in_canonical_order_whatever_order_it_was_built_in() {
+        let switched_on_backwards = [Graha::Shani, Graha::Chandra, Graha::Mangala, Graha::Surya];
+
+        let ordered: Vec<Graha> = Graha::ALL
+            .into_iter()
+            .filter(|graha| *graha != Graha::Chandra && switched_on_backwards.contains(graha))
+            .collect();
+
+        assert_eq!(
+            ordered,
+            vec![Graha::Surya, Graha::Mangala, Graha::Shani],
+            "canonical order, and never the moon"
+        );
+
+        // The same set switched on in a different order gives the same row.
+        let switched_on_forwards = [Graha::Surya, Graha::Mangala, Graha::Shani];
+        let again: Vec<Graha> = Graha::ALL
+            .into_iter()
+            .filter(|graha| *graha != Graha::Chandra && switched_on_forwards.contains(graha))
+            .collect();
+        assert_eq!(ordered, again);
     }
 }

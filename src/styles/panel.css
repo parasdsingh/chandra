@@ -10,9 +10,18 @@
    click-through. */
 /* The window is exactly the panel's size, because the panel's height is
    constant: every view swaps inside a fixed region rather than growing it. */
+/* The panel is composed at one fixed size and drawn at another.
+   Every dimension in this file is the composed one - 320 wide, 40px cells, 13px
+   type - and the whole surface is scaled as a unit, so a larger panel is the
+   same design bigger rather than a different layout. Scaling the type alone
+   would have grown the words inside a window that stayed put, taking the room
+   out of the calendar.
+   The window is resized to match by the back end; the two share one number. */
 .panel-frame {
   width: 320px;
-  height: 100%;
+  height: 332px;
+  transform: scale(var(--panel-scale, 1));
+  transform-origin: top left;
 }
 
 /* The panel is a focus host, not a control: it takes key focus on open so the
@@ -29,7 +38,13 @@
 .panel {
   width: 320px;
   height: 100%;
-  background: rgba(10, 10, 11, 0.28);
+  /* Raised from 0.28. Measured on the shipped panel over ordinary content, the
+     composited ground ran from #1A3033 to #5C4E36; against the light end
+     --text-secondary held only 3.15:1, under the 4.5:1 small text needs. At 0.55
+     it clears it at 4.76:1 and the material still reads as a material. No alpha
+     rescues --text-tertiary - 0.70 reaches 4.09:1 and would make the panel
+     opaque - which is why that colour carries no text any more. */
+  background: rgba(10, 10, 11, 0.55);
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
   padding: var(--s-4) 0;
@@ -190,7 +205,7 @@
 .weekdays span {
   font: var(--type-micro);
   letter-spacing: var(--track-micro);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-align: center;
   text-transform: uppercase;
 }
@@ -293,7 +308,7 @@
 }
 
 .day-cell.is-outside .day-cell__numeral {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .day-cell__content {
@@ -315,7 +330,7 @@
    so the number reads first. It inherits the accent on today, because `S8` is
    one label and half of it in a different colour would read as two. */
 .day-cell__paksha {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .day-cell.is-today .day-cell__paksha,
@@ -335,7 +350,7 @@
   right: 4px;
   font: 600 9px / 1 var(--font-stack);
   letter-spacing: 0.3px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -356,19 +371,6 @@
   height: 3px;
   border-radius: 50%;
   background: var(--marker);
-}
-
-/* A tithi holding two sunrises names two days. Full-bleed on both, so the pair
-   reads as one span bracketed across two cells rather than as a number printed
-   twice by mistake. */
-.day-cell__vriddhi {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--marker);
-  opacity: 0.55;
 }
 
 .phase-glyph {
@@ -488,7 +490,7 @@
   font: var(--type-micro);
   letter-spacing: var(--track-micro);
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   margin-bottom: 2px;
 }
 
@@ -547,7 +549,7 @@
 .detail__date {
   font: var(--type-micro);
   letter-spacing: var(--track-micro);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-transform: uppercase;
   height: 14px;
   /* The day's name, then the fields. Without this the first field's own label

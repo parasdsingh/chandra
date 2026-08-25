@@ -43,6 +43,48 @@ pub enum Ink {
     Fill,
 }
 
+/// The inked bounds of a glyph: the drawn geometry grown by half the stroke
+/// width, which is what actually lands on screen.
+///
+/// `None` only for a path with no geometry, which no glyph has.
+pub fn inked_bounds(graha: Graha) -> Option<(f32, f32, f32, f32)> {
+    let (data, ink) = glyph(graha);
+    let bounds = crate::path::parse(data).ok()?.compute_tight_bounds()?;
+    let margin = match ink {
+        Ink::Fill => 0.0,
+        Ink::Stroke => STROKE_WIDTH / 2.0,
+    };
+    Some((
+        bounds.left() - margin,
+        bounds.top() - margin,
+        bounds.right() + margin,
+        bounds.bottom() + margin,
+    ))
+}
+
+/// A square view box of the design grid's size, centred on the glyph's ink.
+///
+/// The glyphs are drawn on a 24 unit grid but their ink does not sit in the
+/// middle of it: Guru reaches 1.2 units past centre to the right, Shani the same
+/// to the left. Anything drawn concentric with the *box* - a retrograde ring, a
+/// cell's centre line - is then not concentric with the symbol, and at 14px that
+/// is the difference between a ring around a glyph and a ring touching it.
+///
+/// The box keeps its size so every glyph still renders at the same scale; only
+/// its origin moves.
+pub fn view_box(graha: Graha) -> (f32, f32, f32, f32) {
+    let half = DESIGN_GRID / 2.0;
+    match inked_bounds(graha) {
+        Some((left, top, right, bottom)) => (
+            (left + right) / 2.0 - half,
+            (top + bottom) / 2.0 - half,
+            DESIGN_GRID,
+            DESIGN_GRID,
+        ),
+        None => (0.0, 0.0, DESIGN_GRID, DESIGN_GRID),
+    }
+}
+
 /// Path data and ink mode for a graha.
 ///
 /// Chandra's glyph is used in the settings list only: in the menu bar the live
@@ -155,24 +197,31 @@ mod tests {
         (Graha::Ketu, 2.40, 3.56, 21.60, 20.10, 16.54),
     ];
 
-    /// Inked bounds: the drawn geometry grown by half the stroke width, which is
-    /// what actually lands on screen.
     fn inked_bounds(graha: Graha) -> (f32, f32, f32, f32) {
-        let (data, ink) = glyph(graha);
-        let bounds = path::parse(data)
-            .expect("parses")
-            .compute_tight_bounds()
-            .expect("has geometry");
-        let margin = match ink {
-            Ink::Stroke => STROKE_WIDTH / 2.0,
-            Ink::Fill => 0.0,
-        };
-        (
-            bounds.left() - margin,
-            bounds.top() - margin,
-            bounds.right() + margin,
-            bounds.bottom() + margin,
-        )
+        super::inked_bounds(graha).expect("every glyph has geometry")
+    }
+
+    /// Every glyph must sit in the middle of the box it is drawn in.
+    ///
+    /// Not true of the raw 24 unit grid - Guru's ink is 1.2 units right of it and
+    /// Shani's 1.2 left - which is why the box is recentred rather than assumed.
+    #[test]
+    fn the_view_box_centres_every_glyph_on_its_own_ink() {
+        for graha in Graha::ALL {
+            let (left, top, right, bottom) = inked_bounds(graha);
+            let (x, y, width, height) = super::view_box(graha);
+
+            let ink_centre = ((left + right) / 2.0, (top + bottom) / 2.0);
+            let box_centre = (x + width / 2.0, y + height / 2.0);
+
+            assert!(
+                (ink_centre.0 - box_centre.0).abs() < 0.001
+                    && (ink_centre.1 - box_centre.1).abs() < 0.001,
+                "{}: ink centred at {ink_centre:?}, box at {box_centre:?}",
+                graha.name()
+            );
+            assert_eq!((width, height), (DESIGN_GRID, DESIGN_GRID), "same scale");
+        }
     }
 
     #[test]

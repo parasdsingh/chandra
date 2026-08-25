@@ -36,6 +36,12 @@
   /* Text */
   --text-primary: #ededef;
   --text-secondary: #a1a1a8;
+  /* Marks only, never text. The panel is translucent, so its ground follows
+     whatever is behind it: measured over ordinary content this reaches 2.21:1
+     against the light end, which fails the 4.5:1 small text needs and the 3:1
+     non-text bar as well at its worst. It is kept for the one thing that does
+     not have to clear a text floor - a border on a chip - and every label that
+     used it now uses --text-secondary. */
   --text-tertiary: #85858d;
 
   /* Lines */
