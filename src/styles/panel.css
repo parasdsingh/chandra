@@ -326,10 +326,13 @@
 /* The other calendar's date, in the corner. It is an anchor to the world the
    user lives in, not what the cell is about, so it does not take the line that
    carries the glyph. */
+/* Top right, not top left: against the left edge it sat hard up against the
+   tithi and the two numbers read as one. The corner it moved into was the
+   ingress marker's, which the calendar no longer draws. */
 .day-cell__gregorian {
   position: absolute;
   top: 3px;
-  left: 4px;
+  right: 4px;
   font: 600 9px / 1 var(--font-stack);
   letter-spacing: 0.3px;
   color: var(--text-tertiary);
