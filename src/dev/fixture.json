@@ -932,6 +932,115 @@
     ],
     "source": "swieph"
   },
+  "lunarGrahaDay": {
+    "combustion": {
+      "combust": false,
+      "orb": 15.0,
+      "separation": 134.03360979077056
+    },
+    "date": {
+      "day": 21,
+      "month": 8,
+      "year": 2026
+    },
+    "degrees_in_rashi": [
+      19,
+      59,
+      11.140911067136585
+    ],
+    "graha": "shani",
+    "kind": "graha",
+    "longitude": 349.986428030852,
+    "nakshatras": [
+      {
+        "entry": {
+          "day_offset": -96,
+          "unix_ms": 1779008839183
+        },
+        "exit": {
+          "day_offset": 49,
+          "unix_ms": 1791559307482
+        },
+        "lord": "budha",
+        "nakshatra": "revati",
+        "name": "Revati",
+        "pada": 1,
+        "prevailing": true
+      }
+    ],
+    "panchanga": {
+      "reference": "sunrise",
+      "sunrise": {
+        "day_offset": 0,
+        "unix_ms": 1787272683906
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787240934374
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787335601761
+          },
+          "index": 9,
+          "name": "Navami",
+          "number": 9,
+          "paksha": "shukla",
+          "prevailing": true,
+          "source": "swieph",
+          "sunrises": 1
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787335601761
+          },
+          "exit": {
+            "day_offset": 2,
+            "unix_ms": 1787430652282
+          },
+          "index": 10,
+          "name": "Dashami",
+          "number": 10,
+          "paksha": "shukla",
+          "prevailing": false,
+          "source": "swieph",
+          "sunrises": 1
+        }
+      ],
+      "vara": 5,
+      "vara_name": "Shukravara"
+    },
+    "rashis": [
+      {
+        "entry": {
+          "day_offset": -510,
+          "unix_ms": 1743264909075
+        },
+        "exit": {
+          "day_offset": 286,
+          "unix_ms": 1811980694007
+        },
+        "name": "Meena",
+        "prevailing": true,
+        "rashi": "meena",
+        "western": "Pisces"
+      }
+    ],
+    "retrograde": true,
+    "rise": {
+      "day_offset": 0,
+      "unix_ms": 1787326846283
+    },
+    "set": {
+      "day_offset": 0,
+      "unix_ms": 1787284397364
+    },
+    "source": "swieph",
+    "speed": -0.04131782876336352
+  },
   "lunarMonth": {
     "adhika": false,
     "anchor_unix_ms": 1787898600000,

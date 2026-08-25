@@ -19,6 +19,8 @@ import {
   Show,
 } from "solid-js";
 
+import { listen } from "@tauri-apps/api/event";
+
 import * as ipc from "../ipc";
 import type {
   Bootstrap,
@@ -42,14 +44,21 @@ type View = "calendar" | "day" | "settings";
 
 interface Props {
   boot: Bootstrap;
-  /** Fixed for the life of the page: the panel navigates on every open. */
-  subject: GrahaKey;
   onSettingsApplied: (next: Bootstrap) => void;
 }
 
 export function Panel(props: Props): JSX.Element {
   const timeZone = () => props.boot.location.zone;
-  const today = () => todayIn(timeZone());
+
+  /**
+   * Which subject the panel is showing, and which day it calls today.
+   *
+   * Both are set when the panel opens rather than read live. The page is never
+   * reloaded now, so a `new Date()` evaluated during render would leave a panel
+   * left open overnight ringing yesterday.
+   */
+  const [subject, setSubject] = createSignal<GrahaKey>(props.boot.subject);
+  const [today, setToday] = createSignal<DateKey>(todayIn(props.boot.location.zone));
 
   // Navigation is by anchor instant plus offset, because a lunar month has no
   // year-and-number to step through.
@@ -89,10 +98,27 @@ export function Panel(props: Props): JSX.Element {
     setLoaded((count) => count + 1);
   }
 
+  /**
+   * Identity of a month.
+   *
+   * Everything the answer depends on is in the key, rather than being cleared
+   * out of the map when it changes. The map now outlives an open, so a month
+   * cached under one ayanamsa or one location must not be handed back under
+   * another; naming the inputs makes that impossible instead of remembering to
+   * invalidate.
+   */
   function monthKey(delta: number): string {
+    const location = props.boot.location;
     return [
-      props.subject,
+      subject(),
       props.boot.settings.calendar.month_system,
+      props.boot.settings.sidereal.ayanamsa,
+      props.boot.settings.sidereal.node_type,
+      location.zone,
+      location.latitude,
+      location.longitude,
+      location.elevation,
+      firstWeekday,
       anchor(),
       offset() + delta,
     ].join("|");
@@ -113,7 +139,7 @@ export function Panel(props: Props): JSX.Element {
   function monthResource(delta: number) {
     const key = createMemo(() => ({
       id: monthKey(delta),
-      subject: props.subject,
+      subject: subject(),
       anchor: anchor(),
       offset: offset() + delta,
     }));
@@ -175,7 +201,7 @@ export function Panel(props: Props): JSX.Element {
     }
   });
 
-  const [snapshot] = createResource(async () => {
+  const [snapshot, { refetch: refetchSnapshot }] = createResource(async () => {
     try {
       return (await ipc.snapshot(Date.now())) as Snapshot;
     } catch {
@@ -187,7 +213,7 @@ export function Panel(props: Props): JSX.Element {
 
   const detailKey = createMemo(() => {
     const date = selected();
-    return date && view() === "day" ? { subject: props.subject, date } : null;
+    return date && view() === "day" ? { subject: subject(), date } : null;
   });
 
   const [detail] = createResource(detailKey, async (key) => {
@@ -207,13 +233,13 @@ export function Panel(props: Props): JSX.Element {
   });
 
   const grahaInfo = createMemo(() =>
-    props.boot.grahas.find((graha) => graha.key === props.subject),
+    props.boot.grahas.find((graha) => graha.key === subject()),
   );
 
   const selectedEvents = createMemo(() => {
     const date = selected();
     const data = monthData();
-    if (!date || !data || props.subject === "chandra") return [];
+    if (!date || !data || subject() === "chandra") return [];
     return (data as GrahaMonth).events.filter(
       (event) =>
         event.date.year === date.year &&
@@ -342,16 +368,46 @@ export function Panel(props: Props): JSX.Element {
     setSelected(days.at(index)?.date ?? null);
   }
 
+  /**
+   * Everything an open used to get for free by reloading the page.
+   *
+   * The panel opens on the calendar, at today, with nothing selected. Written
+   * out because the page now survives between opens: what a fresh document gave
+   * implicitly has to be done on purpose.
+   *
+   * Idempotent, because it is called twice for every open - once from the event
+   * the backend sends as it shows the window, once when the window takes focus.
+   */
+  function open(next: GrahaKey) {
+    const now = todayIn(props.boot.location.zone);
+    batch(() => {
+      setSubject(next);
+      setToday(now);
+      setAnchor(noonAnchor(now));
+      setOffset(0);
+      setVisibleDelta(0);
+      setSelected(null);
+      setView("calendar");
+      setSection("root");
+      setError(undefined);
+    });
+    // The header's phase glyph is a live reading, not a property of the day.
+    void refetchSnapshot();
+    root?.focus();
+  }
+
   let root: HTMLDivElement | undefined;
   onMount(() => {
     root?.focus();
     const listener = (event: KeyboardEvent) => onKeyDown(event);
     window.addEventListener("keydown", listener);
     onCleanup(() => window.removeEventListener("keydown", listener));
-  });
 
-  // Nothing to reset: the backend navigates the page on every open, so each
-  // open starts from a fresh component tree on the calendar, at today.
+    const opened = listen<string>("chandra://open", (event) =>
+      open(event.payload as GrahaKey),
+    );
+    onCleanup(() => void opened.then((unlisten) => unlisten()));
+  });
 
   const headerTitle = () => {
     if (view() === "settings") return SECTION_TITLES[section()];
@@ -363,7 +419,7 @@ export function Panel(props: Props): JSX.Element {
     <div class="panel-frame">
       <div class="panel" ref={root} tabindex="-1" role="dialog" aria-label="Chandra">
         <Header
-          subject={props.subject}
+          subject={subject()}
           subjectName={grahaInfo()?.name ?? "Chandra"}
           info={grahaInfo()}
           snapshot={snapshot()}
@@ -387,7 +443,7 @@ export function Panel(props: Props): JSX.Element {
               previous={monthAt(-1)}
               current={monthAt(0)}
               next={monthAt(1)}
-              kind={props.subject === "chandra" ? "moon" : "graha"}
+              kind={subject() === "chandra" ? "moon" : "graha"}
               info={grahaInfo()}
               selected={selected()}
               today={today()}

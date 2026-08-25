@@ -98,6 +98,12 @@ fn main() {
                 MonthSystem::Solar,
             )
             .expect("graha day"),
+        // A graha in a lunar month: the one view shape the harness did not cover.
+        // Shani is retrograde on this date, so it carries the tithi block, the
+        // panchanga and the retrograde state at once.
+        "lunarGrahaDay": almanac
+            .day_detail(Graha::Shani, date(21), MonthSystem::Amanta)
+            .expect("lunar graha day"),
         // Before 1800, to exercise the reduced-precision note.
         "moshierDay": almanac
             .day_detail(

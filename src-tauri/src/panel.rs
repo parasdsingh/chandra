@@ -15,6 +15,9 @@ use crate::state::AppState;
 
 pub const PANEL_LABEL: &str = "panel";
 
+/// Carries the subject to the already-running panel as it opens.
+pub const OPEN_EVENT: &str = "chandra://open";
+
 /// Panel width, fixed forever (`docs/DESIGN.md` 2.2).
 const PANEL_WIDTH: f64 = 320.0;
 
@@ -106,25 +109,21 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
 
     set_current_subject(app, subject);
 
-    // Told to the panel directly rather than only through an event. An event is
-    // a one-shot that the webview can miss - if it has not finished registering
-    // its listener, or if delivery fails, the panel keeps showing whatever it
-    // showed last, which meant a graha's tray item opening the Moon's calendar.
-    // Evaluating in the page is synchronous with the show and cannot be missed.
-    // The subject is carried in the page's own URL, and the panel navigates to
-    // it as it opens.
+    // The page is told, and never reloaded.
     //
-    // Pushing the value into the running page was tried first, both as a Tauri
-    // event and as a direct call evaluated in the page. The call demonstrably
-    // arrives - it can write to the DOM - but a signal set from that context
-    // never reached the render, so a graha's tray item kept opening the Moon's
-    // calendar. A navigation needs no reactivity to be believed: the page reads
-    // its own URL on load. It also gives every open a clean slate, which is what
-    // makes reopening return to today.
-    let _ = window.eval(format!(
-        "location.replace(location.pathname + '?subject={}&t=' + Date.now())",
-        subject.key()
-    ));
+    // It used to be navigated to `?subject=<key>` on every open, which is
+    // reliable - a page reads its own URL on load, no reactivity required - and
+    // is why it was chosen after pushing the value into the running page failed
+    // (I-038). It also threw the whole document away every time: measured, the
+    // window appeared empty for 100 to 200ms and the calendar landed at 265 to
+    // 414ms. Without the reload the same open paints in about 100ms with no
+    // empty frame, because the months are already in hand.
+    //
+    // Told twice, and idempotently. `chandra://open` carries the subject and is
+    // what makes the switch immediate; the page also re-reads the subject when
+    // the window takes focus, which is a pull and so cannot be missed. Both call
+    // the same function with the same value, so arriving twice is arriving once.
+    let _ = window.emit_to(PANEL_LABEL, OPEN_EVENT, subject.key());
 
     place(&window, tray_rect);
 
@@ -134,6 +133,16 @@ pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
     let _ = app.show();
     let _ = window.show();
     let _ = window.set_focus();
+}
+
+/// Tells the running panel which subject it is showing.
+///
+/// Called as the window is shown and again when it takes focus. The handler at
+/// the other end is idempotent, so being told twice is being told once.
+pub fn announce_subject(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(PANEL_LABEL) {
+        let _ = window.emit_to(PANEL_LABEL, OPEN_EVENT, subject_or_default(app).key());
+    }
 }
 
 pub fn hide(app: &AppHandle) {

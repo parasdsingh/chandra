@@ -5,7 +5,6 @@ import { createResource, onCleanup, onMount, Show } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 
 import * as ipc from "./ipc";
-import type { GrahaKey } from "./ipc/types";
 import { Panel } from "./components/Panel";
 
 /**
@@ -31,19 +30,7 @@ function DevPreview(): JSX.Element {
   return <Show when={module()}>{(Preview) => Preview()()}</Show>;
 }
 
-/**
- * Which subject this page was opened for.
- *
- * Read from the URL the backend navigated to as it opened the panel, so it is
- * fixed for the life of the page and needs nothing to propagate.
- */
-function subjectFromUrl(): GrahaKey {
-  const value = new URLSearchParams(window.location.search).get("subject");
-  return (value as GrahaKey | null) ?? "chandra";
-}
-
 function PanelWindow(): JSX.Element {
-  const subject = subjectFromUrl();
   const [boot, { refetch, mutate }] = createResource(ipc.bootstrap);
 
   onMount(() => {
@@ -76,11 +63,7 @@ function PanelWindow(): JSX.Element {
         </Show>
       }
     >
-      <Panel
-        boot={boot()!}
-        subject={subject}
-        onSettingsApplied={(next) => mutate(next)}
-      />
+      <Panel boot={boot()!} onSettingsApplied={(next) => mutate(next)} />
     </Show>
   );
 }

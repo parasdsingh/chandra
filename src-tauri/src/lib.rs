@@ -84,6 +84,13 @@ pub fn run() {
                 // A menu bar panel closes when it loses focus. Anything else
                 // leaves a floating window the user has to dismiss deliberately.
                 WindowEvent::Focused(false) => panel::hide(window.app_handle()),
+                // The panel is never reloaded, so the subject has to be told to
+                // a page that is already running. It is told twice: once as the
+                // window is shown, and again here. This one is the safety net -
+                // focus is raised by the platform after the show has completed,
+                // so it cannot be lost to a listener that was not ready. Both
+                // carry the same value into the same handler.
+                WindowEvent::Focused(true) => panel::announce_subject(window.app_handle()),
                 WindowEvent::CloseRequested { api, .. } => {
                     // The panel is created once and reused, so closing it would
                     // leave the tray items opening nothing.
