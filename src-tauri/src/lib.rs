@@ -120,7 +120,8 @@ pub fn run() {
         .expect("the Tauri context must be valid")
         .run(|_app, event| {
             if let RunEvent::ExitRequested { api, .. } = event {
-                // Closing the settings window must not quit a menu bar app.
+                // The panel closing must not quit a menu bar app; it is the only
+                // window there is.
                 api.prevent_exit();
             }
         });

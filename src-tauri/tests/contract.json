@@ -66,7 +66,6 @@
           "sunrises": "integer"
         }
       ],
-      "vara": "integer",
       "vara_name": "string"
     },
     "rashis": [
@@ -111,7 +110,6 @@
         "in_month": "boolean",
         "longitude": "number",
         "retrograde": "boolean",
-        "speed": "number",
         "tithi": {
           "index": "integer",
           "kshaya": [],
@@ -213,7 +211,6 @@
           "sunrises": "integer"
         }
       ],
-      "vara": "integer",
       "vara_name": "string"
     },
     "phase": "string",

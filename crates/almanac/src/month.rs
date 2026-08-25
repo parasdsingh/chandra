@@ -98,7 +98,6 @@ pub struct GrahaCell {
     /// different nakshatras for one day, and 42 cells paid for the pair anyway.
     pub longitude: f64,
     pub retrograde: bool,
-    pub speed: f64,
     /// Within the Sun's rays at this day's reference instant.
     pub combust: bool,
 }
@@ -304,7 +303,6 @@ pub fn graha_month(
             tithi: frames.map(|frames| frames[cell].clone()),
             longitude: position.longitude,
             retrograde: position.is_retrograde(),
-            speed: position.speed,
             combust: combustion.combust,
         });
         sources.push(position.source);

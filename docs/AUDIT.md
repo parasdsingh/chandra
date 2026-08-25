@@ -783,10 +783,11 @@ Ten confirmed, seven suspected. Fixed in this pass:
   cannot work around.
 - **W-07** An unknown elevation prints as `0 m`, a measurement of sea level.
   `Resolved.elevation` is an `f64` and cannot tell "not known" from "measured".
-- **W-08** `GrahaCell.retrograde` and `speed` are read at local noon while the day
-  the cell opens reads its state at sunrise. A station between the two puts a
-  retrograde ring on a cell whose day says `Direct`. The rashi and nakshatra were
-  removed from that struct for exactly this reason; these two were left behind.
+- **W-08** `GrahaCell.retrograde` is read at local noon while the day the cell
+  opens reads its state at sunrise. A station between the two puts a retrograde
+  ring on a cell whose day says `Direct`. The rashi, the nakshatra and `speed`
+  were removed from that struct for exactly this reason; this one was left
+  behind.
   Fixing it means threading the observer into `graha_month`, which changes the
   facade's signature — deliberately not started rather than half-done.
 

@@ -136,10 +136,10 @@ function Root(props: {
  * the number is - nobody wants "1.15".
  */
 const SIZES: { scale: number; label: string }[] = [
-  { scale: 0.85, label: "Compact" },
+  { scale: 0.8, label: "Compact" },
   { scale: 1.0, label: "Default" },
-  { scale: 1.15, label: "Large" },
-  { scale: 1.3, label: "Larger" },
+  { scale: 1.2, label: "Large" },
+  { scale: 1.4, label: "Larger" },
 ];
 
 function sizeLabel(scale: number): string {

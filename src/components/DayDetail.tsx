@@ -26,6 +26,7 @@ import type {
   DayPanchanga,
   DayDetail as Detail,
   GrahaDay,
+  GrahaKey,
   MoonDay,
   NakshatraSpan,
   RashiSpan,
@@ -34,12 +35,26 @@ import type {
 } from "../ipc/types";
 import type { FormatContext } from "../lib/format";
 import {
+  formatShortDate,
   formatTime,
   formatUntil,
   formatWeekday,
   phaseLabel,
 } from "../lib/format";
 import { describeEvent } from "./MonthGrid";
+
+/** Display names, for a row that names whose rise it is. */
+const GRAHA_NAMES: Record<GrahaKey, string> = {
+  surya: "Surya",
+  chandra: "Chandra",
+  mangala: "Mangala",
+  budha: "Budha",
+  guru: "Guru",
+  shukra: "Shukra",
+  shani: "Shani",
+  rahu: "Rahu",
+  ketu: "Ketu",
+};
 
 interface Props {
   detail: Detail | undefined;
@@ -73,8 +88,16 @@ function Body(props: Props): JSX.Element {
               <span> · </span>
             </Show>
             {formatWeekday(detail().date)}
+            {/* The civil date, where the header is carrying the tithi instead.
+                A lunar day still has to be findable in the world the user
+                lives in. */}
             <Show when={detail().panchanga}>
-              {(panchanga) => <span> · {panchanga().vara_name}</span>}
+              {(panchanga) => (
+                <>
+                  <span> · {formatShortDate(detail().date)}</span>
+                  <span> · {panchanga().vara_name}</span>
+                </>
+              )}
             </Show>
           </div>
 
@@ -146,10 +169,18 @@ function Subject(props: {
   const rise = () => (moon() ? moon()!.moonrise : graha()!.rise);
   const set = () => (moon() ? moon()!.moonset : graha()!.set);
 
-  /** The subject's own rise, named for the subject. */
+  /**
+   * The subject's own rise, named for the subject.
+   *
+   * Surya's day names sunrise and Chandra's moonrise because those are the words
+   * for them; every other graha is named outright rather than given a bare
+   * "Rise", so the row says whose rise it is without the header having to.
+   */
   const riseLabel = () => {
     if (moon()) return "Moonrise";
-    return graha()!.graha === "surya" ? "Sunrise" : "Rise";
+    const body = graha()!.graha;
+    if (body === "surya") return "Sunrise";
+    return `${GRAHA_NAMES[body]} rise`;
   };
 
   return (

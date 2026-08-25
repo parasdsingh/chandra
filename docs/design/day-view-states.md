@@ -1,12 +1,47 @@
 # Combustion and retrograde in the day view
 
-Status: **proposed.** Design only; no implementation.
+Status: **proposed.** Design only; the two treatments this document specifies are still not
+built (`docs/TODO.md` §5.1).
 Answers: "combustion in day view should be done beautifully, and aesthetically. similarly retro
 should also produce a different day view."
-Works under [D-011](../DECISIONS.md#d-011) (revised: popover material + 28% scrim),
+Works under [D-011](../DECISIONS.md#d-011) (revised: popover material + scrim),
 [D-019](../DECISIONS.md#d-019), [D-020](../DECISIONS.md#d-020),
 [D-021](../DECISIONS.md#d-021), [D-022](../DECISIONS.md#d-022).
 Expressed in the vocabulary of [DESIGN.md](../DESIGN.md) §2, §4, §6.3, §6.4, §8, §11.
+
+---
+
+## What shipped, and what this document no longer describes
+
+The design below is left intact. The app has moved under it in five places; where a figure here
+and the code disagree, **the code wins**.
+
+**Shipped from this document**
+
+- The amendment at the head of it — *colour may depict, may not encode* — is now
+  [D-023](../DECISIONS.md#d-023).
+- The flat fallback it files as a bug in §1 and §6.1 is fixed. `apply_vibrancy` reports whether
+  the material took, the answer reaches the front end on `Bootstrap.panel_material`, and the
+  panel takes `.is-opaque` and paints `--ground`. `prefers-reduced-transparency: reduce` gets
+  the same answer. The class is named `is-opaque`, not `is-flat`.
+- Neither state is ever a sole carrier: the day view names both in words.
+
+**Superseded**
+
+- **`--glare` is `#e2603a`, not `#F0C9A4`** (D-023). Orange rather than the peach specified
+  here, so it cannot be read as `--accent`. Every contrast figure in §4.4 and §4.5, and the
+  20° hue separation in the decision summary, are computed against the old value and are stale.
+- **The scrim is 0.55, not 0.28** (D-011). §2.2's composited range and every `--text-tertiary`
+  figure predate it.
+- **`--text-tertiary` carries no text at all** (D-023), so the caption-contrast argument in the
+  decision summary — combustion *improving* tertiary from 3.16 to 3.42 — is about a colour that
+  no longer sets any type.
+- **The grid's marks are not the ones assumed here** (D-024). Combustion in a cell is a warm
+  radial wash at the cell's foot, not a rule; retrograde in a cell is a dotted bracket ring
+  around the glyph, not `℞` beside it. The `℞` this document leans on survives in the day view's
+  `Motion` chip and in the menu bar (D-022).
+- **§1's note is discharged.** `DESIGN.md` §2.2 has since been brought in line with the shipped
+  panel; it no longer claims an opaque surface with no material.
 
 Amendment carried through this document, from the owner: **colour may depict, may not encode.**
 A warm light is a picture of a warm thing and is allowed. A grey that *means* combust is a code
@@ -391,6 +426,8 @@ Retrograde rail, `--marker` 0.55 over its 0.45 black keyline:
 ### 4.5 The hue
 
 `--glare: #F0C9A4`. sRGB (240, 201, 164). HSL hue 29°, saturation 73%, lightness 79%.
+*Superseded: the token shipped as `#e2603a` (D-023). The reasoning below is kept as filed; the
+numbers in it describe the peach, not the orange.*
 
 | Question | Answer |
 |---|---|

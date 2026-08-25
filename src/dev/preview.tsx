@@ -292,7 +292,8 @@ export function Preview(): JSX.Element {
         </div>
       </Case>
 
-      <For each={["root", "calendar", "location", "astrology", "menubar", "about"] as const}>
+      <For each={["root", "calendar", "location", "astrology", "menubar",
+            "size", "about"] as const}>
         {(id) => (
           <Case title={`Settings · ${id}`}>
             <Header

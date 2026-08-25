@@ -1,10 +1,50 @@
 # Lunar dates in the calendar grid
 
-Status: **proposed.** Design only; no implementation.
+Status: **proposed, then built.** Shipped as [D-021](../DECISIONS.md#d-021) and closed as
+[I-045](../ISSUES.md); parts of it were later replaced. See the note below before reading any
+pixel value here as current.
 Resolves the second half of [I-032](../ISSUES.md) — lunar months already resolve and label
 correctly, but every cell still shows a Gregorian numeral.
 Extends [D-010](../DECISIONS.md#d-010) by the smallest amount that makes the claim on the
 header true. Expressed in the vocabulary of [DESIGN.md](../DESIGN.md).
+
+---
+
+## What shipped, and what was replaced
+
+The design below is left intact as filed. Where it and the code disagree, **the code wins**.
+
+**Shipped, and still true**
+
+- The tithi is the cell's primary numeral in lunar mode, in panchang notation — `S1`–`S14`,
+  `P`, `K1`–`K14`, `A` — derived from paksha plus number within the paksha, never from the
+  astronomical 1–30 index.
+- The 7-column vara grid, unchanged, with locale-provided weekday labels.
+- The Gregorian day carries its 3-letter month only on a Gregorian 1st: `1 SEP`.
+- The back end lays out all 42 cells with an `in_month` flag; the opening weekday travels the
+  other way, in the request.
+- Vikram Samvat years, and the tithi span behaviour in the day view (§7.4).
+- Solar mode pays nothing: no tithi is computed for it.
+
+**Superseded**
+
+- **Nothing gives way** ([D-024](../DECISIONS.md#d-024)). §2.3 and the §4.2 cell anatomy give
+  the second line to the Gregorian date and drop the phase glyph and the graha symbol. Both are
+  back, on the second line, in *both* calendars; the Gregorian date moved to the cell's
+  top-right corner, where it is set in `--text-secondary` rather than Micro-caps under the
+  numeral.
+- **The kshaya dot is on the numeral**, not in the cell's top-left corner — that corner is the
+  Gregorian date's now. **The vriddhi rule is not drawn at all**: the §5 rule joining two cells
+  along their bottom edge went with the rest of the underline vocabulary (D-024). A repeated
+  tithi is visible as the same numeral on two cells and named in the spoken label.
+- **The `S`/`K` prefix is `--text-secondary`, not `--text-tertiary`**, as is the Gregorian date
+  ([D-023](../DECISIONS.md#d-023)). Tertiary carries no text anywhere in the app, so §11 and
+  §12.3's figures for it are moot.
+- **There is no Sunrise row** ([D-025](../DECISIONS.md#d-025)). The day view is one field stack
+  for all nine subjects, and rise belongs to the subject: sunrise is Surya's rise, on Surya's
+  day. The Tithi block of §7 is one field in that stack.
+- **The header label names the era**: `Shravana VS 2083`, not the `Shravana 2026` of §1
+  (AUDIT W-05). `Adhika` is set apart in `--text-secondary`, as §6.2 specifies.
 
 ---
 

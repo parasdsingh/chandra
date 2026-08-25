@@ -225,8 +225,8 @@ nothing on screen saying the choice was calendar-wide. The section now says so.
 The month label and the day range were lunar; every cell still printed the
 Gregorian day. Designed first in `docs/design/lunar-dates.md`, then implemented
 as D-021. The cell now prints the tithi in panchang notation with the Gregorian
-day beneath it, kshaya and vriddhi are marked rather than smoothed over, and the
-year is Vikram Samvat.
+day in the top-right corner, a skipped tithi is marked rather than smoothed over,
+and the year is Vikram Samvat.
 
 Two things had to move to the back end to make it correct:
 
@@ -242,7 +242,14 @@ Two things had to move to the back end to make it correct:
 Verified in the installed app against Shravana 2083 (13 Aug - 11 Sep 2026): the
 month opens on `S1` and closes on `A`, `P` falls on 28 August, `K13` is skipped
 between 10 and 11 August with the dot on the earlier cell, and `S12` is repeated
-across 24 and 25 August with the rule joining them.
+across 24 and 25 August.
+
+The verification originally also named a rule joining the two days of a vriddhi.
+That mark was removed with the rest of the underline vocabulary (D-024). A
+repeated tithi is now visible only as the same numeral on two cells, and in the
+spoken label: `vriddhi, the same tithi names the day after`. The kshaya dot moved
+from the cell's top-left corner onto the numeral, because the corner now carries
+the Gregorian date.
 
 ### I-046 — The menu bar showed no state at all — done
 `℞` in the lower right of a retrograde graha's icon, with the glyph shrunk to

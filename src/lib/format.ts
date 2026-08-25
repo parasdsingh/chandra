@@ -55,6 +55,16 @@ export function formatUntil(exit: Moment, context: FormatContext): string {
   return formatDayMonth(exit, context);
 }
 
+/** `20 Aug`, for a line that already carries the weekday. */
+export function formatShortDate(date: DateKey): string {
+  const value = new Date(Date.UTC(date.year, date.month - 1, date.day, 12));
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+  }).format(value);
+}
+
 /** `20 August 2026`, for the day view's header. */
 export function formatDateHeading(date: DateKey): string {
   const value = new Date(Date.UTC(date.year, date.month - 1, date.day, 12));

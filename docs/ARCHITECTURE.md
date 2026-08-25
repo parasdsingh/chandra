@@ -208,10 +208,11 @@ tray click
               -> events: bracket scan + Brent refine (D-016)
               -> unlock, insert into cache
    -> render grid
-   -> idle: prefetch month-1 and month+1 in background
+   -> the two neighbouring months are fetched with it; the scroller mounts all three
 day click
    -> day_detail(subject, date)   (usually already warm from the month pass)
-   -> panel animates height, detail renders below the grid
+   -> the day view replaces the calendar inside the fixed 264px region; the panel does
+      not resize
 blur
    -> window.hide() + AppHandle::hide()   (R-05 macOS trap)
 ```
@@ -226,15 +227,25 @@ Measured baseline (R-04): `swe_calc_ut` = 7.9 us; a 31-day 15-minute Moon grid =
 |---|---|---|
 | Panel open, warm | serve from LRU cache | < 5 ms |
 | Panel open, cold month | adaptive bracketing, not brute grid | < 30 ms |
-| Month switch | prev/next prefetched while idle | perceived instant |
+| Month switch | the two neighbours are fetched with the month in view, not while idle: the scroller has all three mounted at once | perceived instant |
 | Tray icon refresh | only on day rollover; the watcher looks at the clock at most ten minutes apart, because a sleeping machine does not advance a `thread::sleep` | ~0% idle CPU |
-| Memory | LRU bounded to 24 month-views per subject | bounded |
+| Memory | one shared LRU, 144 entries: twelve months × (the Moon, nine grahas, and the two entries every subject shares) | bounded |
 | Startup | engine init is lazy; tray icon drawn from cached illumination first | < 200 ms to visible |
 
-Cache keys name the subject, the month system, the month's first civil day and the weekday the
-grid opens on - the month's own identity rather than the request that reached it. Three kinds
-share the cache: a month per subject, the resolved grid, and the lunar days, the last two shared
-by every subject drawn on that month.
+Four kinds of entry share one `Lru`:
+
+| Entry | Key | Shared by |
+|---|---|---|
+| `Moon` | month system, the month's first civil day, opening weekday | — |
+| `Graha` | graha, month system, first civil day, opening weekday | — |
+| `Frames` — the grid's lunar days | month system, first civil day, opening weekday | every subject drawn on that month |
+| `Resolution` — a cursor resolved to a grid and a label | month system, anchor instant, offset, opening weekday | every subject at that address |
+
+The first three are keyed on the month's own identity rather than on the request that reached
+it: the first civil day names a month uniquely in either system, without a numbering scheme
+lunar months do not have. `Resolution` is the exception and is keyed on the cursor, because
+resolving is the step being avoided — it is what finds out which month the cursor names, and a
+lunar cursor walks syzygies and builds 42 civil days to get there.
 
 The configuration is *not* in the key. A generation counter carries it instead: any settings
 change bumps it, which hides every existing entry at once, and a value computed under one
@@ -291,19 +302,26 @@ Progressive disclosure. Each surface does one thing.
 |---|---|---|
 | 0 | menu bar | live moon disc; enabled graha glyphs |
 | 1 | panel, month grid | date + phase glyph per cell; today ringed; month switcher |
-| 2 | panel, expanded | the six v1 fields for the selected day |
-| 3 | settings window | general, location, astrology, grahas, about |
+| 2 | panel, day view | one field stack for the selected day (D-025) |
+| 3 | panel, settings | root, calendar, location, astrology, menubar, size, about |
 
-- Month switcher: chevrons plus the month label; clicking the label opens a year/month picker.
-- Keyboard: arrows move by day, up/down by week, PgUp/PgDn by month, `T` jumps to today,
-  `Esc` closes. Focus ring is visible and follows selection.
+- **There is no settings window.** Settings are a drill-down inside the same 264px region the
+  calendar and the day view use, with the header carrying the way back. The panel is the only
+  surface the app has, and it never resizes.
+- Month switcher: none. The grid scrolls — three months are stacked and moved together by a
+  wheel or a drag — because stepping a lunar month goes from one syzygy to the next rather than
+  through a numbered sequence.
+- Keyboard: arrows move by day, up/down by week, PgUp/PgDn by month and with `⇧` by year,
+  `T` jumps to today, `Esc` closes. Focus ring is visible and follows selection.
 - Graha panels reuse the identical shell; only the cell content and the detail fields differ.
-- Accessibility: all colour pairs meet WCAG AA on the `#0A0A0B` ground; phase is never
-  communicated by shape alone — the day detail always names it.
+- Accessibility: text pairs meet WCAG AA against the *composited* translucent ground, which is
+  what retired `--text-tertiary` as a text colour (D-011, D-023); phase is never communicated
+  by shape alone — the day detail always names it.
 
-Design tokens (D-011): ground `#0A0A0B`, text `#EDEDEF`, muted `#8A8A90`,
-hairline `rgba(255,255,255,0.08)`, accent reserved for "today" only.
-Type: system UI stack, tabular numerals for all times and figures.
+Design tokens (D-011, D-023): ground `#0a0a0b` behind a 0.55 scrim over the popover material,
+text `#ededef`, secondary `#a1a1a8`, border `rgba(255,255,255,0.12)`, accent reserved for
+"today" only, `--glare` for combustion. Type: system UI stack, tabular numerals for all times
+and figures. `src/styles/tokens.css` is the source of truth (D-014).
 
 ---
 

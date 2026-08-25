@@ -532,7 +532,18 @@ export function Panel(props: Props): JSX.Element {
 
   const headerTitle = () => {
     if (view() === "settings") return SECTION_TITLES[section()];
-    if (view() === "day") return "";
+    // A lunar day is called by its tithi, so that is what the header says. The
+    // civil date it also has moves to the line below, where the weekday and the
+    // vara already are. In solar mode the western date is the name and the
+    // header keeps it.
+    if (view() === "day") {
+      const panchanga = detail()?.panchanga;
+      if (!panchanga) return "";
+      const span =
+        panchanga.tithis.find((tithi) => tithi.prevailing) ?? panchanga.tithis[0];
+      if (!span) return "";
+      return `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}`;
+    }
     return monthAt(visibleDelta())?.label ?? "";
   };
 

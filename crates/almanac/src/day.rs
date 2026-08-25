@@ -28,8 +28,6 @@ pub struct DayPanchanga {
     pub tithis: Vec<TithiSpan>,
     pub sunrise: Option<Moment>,
     pub reference: Reference,
-    /// 0 = Ravivara. Independent of the locale's first day of week.
-    pub vara: u8,
     pub vara_name: String,
 }
 
@@ -180,7 +178,6 @@ fn panchanga(
         } else {
             Reference::LocalNoon
         },
-        vara,
         vara_name: time::VARA_NAMES[vara as usize].to_string(),
     }))
 }

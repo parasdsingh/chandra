@@ -93,7 +93,7 @@ impl AppState {
     /// Validate, persist, then mutate. Saving is the only step that can fail for
     /// a reason outside this process, and mutating the engine before it meant a
     /// refused save left every later computation running on a configuration the
-    /// file and the settings pane both denied.
+    /// file and the settings view both denied.
     ///
     /// Returns whether the tray needs rebuilding, so the caller does not have to
     /// re-derive it by comparing settings itself.

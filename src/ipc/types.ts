@@ -122,8 +122,6 @@ export interface DayPanchanga {
   tithis: TithiSpan[];
   sunrise: Moment | null;
   reference: TithiReference;
-  /** 0 = Ravivara, independent of the locale's first day of week. */
-  vara: number;
   vara_name: string;
 }
 
@@ -166,7 +164,6 @@ export interface GrahaCell {
   /** Sidereal longitude at local noon, the instant combustion is judged at. */
   longitude: number;
   retrograde: boolean;
-  speed: number;
   combust: boolean;
 }
 

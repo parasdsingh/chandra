@@ -34,8 +34,11 @@ interface Props {
 export function Header(props: Props): JSX.Element {
   const isCalendar = () => props.view === "calendar";
 
+  // In a lunar month the day view supplies its own title - the tithi, which is
+  // what the day is called there - and the date drops to the line below it. The
+  // western date is the name only where it is the calendar in force.
   const label = () =>
-    props.view === "day" && props.selected
+    props.view === "day" && props.selected && !props.title
       ? formatDateHeading(props.selected)
       : props.title;
 

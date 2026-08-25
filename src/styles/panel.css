@@ -4,10 +4,6 @@
  * from tokens.css.
  */
 
-/* The window is created at the maximum panel height and never resized. The
-   panel itself grows inside it, so the frame and its contents can never visibly
-   disagree during the height transition. The surrounding area is transparent and
-   click-through. */
 /* The window is exactly the panel's size, because the panel's height is
    constant: every view swaps inside a fixed region rather than growing it. */
 /* The panel is composed at one fixed size and drawn at another.
@@ -361,10 +357,8 @@
 }
 
 /* A tithi that began and ended between two sunrises: the grid's numbers jump at
-   this cell. Set on the numeral like a footnote mark rather than in a corner -
-   both corners are spoken for, the date on one side and an ingress on the other,
-   and a dot that meant "the calendar skipped a day" in the same place a dot
-   meant "the graha changed sign" would be unreadable. */
+   this cell. Set on the numeral like a footnote mark rather than in a corner:
+   the top right carries the other calendar's date. */
 .day-cell__kshaya {
   position: absolute;
   top: -1px;
@@ -419,8 +413,7 @@
 /* Combustion does not dim the glyph. Opacity is already spoken for: it is how
    a cell says it belongs to the neighbouring month, so a dimmed glyph inside
    the month read as "not really here" rather than "inside the Sun's rays". The
-   rule under the glyph carries it alone, which is also what the design language
-   asks for - a span is a rule, and combustion is a span. */
+   wash at the cell's foot carries it alone. */
 .day-cell__graha.is-outside {
   opacity: 0.45;
 }

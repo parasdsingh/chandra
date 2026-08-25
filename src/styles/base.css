@@ -15,10 +15,9 @@ body,
 }
 
 :root {
-  /* Native controls in the settings window - checkboxes, selects, scrollbars -
-     take their appearance from this. Declaring it is what makes AppKit draw its
-     own dark variants rather than light controls on a dark page
-     (docs/DESIGN.md 8.2 keeps those controls at their platform default). */
+  /* Native controls in the settings sections - selects, scrollbars - take their
+     appearance from this. Declaring it is what makes AppKit draw its own dark
+     variants rather than light controls on a dark page. */
   color-scheme: dark;
 
   /* Set once, never overridden. A time changing from 09:11 to 19:08 must not
@@ -31,8 +30,8 @@ body,
 }
 
 body {
-  /* The panel window is transparent; the panel paints its own ground. The
-     settings window sets its own background. */
+  /* The panel window is transparent, so the popover material behind it shows
+     through; the panel paints only a scrim over it. */
   background: transparent;
   overflow: hidden;
   /* A menu bar panel is not a document. Selecting its text is never useful and
@@ -57,5 +56,5 @@ button {
    panel container itself, because Panel focuses it on mount to receive key
    events - which is what the bright white border around the panel was. A
    blanket `:focus { outline: none }` is equally wrong: it would strip the
-   native focus rings from the settings window's AppKit controls, which
+   native focus rings from the AppKit controls in the settings sections, which
    docs/DESIGN.md 8.2 keeps at their platform default. */

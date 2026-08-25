@@ -1,4 +1,5 @@
-//! Panel and settings window lifecycle.
+//! Panel window lifecycle. It is the only window the app creates; settings are
+//! a view inside it.
 
 use std::sync::mpsc;
 use std::time::Duration;
@@ -59,7 +60,7 @@ fn scaled_width(app: &AppHandle) -> f64 {
 
 /// How long to wait for CoreLocation before giving up and keeping the offline
 /// resolution. Long enough for the authorisation prompt to be answered, short
-/// enough that the settings pane does not appear stuck.
+/// enough that the location section does not appear stuck.
 const LOCATION_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// Creates the panel window, hidden.

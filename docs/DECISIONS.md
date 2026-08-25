@@ -14,7 +14,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-007](#d-007) | Location resolves through an ordered fallback chain | accepted |
 | [D-008](#d-008) | Tray icons rendered as macOS template images by default | accepted |
 | [D-009](#d-009) | Moon permanent in menu bar; each graha its own toggleable item | accepted |
-| [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted, amended by D-019 |
+| [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted, amended by D-019, D-025 |
 | [D-011](#d-011) | Translucent panel using the system popover material | accepted, revised |
 | [D-012](#d-012) | Private repo, unsigned local build, ad-hoc codesign | accepted |
 | [D-013](#d-013) | Product name is Chandra; bundle id `com.parasdsingh.chandra` | accepted |
@@ -23,9 +23,13 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-016](#d-016) | Event times found by bracket + Brent refinement | accepted |
 | [D-017](#d-017) | No background work, no notifications in v1 | accepted |
 | [D-018](#d-018) | GitHub remote deferred; local VC for now | accepted |
-| [D-019](#d-019) | Every state the grid draws is named in the day view; combustion judged at local noon | accepted |
-| [D-020](#d-020) | One hue. Retrograde is written, not coloured; combustion never dims | accepted |
-| [D-021](#d-021) | Lunar mode names days by tithi; Vikram Samvat years; grid laid out by the back end | accepted |
+| [D-019](#d-019) | Every state the grid draws is named in the day view; combustion judged at local noon | accepted, amended by D-024, D-025 |
+| [D-020](#d-020) | One hue. Retrograde is written, not coloured; combustion never dims | accepted, amended by D-023, D-024 |
+| [D-021](#d-021) | Lunar mode names days by tithi; Vikram Samvat years; grid laid out by the back end | accepted, amended by D-024, D-025 |
+| [D-022](#d-022) | The menu bar carries retrograde, and nothing else | accepted |
+| [D-023](#d-023) | Colour may depict, never encode; `--text-tertiary` carries no text | accepted |
+| [D-024](#d-024) | One mark vocabulary for both calendars: no underlines, a combustion wash, a retrograde bracket | accepted |
+| [D-025](#d-025) | The day view is one field stack for all nine subjects | accepted |
 
 ---
 
@@ -133,12 +137,32 @@ entry/exit, rashi with entry/exit.**
 - The domain model is shaped so those additions do not require restructuring.
 
 ### D-011
-**Opaque near-black surface. No macOS vibrancy.**
+**Translucent panel on the system popover material, with an opaque fallback.**
 
-- Vibrancy samples the desktop wallpaper, which would drift the palette away from the chosen
-  `#0A0A0B` ground and break contrast guarantees.
-- Panel is opaque with a 1 px hairline border, 12 px radius, and a soft drop shadow.
-- Consequence: `macOSPrivateApi` is not needed.
+Revised. The original decision was an opaque `#0A0A0B` surface with no vibrancy, on the
+grounds that a sampled backdrop would drift the palette and break the contrast guarantees.
+It shipped the other way: a flat fill sits oddly among the menu bar's own popovers, which are
+all drawn on the same translucent, blurred backdrop.
+
+- The window is transparent and carries `NSVisualEffectMaterial::Popover`
+  (`NSVisualEffectState::Active`), corner radius matched to the panel's own so the material
+  does not show square corners behind rounded content. Re-cut whenever the panel is scaled.
+- The panel paints a **scrim**, not a fill: `rgba(10, 10, 11, 0.55)`. Raised from 0.28 by
+  measurement — on the shipped panel over ordinary content the composited ground runs
+  `#1A3033` to `#5C4E36`, and against the light end `--text-secondary` held only 3.15:1. At
+  0.55 it clears 4.76:1 and the material still reads as a material.
+- No alpha rescues `--text-tertiary`: 0.70 reaches 4.09:1 and would make the panel opaque.
+  That is what retires it as a text colour (D-023).
+- **The fallback is not cosmetic.** With no material there is nothing for the scrim to darken
+  and the desktop shows through at 45%. `apply_vibrancy` reports whether it took, the answer
+  travels to the front end on `Bootstrap.panel_material`, and the panel paints `--ground`
+  opaque instead. `prefers-reduced-transparency: reduce` gets the same answer.
+- No drop shadow: the window is built with `.shadow(false)`. The panel's edge is its 1px
+  border and 12px radius.
+- The panel is forced to the dark theme regardless of the system appearance. The palette is a
+  single dark one, and the material's light variant would put near-white text on a near-white
+  backdrop.
+- Consequence: `macOSPrivateApi` is not needed. `window-vibrancy` uses public AppKit.
 
 ### D-012
 **Private GitHub repo. Unsigned local build, ad-hoc codesigned.**
@@ -224,6 +248,14 @@ judged at the same instant.**
 - No warning colour: combustion is an ordinary position. `--retro` stays reserved for
   retrograde motion alone.
 
+**Amended by D-024 and D-025.** The principle stands and is what D-024 is built on; two
+clauses of the implementation do not:
+
+- There is no `From Sun` row. A `Combust` field appears only on the days the subject is
+  combust, reading `inside the N° orb`; the separation in degrees is not shown at all.
+- `--retro` was removed by D-020, so nothing is reserved for it. Combustion did acquire a
+  colour of its own under D-023, which is not a warning colour.
+
 ### D-020
 **One chromatic hue in the whole app. Retrograde is written `℞`; combustion is a rule and
 never a dim.**
@@ -245,6 +277,20 @@ never a dim.**
   distinguished from an ingress by shape, which was always the primary difference.
 - `--accent` remains the only hue, and still means today and nothing else.
 - Amends DESIGN.md §1.4, §4.1, §6.3, §11.3.
+
+**Amended by D-023 and D-024.** What survives is that retrograde is not carried by a hue and
+that combustion never dims. The rest was replaced:
+
+- **Combustion is not a rule.** It is a warm radial wash at the cell's foot, `--glare`
+  `#e2603a` (D-023, D-024). The rule under the numeral read as underlined text.
+- **The cell does not carry `℞`.** Retrograde is a dotted ring around the glyph, drawn as a
+  bracket over the run (D-024). `℞` survives in the day view's `Motion` chip and, per D-022,
+  in the menu bar.
+- **The station marker and the span rule are gone**, so neither moves anywhere. The grid draws
+  no ingress or station marks at all (D-024). `--marker` now carries the retrograde ring and
+  the kshaya dot.
+- **`--accent` is no longer the only hue.** It is still the only hue that *encodes* anything,
+  and it still means today alone; `--glare` depicts (D-023).
 
 ### D-021
 **In a lunar month the cell is named by its tithi, the year is Vikram Samvat, and the 42 cells
@@ -290,6 +336,21 @@ research, the wireframes and the rejected alternatives.
   the row above it.
 - Week start follows the system locale in both modes, chosen by the user over forcing Sunday.
 
+**Amended by D-024 and D-025.** The naming, the derivation, the era and the back-end layout all
+stand. What the cell and the day view do with them changed:
+
+- **Nothing gives way.** The subject's glyph — the Moon's phase disc, a graha's symbol — is on
+  the cell's second line in both calendars, and the other calendar's date sits in the top-right
+  corner (D-024). The argument for dropping it was that the second line was spoken for; moving
+  the date freed it.
+- **The kshaya dot is set on the numeral**, not in the top-left corner: the corners carry the
+  other calendar's date.
+- **The vriddhi rule is gone.** A repeated tithi is visible in the grid as the same numeral on
+  two days, and is named in the spoken label (`vriddhi, the same tithi names the day after`).
+  Nothing is drawn for it.
+- **There is no Sunrise row** (D-025). Sunrise is Surya's rise, on Surya's day.
+- The header label names the era: `Shravana VS 2083`, not `Shravana 2083` (AUDIT W-05).
+
 ### D-022
 **The menu bar carries retrograde, and nothing else.**
 
@@ -301,3 +362,65 @@ research, the wireframes and the rejected alternatives.
   square, and the row of tray items would stop being scannable.
 - The mark is drawn rather than set in type: this crate rasterises without a font, and there is
   no text shaping and no system font to ask.
+
+### D-023
+**Colour may depict, may not encode. `--text-tertiary` carries no text.**
+
+Amends D-020's "one hue" to a rule about what a hue is allowed to do.
+
+- **Depicting is allowed; encoding is not.** A body inside the Sun's rays is drawn as the glare
+  it is lost in, and glare is warm because glare is warm. A colour that *means* combust would
+  be a code, and a code has to be learnt.
+- `--glare` `#e2603a`. Orange rather than amber so it cannot be mistaken for `--accent`, which
+  sits about 25° away in hue and can appear in the same 40px cell. It carries no meaning on its
+  own — every combust day says so in words in the day view — so it is free to sit below the
+  contrast floor a text colour must clear.
+- `--accent` still means **today** and nothing else.
+- **`--text-tertiary` carries no text.** Measured over the composited translucent ground
+  (D-011) it reaches 2.21:1 at the light end, failing both the 4.5:1 small-text floor and the
+  3:1 non-text bar. Every label that used it now uses `--text-secondary`. It is kept for the
+  one thing with no text floor to clear: the border on the `℞` chip, and the switch knob.
+
+### D-024
+**One mark vocabulary, the same in both calendars. No underlines.**
+
+Reported: the rule under a numeral read as underlined text, and marks that appeared in solar
+mode and not in lunar mode could not be learnt.
+
+- **A state mark does not vary between the solar and lunar calendars.** A state drawn in one
+  and not the other is a state nobody can learn, so the marks are drawn on the cell rather than
+  on the glyph and survive the swap of what labels it.
+- **No underlines anywhere.** The rule under the numeral is gone and nothing replaced it in
+  that position.
+- **Combustion is a warm radial wash at the cell's foot**, `--glare` (D-023), behind the
+  numeral and the glyph. A field rather than a mark: it costs no room in a cell that has none,
+  and a run of combust days reads as one warm stretch instead of as five separate marks.
+- **Retrograde is a dotted ring around the glyph, drawn as a bracket.** The half facing the
+  retrograde days on the day the motion turns, a whole circle in between, the opposite half on
+  the day it turns back. A run therefore reads as one shape spanning several cells. Centred on
+  the glyph, not on the cell: the cell's middle falls between the numeral and the symbol.
+- **Ingress and station markers are no longer drawn at all.** They are named in the day view's
+  `Events` field, with their times. The marker row they occupied is gone.
+- **The second line carries the subject's glyph in both calendars**, and the other calendar's
+  date moved to the top-right corner — the corner the ingress marker used to hold.
+- Amends D-019, D-020 and D-021. Amends DESIGN.md §5.5, §6.1–§6.4, §11.3.
+
+### D-025
+**The day view is one field stack, the same shape for all nine subjects.**
+
+Designed as variant 02 of the mocks; the reasoning for the shape itself is not recorded beyond
+that.
+
+- **A field is a small uppercase label, the value and the hour it gives way on one line, and a
+  `then …` successor line.** A day holds at most two of each span, so naming the successor
+  costs one line and saves opening tomorrow.
+- **Removed: illuminated percentage, distance from the Sun, speed, longitude.** They were the
+  only reason the Moon's view and a graha's had different shapes.
+- **Rise and set belong to the subject.** Surya's day names sunrise and sunset, Chandra's
+  moonrise and moonset, a graha's its own. There is no separate sunrise row on every subject's
+  day.
+- **Every drawn state is named in words on the same surface** — this is D-019's principle
+  unchanged — and spoken labels say what was measured: `combust at noon`, not `combust`.
+- The phase name appears in solar mode only; in a lunar month the tithi says the same thing
+  more precisely.
+- Amends D-010's field list and D-021's Sunrise row. Amends DESIGN.md §5.6, §6.4.

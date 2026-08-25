@@ -1,17 +1,18 @@
 /**
  * One 40 x 40 day cell.
  *
- * Anatomy is fixed (docs/DESIGN.md 5.4): a label above, content below. Which is
- * which depends on the calendar in force, and that is the whole of the
- * difference between the two modes:
+ * Anatomy is fixed (docs/DESIGN.md 5.4): a label above, the subject's glyph
+ * below. Only the label changes between the two modes:
  *
- * - Solar: the Gregorian day labels the cell, the phase or graha glyph is the
- *   content.
- * - Lunar: the tithi labels the cell, because that is what the day is called,
- *   and the Gregorian day becomes the annotation underneath.
+ * - Solar: the Gregorian day labels the cell.
+ * - Lunar: the tithi labels the cell, because that is what the day is called.
  *
- * State marks - combustion, retrograde, ingress, station, kshaya, vriddhi - are
- * drawn on the cell rather than on the glyph, so they survive that swap.
+ * The other calendar's date sits in the top-right corner, so the second line
+ * carries the glyph in both modes.
+ *
+ * State marks - combustion, retrograde, kshaya - are drawn on the cell rather
+ * than on the glyph, so they survive that swap and do not vary between the two
+ * calendars.
  */
 
 import type { JSX } from "solid-js";
@@ -130,8 +131,8 @@ export function DayCell(props: Props): JSX.Element {
             {tithiLabel(lunar()).value}
             {/* A tithi that began and ended inside this day is one the grid
                 never names, so the numbers jump here. Marked like a footnote,
-                on the numeral that jumps, because the corners are spoken for -
-                the date on one side, an ingress on the other. */}
+                on the numeral that jumps, rather than in the top-right corner,
+                which carries the other calendar's date. */}
             <Show when={lunar().kshaya.length > 0}>
               <span class="day-cell__kshaya" />
             </Show>
@@ -166,9 +167,10 @@ export function DayCell(props: Props): JSX.Element {
         {(phase) => <RetroRing phase={phase()} />}
       </Show>
 
-      {/* Combustion is a span. A rule says "all day", where a marker would read
-          as an instant. Drawn for every subject in both calendars: a state that
-          appears in one calendar and not the other is a state nobody can learn. */}
+      {/* Combustion is a span, so it is drawn as a field over the whole cell
+          rather than as a mark at one point in it. Drawn for every subject in
+          both calendars: a state that appears in one calendar and not the other
+          is a state nobody can learn. */}
       <Show when={props.data.combust}>
         <span class="day-cell__combust" />
       </Show>
@@ -230,7 +232,7 @@ function RetroRing(props: { phase: RetroPhase }): JSX.Element {
   );
 }
 
-/** The graha's symbol, drawn only in solar mode where the second line is free. */
+/** The graha's symbol, on the second line in both calendars. */
 function GrahaMark(props: Props): JSX.Element {
   return (
     <Show when={props.kind === "graha" && (props as GrahaProps).info}>
