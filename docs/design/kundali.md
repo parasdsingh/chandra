@@ -157,6 +157,55 @@ pub fn ascendant(&self, jd_ut: f64, observer: Observer) -> Result<f64>;
   positions, and the ascendant contributes nothing to it. That is a statement about the
   mechanism, not a shortcut — it should be a comment on the method.
 
+### 2.2.1 How the lagna is made correct by construction, not by care
+
+An earlier draft called the argument order "a trap" and left it there. That is
+not good enough: a transposed call returns a real ascendant for a real place, so
+nothing at runtime looks wrong. Correctness here cannot rest on remembering the
+order. It rests on four things, three of which are tests that fail loudly.
+
+**1. The arguments cannot be swapped.** The FFI call takes named fields, not two
+bare `f64`s in an order a reader has to recall:
+
+```rust
+struct HouseRequest { jd_ut: f64, latitude: f64, longitude: f64, system: HouseSystem }
+```
+
+One call site, destructured at the boundary. `as_se_geopos()` — which is
+`[longitude, latitude, elevation]`, the opposite order — is not used here and
+cannot be passed by mistake, because the types do not line up.
+
+**2. The sidereal flag is proved to have taken effect.** Compute the ascendant
+twice at one instant, once with `SEFLG_SIDEREAL` and once without, and assert
+the difference equals the ayanamsa the engine reports for that instant
+(`Engine::ayanamsa`, already implemented and already reconciled with the
+longitudes it displays). This catches three failures at once: the flag not
+being passed, `swed.ayana_is_set` being false so `swehouse.c:230` silently
+substitutes Fagan-Bradley, and the ayanamsa differing from the one every other
+figure in the app uses.
+
+**3. An independent implementation agrees.** The ascendant has a closed form:
+
+> Asc = atan2( cos(RAMC), −( sin(RAMC)·cos(ε) + tan(φ)·sin(ε) ) )
+
+with RAMC the right ascension of the midheaven, ε the obliquity and φ the
+geographic latitude. Implemented in Rust from the engine's own sidereal time and
+obliquity, and asserted against `swe_houses_ex` across a spread of latitudes and
+instants. Two implementations agreeing is a different claim from one
+implementation plus attention — and this is the one that catches a transposition
+outright, because φ appears in the formula and a swapped φ cannot agree.
+
+**4. Published values.** A small table of instants and places with the lagna as
+an independent published source gives it, cited in the test the way the
+Durmuhurtam table is cited (D-026's method note). This is the only check that
+can catch all three of the above being consistently wrong together.
+
+**The asymmetry case is chosen deliberately.** Tests use a place where latitude
+and longitude are far apart and the hemisphere differs — swapping them must not
+merely change the answer, it must produce something the assertion rejects.
+Bengaluru at 12.97N 77.59E transposes to 77.59N 12.97E, which is inside the
+Arctic circle: the polar branch of §2.3 then fires, which is itself a signal.
+
 ### 2.3 Missing: the obliquity, for the polar test
 
 §8.3 needs to know whether the observer is inside the polar circle, which is
@@ -235,9 +284,10 @@ Sources for §3.1:
 
 ### 3.2 Decision: all three formats, chosen in settings
 
-**The user has decided: all common formats are supported.** §3.2 and §3.3 below were written
-before that decision and argued for South Indian alone; they are kept because the reasoning is
-still what decides the *default* and what the degraded cases look like.
+**The user has decided: all common formats are supported, and the default is North Indian.**
+§3.2 and §3.3 below were written before that decision and argued for South Indian alone; they
+are kept because the reasoning is still what the degraded cases look like — it is now an
+argument about fallback rather than about the default.
 
 What the decision changes, and what it does not:
 
@@ -257,11 +307,16 @@ What the decision changes, and what it does not:
   "desirable" to "required", and §2.2 becomes a blocker for the feature rather than for a
   detail of it.
 
-The default is South Indian, for the reasons below. The other two are a setting.
+**The default is North Indian.** It is the format most likely to be recognised, and the user
+has chosen it. The consequence is stated plainly: North Indian has no degraded form. Where
+there is no lagna there is no house 1 and no chart, so §8.2's "no location" case cannot fall
+back to drawing the grahas without a frame — it must either say why there is no chart, or offer
+the South Indian view, which can be drawn without one.
 
-### 3.2.1 Why South Indian is the default
+### 3.2.1 Why South Indian was argued for, and what that argument is now good for
 
-Four reasons, in order of weight.
+Four reasons, in order of weight. They no longer choose the default; they describe what is lost
+when the lagna is unavailable, and they are the reason the fallback is worth building.
 
 **1. It degrades to something, and the North Indian chart degrades to nothing.**
 Chandra's location comes from a fallback chain (D-007) whose last step is a timezone centroid

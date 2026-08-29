@@ -32,26 +32,37 @@ the rashi holding the lagna.
 
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 1.1 | **Sidereal ascendant in the engine** | ready | The blocker. See §2.2 and the limitations note below |
+| 1.1 | **Sidereal ascendant in the engine** | ready | The blocker. `swe_houses_ex` with `SEFLG_SIDEREAL`, named-field request struct so the arguments cannot be transposed. §2.2 |
+| 1.1a | Test: sidereal minus tropical equals the ayanamsa | ready | Proves the flag took effect and matches every other figure in the app. §2.2.1 |
+| 1.1b | Test: independent closed-form ascendant agrees | ready | A second implementation, not a second reading. Catches transposition outright. §2.2.1 |
+| 1.1c | Test: published lagna values, cited | ready | The only check that catches all the others being wrong together. §2.2.1 |
 | 1.2 | Obliquity, for the polar test | ready | §2.3 |
 | 1.3 | `Chakra` payload — 12 rashis of occupants, lagna rashi and degree | ready | Shared by all three formats |
-| 1.4 | South Indian renderer | ready | Default. 4×4, centre removed, Meena top-left, clockwise |
-| 1.5 | East Indian renderer | ready | Same geometry as 1.4, different origin and direction |
-| 1.6 | North Indian renderer | ready | Own geometry: 4 diamonds, 8 triangles, SVG polygons with a text anchor each |
+| 1.4 | North Indian renderer | ready | **Default.** 4 diamonds, 8 triangles, SVG polygons with a text anchor each. Cannot be drawn without a lagna |
+| 1.5 | South Indian renderer | ready | 4×4, centre removed, Meena top-left, clockwise. The fallback where there is no lagna |
+| 1.6 | East Indian renderer | ready | Same geometry as 1.5, different origin and direction |
+| 1.6a | Location quality gate | ready | North Indian needs a real location. Decide and build what happens on a timezone centroid |
 | 1.7 | Chart format setting, and the schema migration | ready | §6. Schema 7 |
 | 1.8 | Panel view and the header title | ready | §5.1–5.3 |
-| 1.9 | Tray item, off by default, live lagna in the tooltip | ready | §5.4, and D-028 for the tooltip |
+| 1.9 | Tray item, **on by default**, live lagna in the tooltip | ready | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
 | 1.10 | Spoken form of the chart | ready | §7. A list, not a grid |
 | 1.11 | Degraded states: no lagna, outside the range, polar | ready | §8 |
-| 1.12 | Decide and record: what the feature is called | blocked on you | `Gochara` or `Kundali` — §9 |
+| 1.12 | ~~Decide what the feature is called~~ | done | `Gochara`, with an English gloss beneath it |
 
-### E1 open decisions
+### E1 decisions taken
+
+| | Question | Answer |
+|---|---|---|
+| a | Default format | **North Indian.** All three supported, chosen in settings |
+| b | Its own status item, or reached from the moon panel? | **Its own**, toggleable in settings, **on by default** |
+| c | `Gochara` or `Kundali`? | **Gochara**, with an English gloss beneath it |
+
+### E1 decisions still open
 
 | | Question | Status |
 |---|---|---|
-| a | Default format — South Indian, or something else? | blocked on you |
-| b | A tenth status item, or reached from the moon panel? | blocked on you |
-| c | Title it `Gochara` or `Kundali`? | blocked on you |
+| d | What happens when the location is only a timezone centroid? North Indian has no degraded form | blocked on you |
+| e | The exact English gloss — `Transits`, `The sky now`, something else | blocked on you |
 
 ---
 
