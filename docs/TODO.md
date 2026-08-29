@@ -16,7 +16,7 @@ document says what shipped.
 
 ---
 
-## E1. Kundali — a chart of the sky now
+## E1. Lagna Kundali — a chart of the sky now
 
 Specification: **`docs/design/kundali.md`**.
 
@@ -33,21 +33,19 @@ the rashi holding the lagna.
 | # | Task | Status | Notes |
 |---|---|---|---|
 | 1.1 | **Sidereal ascendant in the engine** | ready | The blocker. `swe_houses_ex` with `SEFLG_SIDEREAL`, named-field request struct so the arguments cannot be transposed. §2.2 |
-| 1.1a | Test: sidereal minus tropical equals the ayanamsa | ready | Proves the flag took effect and matches every other figure in the app. §2.2.1 |
-| 1.1b | Test: independent closed-form ascendant agrees | ready | A second implementation, not a second reading. Catches transposition outright. §2.2.1 |
-| 1.1c | Test: published lagna values, cited | ready | The only check that catches all the others being wrong together. §2.2.1 |
+| 1.1a | Test: independent closed-form ascendant agrees | ready | The guard. A second derivation, not a second reading; φ is in the formula so a transposed argument cannot agree. Carries the ayanamsa identity as one assertion inside it. §2.2.1 |
 | 1.2 | Obliquity, for the polar test | ready | §2.3 |
 | 1.3 | `Chakra` payload — 12 rashis of occupants, lagna rashi and degree | ready | Shared by all three formats |
 | 1.4 | North Indian renderer | ready | **Default.** 4 diamonds, 8 triangles, SVG polygons with a text anchor each. Cannot be drawn without a lagna |
 | 1.5 | South Indian renderer | ready | 4×4, centre removed, Meena top-left, clockwise. The fallback where there is no lagna |
 | 1.6 | East Indian renderer | ready | Same geometry as 1.5, different origin and direction |
-| 1.6a | Location quality gate | ready | North Indian needs a real location. Decide and build what happens on a timezone centroid |
+| 1.6a | ~~Location quality gate~~ | superseded | Answered by **E4**: a location becomes mandatory, so there is no centroid case to gate |
 | 1.7 | Chart format setting, and the schema migration | ready | §6. Schema 7 |
 | 1.8 | Panel view and the header title | ready | §5.1–5.3 |
 | 1.9 | Tray item, **on by default**, live lagna in the tooltip | ready | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
 | 1.10 | Spoken form of the chart | ready | §7. A list, not a grid |
 | 1.11 | Degraded states: no lagna, outside the range, polar | ready | §8 |
-| 1.12 | ~~Decide what the feature is called~~ | done | `Gochara`, with an English gloss beneath it |
+| 1.12 | ~~Decide what the feature is called~~ | done | **`Lagna Kundali`**, glossed `Ascendant chart`. Not `Gochara` — see below |
 
 ### E1 decisions taken
 
@@ -55,14 +53,23 @@ the rashi holding the lagna.
 |---|---|---|
 | a | Default format | **North Indian.** All three supported, chosen in settings |
 | b | Its own status item, or reached from the moon panel? | **Its own**, toggleable in settings, **on by default** |
-| c | `Gochara` or `Kundali`? | **Gochara**, with an English gloss beneath it |
+| c | What is it called? | **`Lagna Kundali`**, glossed **`Ascendant chart`** |
+
+**On the name.** `Gochara` was accepted and then withdrawn on evidence. In
+common usage — AstroSage, Prokerala, AstroCAMP — *gochar* means transits read
+**against a natal chart**, which this app does not have and will never ask for.
+Using it would be the same class of error as calling the thing a birth chart.
+`Kundali` alone carries the same problem: Drik Panchang's kundali pages are
+*janma* kundali, birth charts.
+
+`Lagna Kundali` is a chart cast with the ascendant as house 1 for a given
+instant. Cast for now, that is exactly this object, and it implies no birth.
+Drik Panchang's own English for lagna is "Hindu Ascendant / Rising Sign", which
+gives the gloss.
 
 ### E1 decisions still open
 
-| | Question | Status |
-|---|---|---|
-| d | What happens when the location is only a timezone centroid? North Indian has no degraded form | blocked on you |
-| e | The exact English gloss — `Transits`, `The sky now`, something else | blocked on you |
+None. E1 is unblocked once E4 lands.
 
 ---
 
@@ -112,6 +119,39 @@ tithi, and whether the `Daylight` row stays.
 |---|---|---|---|
 | 3.1 | ~~A solar day is named by its date again~~ | done | Commit `40c479c`. The second of the two wrong cases |
 | 3.2 | `state.rs:76` and `tray.rs:22` cite D-019 where they mean D-009 | ready | Found in passing |
+
+---
+
+## E4. A location becomes mandatory
+
+No specification document yet.
+
+Chandra currently works from first launch with no location, falling back through
+D-007's chain to a timezone centroid that can be a thousand kilometres out. That
+was defensible while the app showed phases and tithis. It is not defensible now:
+
+- **The lagna needs it.** One degree of longitude is four minutes is about one
+  degree of ascendant. A centroid used from the wrong end of a large country is
+  around eight degrees out, so it names the wrong rashi roughly a quarter of the
+  time — and the North Indian chart *is* the lagna, so a wrong lagna is a wrong
+  chart, not a wrong detail.
+- **It was already affecting the calendar.** Sunrise, moonrise, the tithi a day
+  is named after, and every muhurta are all computed from the observer. A
+  centroid a thousand kilometres east gives a sunrise about forty minutes wrong,
+  which moves the tithi at sunrise near a boundary. This has been true since the
+  first release and nothing said so.
+
+### E4 tasks
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| 4.1 | Decide the shape: a first-run gate, or a persistent banner until set | queued | Affects onboarding, which the app has never had |
+| 4.2 | Ask for CoreLocation, and fall through to city search on refusal | queued | Both already built; what is missing is the requirement |
+| 4.3 | What the app shows before a location exists | queued | Refuse to draw, or draw and mark every figure as provisional |
+| 4.4 | Amend D-007 | queued | The fallback chain stops being silent |
+| 4.5 | Migration for existing installs still on a centroid | queued | They have been running on a guess; say so once |
+
+---
 
 ---
 

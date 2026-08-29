@@ -162,49 +162,66 @@ pub fn ascendant(&self, jd_ut: f64, observer: Observer) -> Result<f64>;
 An earlier draft called the argument order "a trap" and left it there. That is
 not good enough: a transposed call returns a real ascendant for a real place, so
 nothing at runtime looks wrong. Correctness here cannot rest on remembering the
-order. It rests on four things, three of which are tests that fail loudly.
+order.
 
-**1. The arguments cannot be swapped.** The FFI call takes named fields, not two
-bare `f64`s in an order a reader has to recall:
+**The arguments are made untypeable.** The FFI call takes a named-field struct,
+not two bare `f64`s in an order a reader has to recall:
 
 ```rust
 struct HouseRequest { jd_ut: f64, latitude: f64, longitude: f64, system: HouseSystem }
 ```
 
 One call site, destructured at the boundary. `as_se_geopos()` — which is
-`[longitude, latitude, elevation]`, the opposite order — is not used here and
-cannot be passed by mistake, because the types do not line up.
+`[longitude, latitude, elevation]`, the opposite order — cannot be passed by
+mistake, because the types do not line up.
 
-**2. The sidereal flag is proved to have taken effect.** Compute the ascendant
-twice at one instant, once with `SEFLG_SIDEREAL` and once without, and assert
-the difference equals the ayanamsa the engine reports for that instant
-(`Engine::ayanamsa`, already implemented and already reconciled with the
-longitudes it displays). This catches three failures at once: the flag not
-being passed, `swed.ayana_is_set` being false so `swehouse.c:230` silently
-substitutes Fagan-Bradley, and the ayanamsa differing from the one every other
-figure in the app uses.
+**One test, not four.** Three candidate checks were considered and two dropped.
+The reasoning matters more than the conclusion:
 
-**3. An independent implementation agrees.** The ascendant has a closed form:
+| Check | Catches a transposed latitude? | Kept |
+|---|---|---|
+| Sidereal minus tropical equals the ayanamsa | **No** | as one line inside the test below |
+| An independent closed-form ascendant | **Yes** | **yes — this is the test** |
+| Published lagna values | Yes | no |
+
+**Why the ayanamsa identity is not enough on its own.** It is blind to the exact
+bug it was proposed to guard. The ayanamsa does not depend on location at all,
+so a transposed call transposes *both* the sidereal and the tropical reading
+identically and their difference is still exactly the ayanamsa. The check passes
+cleanly on the broken code. It is worth one assertion — it does catch the flag
+being dropped, and `swehouse.c:230` silently substituting Fagan-Bradley if
+`swed.ayana_is_set` were false — but it cannot be the guard.
+
+**The independent implementation is the test.** The ascendant has a closed form:
 
 > Asc = atan2( cos(RAMC), −( sin(RAMC)·cos(ε) + tan(φ)·sin(ε) ) )
 
 with RAMC the right ascension of the midheaven, ε the obliquity and φ the
 geographic latitude. Implemented in Rust from the engine's own sidereal time and
-obliquity, and asserted against `swe_houses_ex` across a spread of latitudes and
-instants. Two implementations agreeing is a different claim from one
-implementation plus attention — and this is the one that catches a transposition
-outright, because φ appears in the formula and a swapped φ cannot agree.
+obliquity, then compared against `swe_houses_ex`.
 
-**4. Published values.** A small table of instants and places with the lagna as
-an independent published source gives it, cited in the test the way the
-Durmuhurtam table is cited (D-026's method note). This is the only check that
-can catch all three of the above being consistently wrong together.
+It subsumes the ayanamsa check rather than sitting beside it: the closed form
+produces a *tropical* ascendant, so the comparison is "closed form minus the
+engine's ayanamsa equals `swe_houses_ex` with `SEFLG_SIDEREAL`". A dropped flag
+shows up as a 24° disagreement in the same assertion.
 
-**The asymmetry case is chosen deliberately.** Tests use a place where latitude
-and longitude are far apart and the hemisphere differs — swapping them must not
-merely change the answer, it must produce something the assertion rejects.
-Bengaluru at 12.97N 77.59E transposes to 77.59N 12.97E, which is inside the
-Arctic circle: the polar branch of §2.3 then fires, which is itself a signal.
+And **φ appears in the formula**, so a swapped argument cannot agree. That is
+the whole reason to prefer it: it is not a second reading of the same number, it
+is a second derivation from the inputs.
+
+**Published values are dropped.** They were argued for as the only check that
+could catch the others being consistently wrong together. That residual is not
+real: for the closed form and `swe_houses_ex` to agree while both are wrong, the
+engine's own sidereal time or obliquity would have to be wrong — and those come
+from Swiss Ephemeris, which is the reference the published values are themselves
+computed from. A table of hand-copied instants would add maintenance and check
+nothing the closed form does not.
+
+**The test's location is chosen so a swap is loud.** Latitude and longitude far
+apart, in a different hemisphere band: Bengaluru at 12.97N 77.59E transposes to
+77.59N 12.97E, inside the Arctic circle, where the polar branch of §2.3 fires as
+well. The assertion fails on the value; the polar path failing too is a second
+signal, not the first.
 
 ### 2.3 Missing: the obliquity, for the polar test
 
