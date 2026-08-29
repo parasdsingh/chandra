@@ -1,10 +1,110 @@
-# Outstanding work
+# Work
 
-Every open thread in one place. Ordered by what blocks what, not by size.
+Two halves. **In flight** is what is being built now, broken into tasks fine
+enough that none of them hides another. **Shipped** is the record of what was
+built and why, kept because the reasoning is the part worth having later.
 
 Status: `in flight` · `blocked on you` · `ready` · `queued` · `done`
 
 ---
+
+# In flight
+
+Three epics, each with a design document that is the specification. A task is
+not done until it is built, tested, verified in the running app, and its
+document says what shipped.
+
+---
+
+## E1. Kundali — a chart of the sky now
+
+Specification: **`docs/design/kundali.md`**.
+
+A gochara chakra: where the nine grahas stand right now, drawn as a chart. Not a
+birth chart — there is no birth time and no birth place, and calling it one
+would be a lie about what it computes.
+
+**All three common formats are supported**, chosen in settings, defaulting to
+South Indian. They share one data model: which rashi each graha occupies, plus
+the rashi holding the lagna.
+
+### E1 tasks
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| 1.1 | **Sidereal ascendant in the engine** | ready | The blocker. See §2.2 and the limitations note below |
+| 1.2 | Obliquity, for the polar test | ready | §2.3 |
+| 1.3 | `Chakra` payload — 12 rashis of occupants, lagna rashi and degree | ready | Shared by all three formats |
+| 1.4 | South Indian renderer | ready | Default. 4×4, centre removed, Meena top-left, clockwise |
+| 1.5 | East Indian renderer | ready | Same geometry as 1.4, different origin and direction |
+| 1.6 | North Indian renderer | ready | Own geometry: 4 diamonds, 8 triangles, SVG polygons with a text anchor each |
+| 1.7 | Chart format setting, and the schema migration | ready | §6. Schema 7 |
+| 1.8 | Panel view and the header title | ready | §5.1–5.3 |
+| 1.9 | Tray item, off by default, live lagna in the tooltip | ready | §5.4, and D-028 for the tooltip |
+| 1.10 | Spoken form of the chart | ready | §7. A list, not a grid |
+| 1.11 | Degraded states: no lagna, outside the range, polar | ready | §8 |
+| 1.12 | Decide and record: what the feature is called | blocked on you | `Gochara` or `Kundali` — §9 |
+
+### E1 open decisions
+
+| | Question | Status |
+|---|---|---|
+| a | Default format — South Indian, or something else? | blocked on you |
+| b | A tenth status item, or reached from the moon panel? | blocked on you |
+| c | Title it `Gochara` or `Kundali`? | blocked on you |
+
+---
+
+## E2. Explaining the marks
+
+Specification: **`docs/design/legend.md`**.
+
+65 distinct marks, notations and abbreviations were inventoried from source.
+**21 have no carrier a sighted reader can use** — no visible words, no tooltip,
+no hint anywhere. Recommended surface: a `Marks` section in settings, with
+specimens drawn by the real components so it cannot drift.
+
+### E2 tasks
+
+Not yet broken down — the epic is specified but not scheduled. Two defects it
+found are separable and can be fixed before the epic starts:
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| 2.1 | Muhurta auspiciousness is spoken but never drawn | ready | A VoiceOver user is told `avoid`/`auspicious`; a sighted reader is not. Inverts the app's own contract |
+| 2.2 | `Ari` in a cell against `Mesha` in the day view, same sign | ready | Fix at the source or explain it — E2 open question |
+
+---
+
+## E3. Lunar and solar concepts, and where each belongs
+
+Specification: **`docs/design/calendar-modes.md`**.
+
+24 elements cross a calendar boundary: 11 correct and intended, 7 correct but
+undocumented, 4 inconsistent, 2 wrong. One of the two wrong cases is already
+fixed (below); the other is open.
+
+Proposed principle:
+
+> The mode decides three things and nothing else: which civil days a month
+> holds, what the month is called, and what a day is called inside it.
+> Everything else is a fact about a civil day or a subject, and appears in all
+> three modes.
+
+### E3 tasks
+
+Not yet broken down. Its seven open questions need answering before the tasks
+are real; two matter most — whether the solar day header carries the date or the
+tithi, and whether the `Daylight` row stays.
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| 3.1 | ~~A solar day is named by its date again~~ | done | Commit `40c479c`. The second of the two wrong cases |
+| 3.2 | `state.rs:76` and `tray.rs:22` cite D-019 where they mean D-009 | ready | Found in passing |
+
+---
+
+# Shipped
 
 ## 1. Correctness — the 56 audit findings are closed
 
