@@ -35,7 +35,224 @@
         "prevailing": true
       }
     ],
-    "panchanga": null,
+    "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1740299185238
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1740342411141
+          },
+          "fixed": false,
+          "index": 51,
+          "name": "Bava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1740342411141
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1740384921280
+          },
+          "fixed": false,
+          "index": 52,
+          "name": "Balava",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1740384921280
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1740426733632
+          },
+          "fixed": false,
+          "index": 53,
+          "name": "Kaulava",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740356365301
+          },
+          "half": "night",
+          "inauspicious": false,
+          "name": "Brahma Muhurta",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740353442245
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740369929890
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Rahu Kaal",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740364609123
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740380571423
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Yamaganda",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740375250657
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740381990294
+          },
+          "half": "day",
+          "inauspicious": false,
+          "name": "Abhijit",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740379152552
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740384828036
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740381990294
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740391212956
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Gulika",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740385892190
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1740393341263
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1740390503521
+          }
+        }
+      ],
+      "reference": "sunrise",
+      "sunrise": {
+        "day_offset": 0,
+        "unix_ms": 1740359288357
+      },
+      "sunset": {
+        "day_offset": 0,
+        "unix_ms": 1740401854489
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1740299185238
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1740384921280
+          },
+          "index": 26,
+          "name": "Ekadashi",
+          "number": 11,
+          "paksha": "krishna",
+          "prevailing": true,
+          "source": "swieph",
+          "sunrises": 1
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1740384921280
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1740467878464
+          },
+          "index": 27,
+          "name": "Dvadashi",
+          "number": 12,
+          "paksha": "krishna",
+          "prevailing": false,
+          "source": "swieph",
+          "sunrises": 1
+        }
+      ],
+      "vara_name": "Somavara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1740289732018
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1740371707670
+          },
+          "index": 16,
+          "name": "Siddhi",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1740371707670
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1740451492947
+          },
+          "index": 17,
+          "name": "Vyatipata",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ]
+    },
     "rashis": [
       {
         "entry": {
@@ -62,7 +279,19 @@
       "unix_ms": 1740349059214
     },
     "source": "swieph",
-    "speed": -0.0005101790010891006
+    "speed": -0.0005101790010891006,
+    "standing": {
+      "aspected_by": [
+        "chandra"
+      ],
+      "aspects": [
+        "chandra",
+        "ketu"
+      ],
+      "dignity": null,
+      "nakshatra_lord": "guru",
+      "war": null
+    }
   },
   "grahaMonth": {
     "adhika": false,
@@ -76,9 +305,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 87.77143647041285,
+        "longitude": 87.84648766113492,
         "retrograde": true,
-        "speed": -0.3435792119335126,
         "tithi": null
       },
       {
@@ -89,9 +317,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 87.43237066020664,
+        "longitude": 87.50546362499632,
         "retrograde": true,
-        "speed": -0.33445630243617613,
         "tithi": null
       },
       {
@@ -102,9 +329,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 87.10271021453292,
+        "longitude": 87.17372557123463,
         "retrograde": true,
-        "speed": -0.32477403669244365,
         "tithi": null
       },
       {
@@ -115,9 +341,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 86.78299724405854,
+        "longitude": 86.85182271403734,
         "retrograde": true,
-        "speed": -0.3145675173451506,
         "tithi": null
       },
       {
@@ -128,9 +353,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 86.47373691319768,
+        "longitude": 86.54026809131241,
         "retrograde": true,
-        "speed": -0.3038755525211511,
         "tithi": null
       },
       {
@@ -141,9 +365,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 86.175393762904,
+        "longitude": 86.23953487509864,
         "retrograde": true,
-        "speed": -0.29274048492891463,
         "tithi": null
       },
       {
@@ -154,9 +377,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 85.88838851449538,
+        "longitude": 85.95005301906528,
         "retrograde": true,
-        "speed": -0.2812074363336563,
         "tithi": null
       },
       {
@@ -167,9 +389,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 85.61309593381917,
+        "longitude": 85.67220685863622,
         "retrograde": true,
-        "speed": -0.26932295704263526,
         "tithi": null
       },
       {
@@ -180,9 +401,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 85.3498441264925,
+        "longitude": 85.4063340865201,
         "retrograde": true,
-        "speed": -0.2571335651213209,
         "tithi": null
       },
       {
@@ -193,9 +413,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 85.09891529447796,
+        "longitude": 85.15272620899076,
         "retrograde": true,
-        "speed": -0.2446843528335353,
         "tithi": null
       },
       {
@@ -206,9 +425,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 84.86054769686048,
+        "longitude": 84.91163028128604,
         "retrograde": true,
-        "speed": -0.2320179685046009,
         "tithi": null
       },
       {
@@ -219,9 +437,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 84.63493845591807,
+        "longitude": 84.68325156697692,
         "retrograde": true,
-        "speed": -0.21917396112130424,
         "tithi": null
       },
       {
@@ -232,9 +449,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 84.42224685215267,
+        "longitude": 84.46775675559252,
         "retrograde": true,
-        "speed": -0.20618842560053233,
         "tithi": null
       },
       {
@@ -245,9 +461,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 84.22259784717679,
+        "longitude": 84.2652774580875,
         "retrograde": true,
-        "speed": -0.19309390160546275,
         "tithi": null
       },
       {
@@ -258,9 +473,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 84.03608563576582,
+        "longitude": 84.0759137678479,
         "retrograde": true,
-        "speed": -0.179919398001707,
         "tithi": null
       },
       {
@@ -271,9 +485,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.86277707278461,
+        "longitude": 83.89973773168609,
         "retrograde": true,
-        "speed": -0.1666906279163419,
         "tithi": null
       },
       {
@@ -284,9 +497,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.70271483367297,
+        "longitude": 83.73679657736898,
         "retrograde": true,
-        "speed": -0.15343031324968334,
         "tithi": null
       },
       {
@@ -297,9 +509,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.55592017535211,
+        "longitude": 83.58711557627542,
         "retrograde": true,
-        "speed": -0.1401586551941425,
         "tithi": null
       },
       {
@@ -310,9 +521,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.42239523100406,
+        "longitude": 83.45070043976027,
         "retrograde": true,
-        "speed": -0.1268937678867142,
         "tithi": null
       },
       {
@@ -323,9 +533,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.30212482195964,
+        "longitude": 83.3275392377014,
         "retrograde": true,
-        "speed": -0.11365223594604364,
         "tithi": null
       },
       {
@@ -336,9 +545,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.1950778560583,
+        "longitude": 83.2176038775054,
         "retrograde": true,
-        "speed": -0.10044935103862487,
         "tithi": null
       },
       {
@@ -349,9 +557,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.10120843216814,
+        "longitude": 83.12085126200422,
         "retrograde": true,
-        "speed": -0.0872994538109091,
         "tithi": null
       },
       {
@@ -362,9 +569,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 83.02045678215043,
+        "longitude": 83.03722425706565,
         "retrograde": true,
-        "speed": -0.07421596178613471,
         "tithi": null
       },
       {
@@ -375,9 +581,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.95275017957357,
+        "longitude": 82.96665259819582,
         "retrograde": true,
-        "speed": -0.061211369007861144,
         "tithi": null
       },
       {
@@ -388,9 +593,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.89800388962463,
+        "longitude": 82.90905382640989,
         "retrograde": true,
-        "speed": -0.04829716897995505,
         "tithi": null
       },
       {
@@ -401,9 +605,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.85612220573255,
+        "longitude": 82.8643343040525,
         "retrograde": true,
-        "speed": -0.03548380363785533,
         "tithi": null
       },
       {
@@ -414,9 +617,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.82699955115324,
+        "longitude": 82.8323903067264,
         "retrograde": true,
-        "speed": -0.02278057771785623,
         "tithi": null
       },
       {
@@ -427,9 +629,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.81052158036218,
+        "longitude": 82.81310912908165,
         "retrograde": true,
-        "speed": -0.010195732868233985,
         "tithi": null
       },
       {
@@ -440,9 +641,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.80656614302563,
-        "retrograde": false,
-        "speed": 0.002263314339290469,
+        "longitude": 82.8063700968356,
+        "retrograde": true,
         "tithi": null
       },
       {
@@ -453,9 +653,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.81500393746101,
+        "longitude": 82.81204530302068,
         "retrograde": false,
-        "speed": 0.014589574713504416,
         "tithi": null
       },
       {
@@ -466,9 +665,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.83569863358208,
+        "longitude": 82.82999986770731,
         "retrograde": false,
-        "speed": 0.026775861708323998,
         "tithi": null
       },
       {
@@ -479,9 +677,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.86850631558255,
+        "longitude": 82.86009154075869,
         "retrograde": false,
-        "speed": 0.03881408386469751,
         "tithi": null
       },
       {
@@ -492,9 +689,8 @@
           "year": 2025
         },
         "in_month": true,
-        "longitude": 82.91327425223616,
+        "longitude": 82.90216960973943,
         "retrograde": false,
-        "speed": 0.05069462379357248,
         "tithi": null
       },
       {
@@ -505,9 +701,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 82.96983928356778,
+        "longitude": 82.95607333379213,
         "retrograde": false,
-        "speed": 0.06240628374636182,
         "tithi": null
       },
       {
@@ -518,9 +713,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.03802638727582,
+        "longitude": 83.02163041798103,
         "retrograde": false,
-        "speed": 0.07393668654809112,
         "tithi": null
       },
       {
@@ -531,9 +725,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.11764806062558,
+        "longitude": 83.09865616323648,
         "retrograde": false,
-        "speed": 0.08527342030845031,
         "tithi": null
       },
       {
@@ -544,9 +737,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.20850492040428,
+        "longitude": 83.18695377978545,
         "retrograde": false,
-        "speed": 0.0964053540534104,
         "tithi": null
       },
       {
@@ -557,9 +749,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.31038748840301,
+        "longitude": 83.28631592854308,
         "retrograde": false,
-        "speed": 0.107323584179042,
         "tithi": null
       },
       {
@@ -570,9 +761,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.42307875629953,
+        "longitude": 83.39652715209755,
         "retrograde": false,
-        "speed": 0.11802197940557865,
         "tithi": null
       },
       {
@@ -583,9 +773,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.54635698744734,
+        "longitude": 83.51736666279045,
         "retrograde": false,
-        "speed": 0.1284971734669066,
         "tithi": null
       },
       {
@@ -596,9 +785,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.67999832565526,
+        "longitude": 83.64861101659284,
         "retrograde": false,
-        "speed": 0.1387482111936742,
         "tithi": null
       },
       {
@@ -609,9 +797,8 @@
           "year": 2025
         },
         "in_month": false,
-        "longitude": 83.82377899167446,
+        "longitude": 83.790036408255,
         "retrograde": false,
-        "speed": 0.1487761322255321,
         "tithi": null
       }
     ],
@@ -629,7 +816,8 @@
         "graha": "mangala",
         "kind": "direct_station",
         "source": "swieph",
-        "target": null
+        "target": null,
+        "target_short": null
       }
     ],
     "graha": "mangala",
@@ -763,10 +951,154 @@
       }
     ],
     "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787147400984
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787193981111
+          },
+          "fixed": false,
+          "index": 15,
+          "name": "Vishti",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787193981111
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "fixed": false,
+          "index": 16,
+          "name": "Bava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787288172476
+          },
+          "fixed": false,
+          "index": 17,
+          "name": "Balava",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787183521289
+          },
+          "half": "night",
+          "inauspicious": false,
+          "name": "Brahma Muhurta",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787180763655
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787191904161
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Yamaganda",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787186278923
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787203154636
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Gulika",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787197529399
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787204279684
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787201279557
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787210279938
+          },
+          "half": "day",
+          "inauspicious": false,
+          "name": "Abhijit",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787207279811
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787220030350
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Rahu Kaal",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787214405112
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787222280445
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787219280318
+          }
+        }
+      ],
       "reference": "sunrise",
       "sunrise": {
         "day_offset": 0,
         "unix_ms": 1787186278923
+      },
+      "sunset": {
+        "day_offset": 0,
+        "unix_ms": 1787231280825
       },
       "tithis": [
         {
@@ -804,8 +1136,37 @@
           "sunrises": 1
         }
       ],
-      "vara": 4,
-      "vara_name": "Guruvara"
+      "vara_name": "Guruvara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787089981703
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787177644951
+          },
+          "index": 25,
+          "name": "Brahma",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787177644951
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787266528775
+          },
+          "index": 26,
+          "name": "Indra",
+          "prevailing": true,
+          "source": "swieph"
+        }
+      ]
     },
     "phase": "first_quarter",
     "rashis": [
@@ -838,7 +1199,16 @@
         "western": "Scorpio"
       }
     ],
-    "source": "swieph"
+    "source": "swieph",
+    "standing": {
+      "aspected_by": [
+        "guru"
+      ],
+      "aspects": [],
+      "dignity": "debilitated",
+      "nakshatra_lord": "guru",
+      "war": null
+    }
   },
   "lunarGrahaDay": {
     "combustion": {
@@ -877,10 +1247,154 @@
       }
     ],
     "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787240934374
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787288172476
+          },
+          "fixed": false,
+          "index": 17,
+          "name": "Balava",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787288172476
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787335601761
+          },
+          "fixed": false,
+          "index": 18,
+          "name": "Kaulava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787335601761
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787383126512
+          },
+          "fixed": false,
+          "index": 19,
+          "name": "Taitila",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787269923701
+          },
+          "half": "night",
+          "inauspicious": false,
+          "name": "Brahma Muhurta",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787267163495
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787283924584
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Gulika",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787278304245
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787284673962
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787281676448
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787295165261
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Rahu Kaal",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787289544923
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787296664019
+          },
+          "half": "day",
+          "inauspicious": false,
+          "name": "Abhijit",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787293666504
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787308654075
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787305656561
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787312026278
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Yamaganda",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787306405939
+          }
+        }
+      ],
       "reference": "sunrise",
       "sunrise": {
         "day_offset": 0,
         "unix_ms": 1787272683906
+      },
+      "sunset": {
+        "day_offset": 0,
+        "unix_ms": 1787317646617
       },
       "tithis": [
         {
@@ -918,8 +1432,37 @@
           "sunrises": 1
         }
       ],
-      "vara": 5,
-      "vara_name": "Shukravara"
+      "vara_name": "Shukravara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787177644951
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787266528775
+          },
+          "index": 26,
+          "name": "Indra",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787266528775
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787356119374
+          },
+          "index": 27,
+          "name": "Vaidhriti",
+          "prevailing": true,
+          "source": "swieph"
+        }
+      ]
     },
     "rashis": [
       {
@@ -947,7 +1490,19 @@
       "unix_ms": 1787284397364
     },
     "source": "swieph",
-    "speed": -0.04131782876336352
+    "speed": -0.04131782876336352,
+    "standing": {
+      "aspected_by": [
+        "guru",
+        "shukra"
+      ],
+      "aspects": [
+        "shukra"
+      ],
+      "dignity": null,
+      "nakshatra_lord": "budha",
+      "war": null
+    }
   },
   "lunarMonth": {
     "adhika": false,
@@ -2018,7 +2573,7 @@
         }
       }
     ],
-    "label": "Shravana 2083",
+    "label": "Shravana VS 2083",
     "name": "Shravana",
     "source": "swieph"
   },
@@ -2073,7 +2628,224 @@
         "prevailing": false
       }
     ],
-    "panchanga": null,
+    "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787147400984
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787193981111
+          },
+          "fixed": false,
+          "index": 15,
+          "name": "Vishti",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787193981111
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "fixed": false,
+          "index": 16,
+          "name": "Bava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787288172476
+          },
+          "fixed": false,
+          "index": 17,
+          "name": "Balava",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787183521289
+          },
+          "half": "night",
+          "inauspicious": false,
+          "name": "Brahma Muhurta",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787180763655
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787191904161
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Yamaganda",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787186278923
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787203154636
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Gulika",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787197529399
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787204279684
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787201279557
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787210279938
+          },
+          "half": "day",
+          "inauspicious": false,
+          "name": "Abhijit",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787207279811
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787220030350
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Rahu Kaal",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787214405112
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1787222280445
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1787219280318
+          }
+        }
+      ],
+      "reference": "sunrise",
+      "sunrise": {
+        "day_offset": 0,
+        "unix_ms": 1787186278923
+      },
+      "sunset": {
+        "day_offset": 0,
+        "unix_ms": 1787231280825
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787147400984
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "index": 8,
+          "name": "Ashtami",
+          "number": 8,
+          "paksha": "shukla",
+          "prevailing": true,
+          "source": "swieph",
+          "sunrises": 1
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787240934374
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787335601761
+          },
+          "index": 9,
+          "name": "Navami",
+          "number": 9,
+          "paksha": "shukla",
+          "prevailing": false,
+          "source": "swieph",
+          "sunrises": 1
+        }
+      ],
+      "vara_name": "Guruvara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1787089981703
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1787177644951
+          },
+          "index": 25,
+          "name": "Brahma",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1787177644951
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1787266528775
+          },
+          "index": 26,
+          "name": "Indra",
+          "prevailing": true,
+          "source": "swieph"
+        }
+      ]
+    },
     "phase": "first_quarter",
     "rashis": [
       {
@@ -2105,7 +2877,16 @@
         "western": "Scorpio"
       }
     ],
-    "source": "swieph"
+    "source": "swieph",
+    "standing": {
+      "aspected_by": [
+        "guru"
+      ],
+      "aspects": [],
+      "dignity": "debilitated",
+      "nakshatra_lord": "guru",
+      "war": null
+    }
   },
   "moonDayNoRise": {
     "combustion": {
@@ -2158,7 +2939,224 @@
         "prevailing": false
       }
     ],
-    "panchanga": null,
+    "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1785942771558
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1785982889670
+          },
+          "fixed": false,
+          "index": 45,
+          "name": "Balava",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1785982889670
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1786022592751
+          },
+          "fixed": false,
+          "index": 46,
+          "name": "Kaulava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1786022592751
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1786061903330
+          },
+          "fixed": false,
+          "index": 47,
+          "name": "Taitila",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1785973846090
+          },
+          "half": "night",
+          "inauspicious": false,
+          "name": "Brahma Muhurta",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1785971122176
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1785982259734
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Yamaganda",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1785976570004
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1785993639193
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Gulika",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1785987949464
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1785994777139
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1785991742617
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1786000846185
+          },
+          "half": "day",
+          "inauspicious": false,
+          "name": "Abhijit",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1785997811662
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1786010708383
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Rahu Kaal",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1786005018653
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": 1786012984275
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": 1786009949752
+          }
+        }
+      ],
+      "reference": "sunrise",
+      "sunrise": {
+        "day_offset": 0,
+        "unix_ms": 1785976570004
+      },
+      "sunset": {
+        "day_offset": 0,
+        "unix_ms": 1786022087843
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1785942771558
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1786022592751
+          },
+          "index": 23,
+          "name": "Ashtami",
+          "number": 8,
+          "paksha": "krishna",
+          "prevailing": true,
+          "source": "swieph",
+          "sunrises": 1
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1786022592751
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1786100849458
+          },
+          "index": 24,
+          "name": "Navami",
+          "number": 9,
+          "paksha": "krishna",
+          "prevailing": false,
+          "source": "swieph",
+          "sunrises": 1
+        }
+      ],
+      "vara_name": "Guruvara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1785931143805
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1786008659988
+          },
+          "index": 10,
+          "name": "Ganda",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1786008659988
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1786084863176
+          },
+          "index": 11,
+          "name": "Vriddhi",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ]
+    },
     "phase": "last_quarter",
     "rashis": [
       {
@@ -2176,7 +3174,16 @@
         "western": "Aries"
       }
     ],
-    "source": "swieph"
+    "source": "swieph",
+    "standing": {
+      "aspected_by": [
+        "ketu"
+      ],
+      "aspects": [],
+      "dignity": null,
+      "nakshatra_lord": "shukra",
+      "war": null
+    }
   },
   "moonMonth": {
     "adhika": false,
@@ -2787,7 +3794,224 @@
         "prevailing": false
       }
     ],
-    "panchanga": null,
+    "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": -10078246679062
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": -10078199141441
+          },
+          "fixed": false,
+          "index": 47,
+          "name": "Taitila",
+          "prevailing": true,
+          "source": "moshier"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": -10078199141441
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": -10078151432865
+          },
+          "fixed": false,
+          "index": 48,
+          "name": "Gara",
+          "prevailing": false,
+          "source": "moshier"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": -10078151432865
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": -10078103666214
+          },
+          "fixed": false,
+          "index": 49,
+          "name": "Vanija",
+          "prevailing": false,
+          "source": "moshier"
+        }
+      ],
+      "muhurtas": [
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078214919241
+          },
+          "half": "night",
+          "inauspicious": false,
+          "name": "Brahma Muhurta",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078217676393
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078206535884
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Gulika",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078212162088
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078209161446
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078212162088
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078206160804
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Durmuhurtam",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078209161446
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078195283476
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Rahu Kaal",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078200909680
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078188156952
+          },
+          "half": "day",
+          "inauspicious": false,
+          "name": "Abhijit",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078191157594
+          }
+        },
+        {
+          "end": {
+            "day_offset": 0,
+            "unix_ms": -10078178404865
+          },
+          "half": "day",
+          "inauspicious": true,
+          "name": "Yamaganda",
+          "start": {
+            "day_offset": 0,
+            "unix_ms": -10078184031069
+          }
+        }
+      ],
+      "reference": "sunrise",
+      "sunrise": {
+        "day_offset": 0,
+        "unix_ms": -10078212162088
+      },
+      "sunset": {
+        "day_offset": 0,
+        "unix_ms": -10078167152458
+      },
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": -10078246679062
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": -10078151432865
+          },
+          "index": 24,
+          "name": "Navami",
+          "number": 9,
+          "paksha": "krishna",
+          "prevailing": true,
+          "source": "moshier",
+          "sunrises": 1
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": -10078151432865
+          },
+          "exit": {
+            "day_offset": 2,
+            "unix_ms": -10078055949326
+          },
+          "index": 25,
+          "name": "Dashami",
+          "number": 10,
+          "paksha": "krishna",
+          "prevailing": false,
+          "source": "moshier",
+          "sunrises": 1
+        }
+      ],
+      "vara_name": "Shanivara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": -10078321184056
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": -10078231973239
+          },
+          "index": 13,
+          "name": "Vyaghata",
+          "prevailing": false,
+          "source": "moshier"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": -10078231973239
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": -10078142014869
+          },
+          "index": 14,
+          "name": "Harshana",
+          "prevailing": true,
+          "source": "moshier"
+        }
+      ]
+    },
     "phase": "waning_crescent",
     "rashis": [
       {
@@ -2805,7 +4029,14 @@
         "western": "Taurus"
       }
     ],
-    "source": "moshier"
+    "source": "moshier",
+    "standing": {
+      "aspected_by": [],
+      "aspects": [],
+      "dignity": "exalted",
+      "nakshatra_lord": "chandra",
+      "war": null
+    }
   },
   "snapshot": {
     "grahas": [
@@ -2822,6 +4053,7 @@
     "is_waxing": false,
     "phase": "waning_gibbous",
     "source": "swieph",
+    "tithi": "Krishna Chaturthi",
     "unix_ms": 1755000000000
   },
   "timeZone": "Asia/Kolkata"

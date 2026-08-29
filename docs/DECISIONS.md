@@ -489,3 +489,40 @@ correction to a case somebody did. Anyone who wants the change makes it in
 **Tests.** `a_new_install_uses_the_node_a_panchanga_uses` pins the default, because it is a default
 rather than a constant and nothing else in the code asserts it — and it shipped wrong once.
 `changing_the_default_does_not_rewrite_a_file_that_names_one` pins the other half.
+
+## D-028 — The menu bar is redrawn on the hour, and its tooltip when you point at it
+
+**Decision.** The tray icons are redrawn when the local hour changes, not when the local date does.
+The tooltip is rebuilt from the current instant when the pointer enters the item.
+
+**Supersedes D-017**, which said the tray is redrawn on local-midnight rollover only.
+
+**Why the icon changed.** The disc is drawn from the illumination *now*, and was redrawn once a
+day, so it was stale by up to twenty-four hours. The Moon's lit fraction moves by as much as
+thirteen points across a day; by evening the menu bar was visibly wrong. Hourly is the resolution
+the disc can actually show — a fifty-fifth of a percent of illumination is well under a pixel at
+22pt — so a finer tick would cost ephemeris calls for a change nobody can see.
+
+D-017's own reasoning does not survive the change of premise. It assumed the disc showed the
+illumination at local noon of the current date, which changes once a day. It does not; it never
+did. The code always read the current instant.
+
+**Why the tooltip is separate.** `TrayIconEvent::Enter` fires when the pointer arrives, and macOS
+waits about a second before showing a tooltip, so there is room to recompute one in between. That
+makes it current to the second rather than to the hour, which is what makes it usable for reading
+a transit. Only the tooltip is rebuilt, and only for the item under the pointer: redrawing the icon
+there would put an ephemeris call and a rasterise between the pointer arriving and the menu bar
+settling, for a change smaller than a pixel.
+
+**What the moon tooltip says.** Not the percentage lit. That answers "how much of the disc is
+showing", which is a solar-calendar question already answered by the icon beside the pointer. In
+its place, the fact the calendar in force makes relevant: the phase name in solar mode, the tithi
+in lunar mode.
+
+The tithi is the one in force at that instant, not the one the day is named after. The panel names
+a day from its sunrise; the menu bar answers "now". The two differ for the part of a day after the
+tithi turns over, and that difference is the difference between "today is" and "it is now".
+
+**Not polling.** Each wake is two clock reads costing microseconds, and the redraw happens only
+when the displayed hour has actually rolled over. The thread compares clocks rather than trusting
+that it woke when it meant to, because a sleep does not advance while the machine is suspended.

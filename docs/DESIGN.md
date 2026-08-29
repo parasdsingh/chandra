@@ -698,9 +698,31 @@ half-ellipse. Each half is 2 cubic Béziers (one per quadrant) with the handle c
 | `k > 0.98` | solid disc at alpha 1.00, ring omitted |
 | otherwise | lit fill at alpha 1.00 + ring at alpha 0.55 |
 
-**Refresh.** Redrawn on local-midnight rollover only (D-017). The value used is the
-illumination at local noon of the current date — the same value the grid cell uses, so the
-menu bar and the grid can never disagree.
+**Refresh.** Redrawn on the local hour (D-028), and on every settings change, panel open and
+location answer. The value used is the illumination **now**.
+
+The disc and the grid cell therefore answer different questions and can differ within a day:
+the cell is the illumination at that day's local noon, the disc is the illumination at this
+moment. That is deliberate. A menu bar says what is happening; a calendar says what a day is.
+Bound to noon the disc was right twice a day at best, and redrawn only at midnight it was up to
+twenty-four hours stale — the Moon's lit fraction moves by as much as thirteen points across a
+day, so by evening it was visibly wrong.
+
+**Tooltip.** Rebuilt when the pointer arrives, from that instant (`TrayIconEvent::Enter`), so it
+is current to the second rather than to the hour.
+
+It does not carry the percentage lit. That is the answer to "how much of the disc is showing",
+which is a solar-calendar question and is already drawn — the icon beside the pointer *is* that
+number. What it carries instead follows the calendar in force:
+
+| Calendar | Tooltip |
+|---|---|
+| Solar | `Chandra - Waning Gibbous` |
+| Lunar | `Chandra - Krishna Dvitiya` |
+
+The tithi is the one in force at that instant, not the one today is named after. The panel names a
+day from its sunrise, which is the tradition; the menu bar answers "now", which is what it is for
+and what a transit is read against.
 
 **Colour mode** (settings, off by default): lit fill `#EDEDEF`, ring `rgba(237,237,239,0.55)`,
 applied with `set_icon_with_as_template(false)`. Geometry is unchanged.
@@ -977,7 +999,7 @@ button**: none of the four failures has a button that would help.
 
 | Code | Headline | Cause line |
 |---|---|---|
-| `DATE_OUT_OF_RANGE` | Outside 1800–2399. | Chandra has no ephemeris data for this date. |
+| `INVALID_DATE` | Not a date. | That day does not exist in the calendar. |
 | `NO_CONVERGENCE` | Boundary time unavailable. | This entry could not be resolved. |
 | `SETTINGS` | Settings could not be saved. | *(reason, one line, truncated at 60 chars)* |
 | `ENGINE` | Ephemeris unavailable. | *(engine error text, one line, truncated at 60 chars)* |

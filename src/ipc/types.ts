@@ -352,6 +352,14 @@ export interface Snapshot {
   illumination: number;
   is_waxing: boolean;
   phase: PhaseKey;
+  /**
+   * The tithi in force at this instant — `Shukla Ashtami`.
+   *
+   * At this instant, not at today's sunrise. The panel names a day after the
+   * tithi its sunrise fell in; this is what the Moon is doing now, which is the
+   * question the menu bar answers.
+   */
+  tithi: string;
   grahas: SnapshotGraha[];
   source: Source;
 }
@@ -476,7 +484,7 @@ export interface City {
 
 /** Every failure carries a stable code; there is no generic fallback. */
 export interface AppError {
-  code: "DATE_OUT_OF_RANGE" | "NO_CONVERGENCE" | "ENGINE" | "SETTINGS";
+  code: "INVALID_DATE" | "NO_CONVERGENCE" | "ENGINE" | "SETTINGS";
   message: string;
 }
 

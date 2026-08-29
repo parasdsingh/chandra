@@ -281,17 +281,30 @@ function grahaCellLabel(cell: GrahaCell, ingress: string | null): string {
   return parts.join(", ");
 }
 
+/**
+ * What an event is called in the day view's list.
+ *
+ * Every entry names something that *happens*, because each one is printed
+ * against the minute it happened at. `Combust` was the exception: an adjective
+ * beside a time reads as "it is combust at 04:12" rather than "it becomes
+ * combust at 04:12", and its own partner already said `Leaves combustion`.
+ *
+ * The division is named too. `Enters Magha` and `Enters Makara` were the same
+ * sentence for two different kinds of thing, and the names are alike enough
+ * that nothing in the words told them apart.
+ */
 export function describeEvent(event: TransitEvent): string {
   switch (event.kind) {
     case "rashi_ingress":
+      return `Enters ${event.target ?? ""} rashi`.replace("  ", " ").trim();
     case "nakshatra_ingress":
-      return `Enters ${event.target ?? ""}`.trim();
+      return `Enters ${event.target ?? ""} nakshatra`.replace("  ", " ").trim();
     case "retrograde_station":
       return "Retrograde station";
     case "direct_station":
       return "Direct station";
     case "combustion_start":
-      return "Combust";
+      return "Enters combustion";
     case "combustion_end":
       return "Leaves combustion";
   }

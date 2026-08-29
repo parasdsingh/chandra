@@ -575,7 +575,7 @@ no icon, no border.
 
 | Case | Cell | Day view | Spoken |
 |---|---|---|---|
-| **Tithi number unavailable** | Cannot happen in isolation. The number is `⌊elongation(sunrise) / 12⌋ + 1` — one ephemeris call, no root-finding. If that call fails the whole month fails and the existing `ENGINE` / `DATE_OUT_OF_RANGE` path in DESIGN §9.3 applies | — | — |
+| **Tithi number unavailable** | Cannot happen in isolation. The number is `⌊elongation(sunrise) / 12⌋ + 1` — one ephemeris call, no root-finding. If that call fails the whole month fails and the existing `ENGINE` / `INVALID_DATE` path in DESIGN §9.3 applies | — | — |
 | **Tithi boundary time unresolved** (`NoConvergence`) | Nothing. The numeral is unaffected | Caption reads `21:14 → time unavailable`. The resolved side still prints. No guessed time is ever shown (ARCHITECTURE §6) | `… ends, time unavailable` |
 | **No sunrise** — polar day or night | Numeral drawn normally. **No cell mark**: polar night runs for weeks, and marking 42 cells to say one thing is the clutter DESIGN §9.4 forbids for provenance | One `--annotate` line at the foot, in the provenance slot: `No sunrise at this latitude — tithi taken at local noon.` | Each cell appends `, tithi at local noon` |
 | **Sun never sets** | Same as above; the reference instant is local noon either way (`day.rs::reference_instant`, already implemented) | Same line | Same suffix |

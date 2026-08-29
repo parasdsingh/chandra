@@ -698,9 +698,14 @@ function rashiRows(spans: RashiSpan[], context: FormatContext): SpanRow[] {
 }
 
 const ERROR_TEXT: Record<string, { headline: string; cause: string }> = {
-  DATE_OUT_OF_RANGE: {
-    headline: "Outside 1800–2399.",
-    cause: "Chandra has no ephemeris data for this date.",
+  // Not "Outside 1800-2399", which is what this said. The back end raises this
+  // for a year, month and day that do not name a day - 30 February, month 13 -
+  // and there is no out-of-range case at all: outside 1800-2399 the analytic
+  // fallback answers and the panel says so. Both sentences were false for the
+  // one input that could reach them.
+  INVALID_DATE: {
+    headline: "Not a date.",
+    cause: "That day does not exist in the calendar.",
   },
   NO_CONVERGENCE: {
     headline: "Boundary time unavailable.",

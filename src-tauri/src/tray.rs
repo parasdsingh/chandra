@@ -4,6 +4,8 @@
 //! Declaring one in both places produces two items on macOS, one of them inert
 //! (tauri#8982, tauri#10912).
 
+use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::{Snapshot, SnapshotGraha};
 use chandra_ephemeris::Graha;
 use chandra_glyph::{graha_icon, moon_icon, Tint};
 use tauri::image::Image;
@@ -52,19 +54,33 @@ fn build_item(app: &AppHandle, id: String, subject: Graha) -> Result<()> {
     TrayIconBuilder::with_id(id)
         // Left click opens the panel, so a menu on left click would swallow it.
         .show_menu_on_left_click(false)
-        .on_tray_icon_event(move |_icon, event| {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                rect,
-                ..
-            } = event
-            {
-                // The event carries the item's screen rectangle, so the panel is
-                // placed from that directly. Asking the window where it ended up
-                // after a positioning call instead races the window server, and
-                // reads a stale coordinate often enough to be visible.
-                panel::toggle(&handle, subject, rect);
+        .on_tray_icon_event(move |icon, event| {
+            match event {
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    rect,
+                    ..
+                } => {
+                    // The event carries the item's screen rectangle, so the
+                    // panel is placed from that directly. Asking the window
+                    // where it ended up after a positioning call instead races
+                    // the window server, and reads a stale coordinate often
+                    // enough to be visible.
+                    panel::toggle(&handle, subject, rect);
+                }
+                // The pointer has arrived and the tooltip has not appeared yet -
+                // macOS waits about a second before showing one. Rebuilding it
+                // here is what makes it a reading of now rather than of whenever
+                // the tray last happened to be redrawn.
+                //
+                // A failure is dropped: the item keeps the text it had, which is
+                // at most an hour old, and there is nowhere to report a tooltip
+                // to anyway.
+                TrayIconEvent::Enter { .. } => {
+                    let _ = refresh_tooltip(&handle, icon, subject);
+                }
+                _ => {}
             }
         })
         .build(app)
@@ -126,10 +142,9 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
 
         item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
             .map_err(|e| AppError::Engine(format!("cannot set the moon icon: {e}")))?;
-        item.set_tooltip(Some(format!(
-            "Chandra - {}, {:.0}% lit",
-            snapshot.phase.label(),
-            snapshot.illumination * 100.0
+        item.set_tooltip(Some(moon_tooltip(
+            &snapshot,
+            settings.calendar.month_system,
         )))
         .map_err(|e| AppError::Engine(format!("cannot set the moon tooltip: {e}")))?;
     }
@@ -148,21 +163,71 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
         item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
             .map_err(|e| AppError::Engine(format!("cannot set the {} icon: {e}", graha.name())))?;
 
-        let tooltip = match position {
-            Some(p) => format!(
-                "{} - {}{}",
-                graha.name(),
-                p.rashi.name(),
-                if p.retrograde { ", retrograde" } else { "" }
-            ),
-            None => graha.name().to_string(),
-        };
-        item.set_tooltip(Some(tooltip)).map_err(|e| {
-            AppError::Engine(format!("cannot set the {} tooltip: {e}", graha.name()))
-        })?;
+        item.set_tooltip(Some(graha_tooltip(graha, position)))
+            .map_err(|e| {
+                AppError::Engine(format!("cannot set the {} tooltip: {e}", graha.name()))
+            })?;
     }
 
     Ok(())
+}
+
+/// Rebuilds one item's tooltip from this instant.
+///
+/// Only the tooltip, and only this item. The icon is left alone: redrawing it on
+/// hover would put an ephemeris call and a rasterise between the pointer
+/// arriving and the menu bar settling, for a change too small to see - the disc
+/// moves less than a pixel in the hour this is bridging.
+fn refresh_tooltip(app: &AppHandle, icon: &tauri::tray::TrayIcon, subject: Graha) -> Result<()> {
+    let state = app.state::<AppState>();
+    let system = state.settings().calendar.month_system;
+
+    // Asked for only the subject this item carries, not for the whole row: the
+    // pointer is over one item and the other tooltips are not about to be read.
+    let subjects = if subject == Graha::Chandra {
+        Vec::new()
+    } else {
+        vec![subject]
+    };
+    let now = jiff::Timestamp::now().as_millisecond();
+    let snapshot = state.almanac.now(now, &subjects).map_err(AppError::from)?;
+
+    let tooltip = if subject == Graha::Chandra {
+        moon_tooltip(&snapshot, system)
+    } else {
+        graha_tooltip(subject, snapshot.grahas.first())
+    };
+
+    icon.set_tooltip(Some(tooltip))
+        .map_err(|e| AppError::Engine(format!("cannot set the {} tooltip: {e}", subject.name())))
+}
+
+/// What the moon item says on hover, in the calendar that is in force.
+///
+/// The percentage lit is not here. It is the answer to "how much of the disc is
+/// showing", which is a solar-calendar question and is already drawn - the icon
+/// beside the pointer is that number. In a lunar month the useful fact is which
+/// tithi it is, because that is what the day is called and what a transit is
+/// read against.
+fn moon_tooltip(snapshot: &Snapshot, system: MonthSystem) -> String {
+    if system.is_lunar() {
+        format!("Chandra - {}", snapshot.tithi)
+    } else {
+        format!("Chandra - {}", snapshot.phase.label())
+    }
+}
+
+/// What a graha item says on hover.
+fn graha_tooltip(graha: Graha, position: Option<&SnapshotGraha>) -> String {
+    match position {
+        Some(p) => format!(
+            "{} - {}{}",
+            graha.name(),
+            p.rashi.name(),
+            if p.retrograde { ", retrograde" } else { "" }
+        ),
+        None => graha.name().to_string(),
+    }
 }
 
 fn to_image(icon: &chandra_glyph::Icon) -> Image<'_> {

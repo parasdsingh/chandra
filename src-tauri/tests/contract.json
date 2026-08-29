@@ -454,6 +454,7 @@
     "is_waxing": "boolean",
     "phase": "string",
     "source": "string",
+    "tithi": "string",
     "unix_ms": "integer"
   }
 }

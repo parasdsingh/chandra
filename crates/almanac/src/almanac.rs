@@ -642,6 +642,9 @@ impl Almanac {
             illumination: illumination.fraction,
             is_waxing: phase::is_waxing(elongation),
             phase: phase::intermediate_phase(elongation),
+            // Free: a tithi is 12 degrees of the elongation already computed
+            // above for the phase.
+            tithi: crate::tithi::Tithi::from_elongation(elongation).full_name(),
             grahas: positions,
             source,
         })
@@ -683,6 +686,14 @@ pub struct Snapshot {
     pub illumination: f64,
     pub is_waxing: bool,
     pub phase: PhaseName,
+    /// The tithi in force at this instant - `Shukla Ashtami`.
+    ///
+    /// At this instant, not at today's sunrise. The panel names a day after the
+    /// tithi its sunrise fell in, which is the tradition; this is what the Moon
+    /// is doing now, which is the question a menu bar answers. The two differ
+    /// for the part of the day after the tithi turns over, and that is the
+    /// difference between "today is" and "it is now".
+    pub tithi: String,
     pub grahas: Vec<SnapshotGraha>,
     pub source: Source,
 }

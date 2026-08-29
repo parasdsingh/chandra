@@ -28,6 +28,7 @@ import type {
   GrahaKey,
   IngressMode,
   MonthSystem,
+  Resolved,
   Settings,
 } from "../ipc/types";
 import { GrahaGlyph } from "./GrahaGlyph";
@@ -374,8 +375,7 @@ function Location(props: SectionProps): JSX.Element {
       <div class="settings__current">
         <span class="settings__current-place">{props.boot.location.label}</span>
         <span class="settings__hint">
-          {props.boot.location.latitude.toFixed(3)},{" "}
-          {props.boot.location.longitude.toFixed(3)} ·{" "}
+          {coordinates(props.boot.location)} ·{" "}
           {/* Not `0 m` when nobody knew. Rise and set are still computed at sea
               level, which is the assumption to make with no height - but saying
               `0 m` reported that assumption as a measurement, and the city
@@ -742,6 +742,23 @@ function Choice(props: {
  * several and cannot be switched off again once chosen, which is the opposite of
  * what this does. `switch` is the role for a control with two states.
  */
+/**
+ * The coordinates, printed to the precision the data actually has.
+ *
+ * `zone.tab` stores degrees and arcminutes - `+2232+08822` for Kolkata - so
+ * every city and every timezone centroid in the app is known to about 1.9 km.
+ * Three decimals of a degree is 110 m, so the last one was a unit conversion
+ * rather than information, and it was claiming seventeen times the precision
+ * the file holds. Two decimals is about 1.1 km, which is the honest rounding.
+ *
+ * CoreLocation is the exception: those are the device's own coordinates and are
+ * as precise as they read, so they keep the third decimal.
+ */
+function coordinates(location: Resolved): string {
+  const places = location.provenance === "core_location" ? 3 : 2;
+  return `${location.latitude.toFixed(places)}, ${location.longitude.toFixed(places)}`;
+}
+
 /** `Off`, `Yogas`, `2 of 3`, `All`. */
 function limbCount(settings: Settings): string {
   const limbs = settings.panchanga;

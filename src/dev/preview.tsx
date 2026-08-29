@@ -304,7 +304,7 @@ export function Preview(): JSX.Element {
             isToday={false}
             lunar={true}
             error={{
-              code: "DATE_OUT_OF_RANGE",
+              code: "INVALID_DATE",
               message: "1650-08-20 is outside the range Chandra has data for",
             }}
           />

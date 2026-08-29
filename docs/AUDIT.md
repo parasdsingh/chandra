@@ -791,8 +791,41 @@ Ten confirmed, seven suspected. Fixed in this pass:
   Fixing it means threading the observer into `graha_month`, which changes the
   facade's signature — deliberately not started rather than half-done.
 
-Suspected, unverified: a tray tooltip refreshed once a day but written in the
-present tense; `Combust` naming a state where a span start is meant;
-`DATE_OUT_OF_RANGE` reported for dates that are not dates; three decimals of
-latitude on a timezone centroid; `Enters Magha` not saying what kind of thing
-Magha is.
+### The five suspected items — all verified, all real, all fixed
+
+Each was checked against the code before anything was changed. Four were what
+they looked like; one was worse.
+
+- **The tray tooltip.** Confirmed, and larger than a wording fault. The tooltip
+  and the disc were computed at the current instant but redrawn only at local
+  midnight, so both were stale by up to twenty-four hours — the Moon's lit
+  fraction moves by as much as thirteen points across a day. `DESIGN` §7.1 also
+  claimed the value was the illumination at local noon, "the same value the grid
+  cell uses, so the menu bar and the grid can never disagree"; the code had
+  always read the current instant, so they could. Fixed as **D-028**: hourly
+  redraw, tooltip rebuilt on `TrayIconEvent::Enter`, and the percentage lit
+  replaced by the phase name in solar mode and the tithi in lunar.
+- **`Combust` as an event name.** Confirmed. Every other entry in the day view's
+  event list names something that happens, and each is printed against the
+  minute it happened at — so an adjective read as "it is combust at 04:12"
+  rather than "it becomes combust at 04:12". Its own partner already said
+  `Leaves combustion`. Now `Enters combustion`.
+- **`DATE_OUT_OF_RANGE`.** Confirmed, and the name was backwards. The only error
+  that reached it was the almanac's `InvalidDate`, whose own message is
+  "`2026-2-30` is not a date" — so asking for 30 February printed "Outside
+  1800–2399. Chandra has no ephemeris data for this date", and both sentences
+  were false. There is no out-of-range case anywhere: the almanac error enum has
+  no such variant, and dates outside 1800–2399 compute on the analytic fallback.
+  The name described a case that cannot happen while being used for one that
+  can. Renamed `INVALID_DATE` through the whole chain.
+- **Three decimals of latitude.** Confirmed, and understated. `zone.tab` stores
+  degrees and arcminutes — `+2232+08822` for Kolkata — so every city and every
+  timezone centroid in the app is known to about 1.9 km. Three decimals of a
+  degree is 110 m: the last one was a unit conversion, claiming seventeen times
+  the precision the file holds. There is no separate city database, so this was
+  every coordinate the app printed. Now two decimals, except for CoreLocation,
+  where the coordinates are the device's own and are as precise as they read.
+- **`Enters Magha`.** Confirmed. Both ingress kinds produced the same sentence,
+  and the names are alike enough that nothing told them apart — Magha is a
+  nakshatra, Makara is a rashi. Now `Enters Magha nakshatra` and `Enters Makara
+  rashi`.

@@ -13,8 +13,15 @@ use serde::Serialize;
 /// unreachable.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
-    #[error("{0} is outside the range Chandra has data for")]
-    DateOutOfRange(String),
+    /// A year, month and day that do not name a day - 30 February, month 13.
+    ///
+    /// Not an out-of-range date, which is what this used to be called. There is
+    /// no out-of-range case: outside 1800-2399 the analytic fallback answers and
+    /// the panel says so, which is what the precision note exists for. The old
+    /// name described a case that cannot happen while being used for one that
+    /// can, and the front end printed "Outside 1800-2399" for 30 February.
+    #[error("{0} is not a date")]
+    InvalidDate(String),
 
     #[error("a boundary time could not be resolved: {0}")]
     NoConvergence(String),
@@ -30,7 +37,7 @@ impl AppError {
     /// Stable identifier the front end switches on.
     pub fn code(&self) -> &'static str {
         match self {
-            AppError::DateOutOfRange(_) => "DATE_OUT_OF_RANGE",
+            AppError::InvalidDate(_) => "INVALID_DATE",
             AppError::NoConvergence(_) => "NO_CONVERGENCE",
             AppError::Engine(_) => "ENGINE",
             AppError::Settings(_) => "SETTINGS",
@@ -43,7 +50,7 @@ impl From<chandra_almanac::Error> for AppError {
         use chandra_almanac::Error as E;
         match error {
             E::InvalidDate { year, month, day } => {
-                AppError::DateOutOfRange(format!("{year}-{month:02}-{day:02}"))
+                AppError::InvalidDate(format!("{year}-{month:02}-{day:02}"))
             }
             E::NoCrossing { what, graha, .. } => {
                 AppError::NoConvergence(format!("{what} for {graha}"))

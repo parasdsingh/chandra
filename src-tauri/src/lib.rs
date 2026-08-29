@@ -23,25 +23,24 @@ use tauri::{Manager, RunEvent, WindowEvent};
 
 use crate::state::AppState;
 
-/// How long after local midnight to redraw the tray.
+/// How long after an hour boundary to redraw the tray.
 ///
 /// A few seconds of slack, so a clock adjustment across the boundary cannot make
-/// the timer fire on the day it just left.
-const MIDNIGHT_SLACK: Duration = Duration::from_secs(5);
+/// the timer fire on the hour it just left.
+const HOUR_SLACK: Duration = Duration::from_secs(5);
 
-/// Longest the midnight watcher parks for in one go.
+/// Longest the tray watcher parks for in one go.
 ///
 /// `thread::sleep` does not advance while the machine is asleep, so a laptop
-/// shut over midnight returns from a single long sleep hours after the boundary
-/// it was waiting for and keeps yesterday's disc in the menu bar until the rest
-/// of that sleep has elapsed awake - which can be another whole day. Looking at
-/// the clock periodically bounds that to this interval.
+/// shut over an hour boundary returns from a single long sleep well after the
+/// boundary it was waiting for and keeps a stale disc in the menu bar until the
+/// rest of that sleep has elapsed awake. Looking at the clock periodically
+/// bounds that to this interval.
 ///
-/// Not polling in the sense D-017 rules out: what happens on each wake is two
-/// date computations costing microseconds, and the redraw still happens only
-/// when the displayed day has actually rolled over, which is the one trigger
-/// D-017 names.
-const MIDNIGHT_CHECK_INTERVAL: Duration = Duration::from_secs(600);
+/// Not polling in the sense D-017 ruled out: what happens on each wake is two
+/// clock reads costing microseconds, and the redraw still happens only when the
+/// displayed hour has actually rolled over.
+const HOUR_CHECK_INTERVAL: Duration = Duration::from_secs(300);
 
 pub fn run() {
     tauri::Builder::default()
@@ -89,7 +88,7 @@ pub fn run() {
                 handle.state::<AppState>().settings().appearance.clamped(),
             );
             tray::build(&handle)?;
-            watch_for_midnight(handle.clone());
+            watch_the_clock(handle.clone());
 
             Ok(())
         })
@@ -128,27 +127,34 @@ pub fn run() {
         });
 }
 
-/// Redraws the tray when the local date changes.
+/// Redraws the tray when the local hour changes.
 ///
-/// The moon disc shows the illumination at local noon of the current date, so it
-/// changes exactly once a day (`docs/DESIGN.md` 7.1). The thread waits for that
-/// boundary rather than recomputing on a timer, and compares dates rather than
-/// trusting that it woke when it meant to: a sleep does not run while the
-/// machine is suspended, and one that meant to end at midnight can return long
-/// after it.
-fn watch_for_midnight(app: tauri::AppHandle) {
+/// The moon disc shows the illumination *now*, not at any fixed instant of the
+/// day, so it is only ever as current as its last redraw. It used to be redrawn
+/// at local midnight alone, which left the disc and its tooltip up to
+/// twenty-four hours stale - the Moon's lit fraction moves by as much as
+/// thirteen points across a day, so by evening the menu bar was visibly wrong.
+///
+/// Hourly is the resolution the disc can actually show: a fifty-fifth of a
+/// percent of illumination is well under a pixel at 22pt. The tooltip is not
+/// bound to this at all - it is rebuilt when the pointer arrives.
+///
+/// The thread compares clocks rather than trusting that it woke when it meant
+/// to: a sleep does not run while the machine is suspended, and one that meant
+/// to end on the hour can return long after it.
+fn watch_the_clock(app: tauri::AppHandle) {
     std::thread::spawn(move || {
-        // The tray was drawn for today as the app started.
-        let mut drawn_for = jiff::Zoned::now().date();
+        // The tray was drawn for this hour as the app started.
+        let mut drawn_for = current_hour();
 
         loop {
-            std::thread::sleep(next_midnight_check());
+            std::thread::sleep(next_hour_check());
 
-            let today = jiff::Zoned::now().date();
-            if today == drawn_for {
+            let hour = current_hour();
+            if hour == drawn_for {
                 continue;
             }
-            drawn_for = today;
+            drawn_for = hour;
 
             // Same rule as everywhere else: the status item is an AppKit object
             // and must only be touched on the main thread.
@@ -168,28 +174,47 @@ fn watch_for_midnight(app: tauri::AppHandle) {
     });
 }
 
-/// How long to wait before looking at the clock again.
+/// The local date and hour, which is what a redraw is keyed on.
 ///
-/// Until just after the next local midnight, or [`MIDNIGHT_CHECK_INTERVAL`],
-/// whichever comes first.
-fn next_midnight_check() -> Duration {
-    duration_until_local_midnight()
-        .map(|until| until + MIDNIGHT_SLACK)
-        .unwrap_or(MIDNIGHT_CHECK_INTERVAL)
-        .min(MIDNIGHT_CHECK_INTERVAL)
+/// A pair rather than an hour alone: comparing hours across midnight would find
+/// 23 and 0 equal one day apart only by accident, and a machine suspended for
+/// exactly a day would skip the redraw entirely.
+fn current_hour() -> (jiff::civil::Date, i8) {
+    let now = jiff::Zoned::now();
+    (now.date(), now.hour())
 }
 
-/// Time from now until the next local midnight.
+/// How long to wait before looking at the clock again.
 ///
-/// Derived from the tz database rather than by rounding up to the next multiple
-/// of 24 hours: a daylight saving transition makes a day 23 or 25 hours long,
-/// and arithmetic would drift a day out of step twice a year.
-fn duration_until_local_midnight() -> Option<Duration> {
-    let now = jiff::Zoned::now();
-    let tomorrow = now.date().tomorrow().ok()?;
-    let midnight = tomorrow.to_zoned(now.time_zone().clone()).ok()?;
+/// Until just after the next local hour boundary, or [`HOUR_CHECK_INTERVAL`],
+/// whichever comes first.
+fn next_hour_check() -> Duration {
+    duration_until_next_hour()
+        .map(|until| until + HOUR_SLACK)
+        .unwrap_or(HOUR_CHECK_INTERVAL)
+        .min(HOUR_CHECK_INTERVAL)
+}
 
-    let seconds = midnight.timestamp().as_second() - now.timestamp().as_second();
+/// Time from now until the next local hour boundary.
+///
+/// Derived from the tz database rather than from the minutes and seconds on the
+/// clock: a zone that moves its offset by thirty or forty-five minutes - India,
+/// Nepal, parts of Australia - has hour boundaries that are not on the hour in
+/// any other zone, and a daylight saving transition can make the step to the
+/// next one shorter or longer than an hour.
+fn duration_until_next_hour() -> Option<Duration> {
+    let now = jiff::Zoned::now();
+    let next = now
+        .with()
+        .minute(0)
+        .second(0)
+        .subsec_nanosecond(0)
+        .build()
+        .ok()?
+        .checked_add(jiff::Span::new().hours(1))
+        .ok()?;
+
+    let seconds = next.timestamp().as_second() - now.timestamp().as_second();
     (seconds > 0).then(|| Duration::from_secs(seconds as u64))
 }
 
@@ -198,15 +223,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn midnight_is_always_within_the_next_twenty_six_hours() {
-        // 26 rather than 24: a zone that moves its clock back makes the longest
-        // possible day 25 hours, and the slack is added on top.
-        let wait = duration_until_local_midnight().expect("a next midnight exists");
+    fn the_next_hour_is_always_within_two_hours() {
+        // Two rather than one: a zone that moves its clock back repeats an hour,
+        // and the slack is added on top.
+        let wait = duration_until_next_hour().expect("a next hour exists");
         assert!(wait.as_secs() > 0);
         assert!(
-            wait.as_secs() <= 26 * 3600,
-            "waiting {} hours is not a next midnight",
-            wait.as_secs() / 3600
+            wait.as_secs() <= 2 * 3600,
+            "waiting {} seconds is not a next hour",
+            wait.as_secs()
         );
     }
 
@@ -214,10 +239,10 @@ mod tests {
     /// machine that was asleep over the boundary.
     #[test]
     fn the_watcher_looks_at_the_clock_at_least_every_interval() {
-        let wait = next_midnight_check();
+        let wait = next_hour_check();
         assert!(wait > Duration::ZERO, "a zero wait would spin");
         assert!(
-            wait <= MIDNIGHT_CHECK_INTERVAL,
+            wait <= HOUR_CHECK_INTERVAL,
             "parked for {wait:?}, past the point a resumed machine would be noticed"
         );
     }
