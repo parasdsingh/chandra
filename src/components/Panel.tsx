@@ -550,13 +550,25 @@ export function Panel(props: Props): JSX.Element {
     onCleanup(() => void opened.then((unlisten) => unlisten()));
   });
 
+  /** Whether the calendar in force names months by the Moon. */
+  const lunar = () => props.boot.settings.calendar.month_system !== "solar";
+
   const headerTitle = () => {
     if (view() === "settings") return SECTION_TITLES[section()];
-    // A lunar day is called by its tithi, so that is what the header says. The
-    // civil date it also has moves to the line below, where the weekday and the
-    // vara already are. In solar mode the western date is the name and the
-    // header keeps it.
+    // A lunar day is called by its tithi, so that is what the header says, and
+    // the civil date it also has moves to the line below. In solar mode the
+    // western date *is* the name, so the header is left empty and `Header`
+    // falls back to it.
+    //
+    // The mode is tested explicitly. It used to be inferred from the panchanga
+    // being absent, which was true only while `DayPanchanga` was an `Option`
+    // that solar mode left `None`. Making it non-optional removed the inference
+    // without removing the code that depended on it, so every mode got a tithi
+    // for a title - and because the date line prints the civil date only in
+    // lunar mode, a solar day ended up naming itself `Krishna Shashthi` with no
+    // date anywhere on the surface.
     if (view() === "day") {
+      if (!lunar()) return "";
       const panchanga = detail()?.panchanga;
       if (!panchanga) return "";
       const span =
@@ -671,7 +683,7 @@ export function Panel(props: Props): JSX.Element {
               events={selectedEvents()}
               context={{ timeZone: timeZone() }}
               isToday={sameDate(selected(), today())}
-              lunar={props.boot.settings.calendar.month_system !== "solar"}
+              lunar={lunar()}
               error={error()}
             />
           </Show>
