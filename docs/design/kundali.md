@@ -217,6 +217,64 @@ from Swiss Ephemeris, which is the reference the published values are themselves
 computed from. A table of hand-copied instants would add maintenance and check
 nothing the closed form does not.
 
+### 2.2.2 The guard, concretely
+
+**What it computes.** The same number, from the inputs rather than from the
+library.
+
+| Input | Where from |
+|---|---|
+| RAMC — right ascension of the midheaven | `swe_sidtime(jd_ut)` gives Greenwich apparent sidereal time in hours. LST = GAST + longitude ÷ 15. RAMC = LST × 15 |
+| ε — true obliquity | `swe_calc_ut(jd, SE_ECL_NUT, …)`, first element |
+| φ — geographic latitude | the observer |
+
+> Asc = atan2( cos RAMC, −( sin RAMC · cos ε + tan φ · sin ε ) )
+
+normalised to `[0, 360)`, with the quadrant resolved against the MC — the
+ascendant lies in the semicircle east of it. That quadrant fix is the most
+likely place to get this wrong, and getting it wrong shows up as a clean 180°
+disagreement, which is about as loud as a test failure gets.
+
+**What it asserts.**
+
+```
+closed_form_tropical(jd, lat, lon) − ayanamsa(jd)  ==  engine.ascendant(jd, observer)
+```
+
+**Coverage.** Latitudes 0, ±23.4, ±45, ±60 — every band except polar, which
+§2.3 handles separately. Instants every two hours across a day so all twelve
+rashis take a turn rising, and a handful of dates across a year so the obliquity
+and the equation of time both move. A test that only ever sees one rising sign
+proves one twelfth of the thing.
+
+**The wrinkle, and why the tolerance is a finding rather than a knob.**
+
+`Engine::ayanamsa` is deliberately *not* `swe_get_ayanamsa_ex_ut`. It is the
+difference between the tropical and sidereal longitude of the Sun, because that
+is the quantity actually applied to every position the app displays
+(`engine.rs:365-384`). The two resolve the equinox differently and can differ by
+the nutation in longitude, up to about 17 arcseconds.
+
+`swe_houses_ex` with `SEFLG_SIDEREAL` does its own sidereal transformation
+(`swehouse.c:269`). If it uses the library's ayanamsa rather than ours, the
+assertion above will not close to arcsecond precision — it will close to about
+17 arcseconds.
+
+That is worth knowing rather than absorbing. **If the residual is ~17″, it means
+the lagna sits on a very slightly different sidereal frame from every rashi the
+app already prints**, and two figures on one screen would disagree about where a
+sign boundary is — within 17″ of it, or about one crossing in six thousand. The
+tolerance is therefore set at arcsecond precision first, and if it fails at ~17″
+the fix is to put the lagna on the app's own frame, not to widen the tolerance
+until it passes.
+
+**One discipline note.** If the two disagree, the question is which is wrong.
+The closed form is implemented from a cited source and then left alone; tuning
+it until it agrees with `swe_houses_ex` would turn the guard into an echo of the
+thing it guards, and this project has already recorded what that failure looks
+like — `docs/AUDIT.md`: *a fix whose test would still pass against the old code
+is not finished.*
+
 **The test's location is chosen so a swap is loud.** Latitude and longitude far
 apart, in a different hemisphere band: Bengaluru at 12.97N 77.59E transposes to
 77.59N 12.97E, inside the Arctic circle, where the polar branch of §2.3 fires as
