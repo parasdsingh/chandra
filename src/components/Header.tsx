@@ -33,18 +33,26 @@ interface Props {
   onJump: () => void;
   /** Whether the picker is already open, so the title can say so. */
   jumping: boolean;
+  /** Whether the app is waiting for a location before it will show anything.
+   *
+   * The header then names the app and offers nothing: there is no month to
+   * title, and the settings gear would be a way round the one thing being
+   * insisted on. */
+  gated: boolean;
 }
 
 export function Header(props: Props): JSX.Element {
-  const isCalendar = () => props.view === "calendar";
+  const isCalendar = () => props.view === "calendar" && !props.gated;
 
   // In a lunar month the day view supplies its own title - the tithi, which is
   // what the day is called there - and the date drops to the line below it. The
   // western date is the name only where it is the calendar in force.
   const label = () =>
-    props.view === "day" && props.selected && !props.title
-      ? formatDateHeading(props.selected)
-      : props.title;
+    props.gated
+      ? "Chandra"
+      : props.view === "day" && props.selected && !props.title
+        ? formatDateHeading(props.selected)
+        : props.title;
 
   const full = () =>
     isCalendar() ? `${props.subjectName} · ${props.title}` : label();
@@ -92,12 +100,21 @@ export function Header(props: Props): JSX.Element {
 
   return (
     <header class="header">
+      {/* Nothing to go back to while the gate is up, and nowhere to go: the
+          leading slot is empty rather than holding a control that would do
+          nothing. */}
       <Show
         when={isCalendar()}
         fallback={
-          <button class="header__icon" onClick={props.onBack} aria-label="Back">
-            <Chevron />
-          </button>
+          <Show when={!props.gated} fallback={<span class="header__icon" />}>
+            <button
+              class="header__icon"
+              onClick={props.onBack}
+              aria-label="Back"
+            >
+              <Chevron />
+            </button>
+          </Show>
         }
       >
         <span class="header__glyph">
@@ -158,7 +175,7 @@ export function Header(props: Props): JSX.Element {
         </button>
       </Show>
 
-      <Show when={props.view !== "settings"}>
+      <Show when={props.view !== "settings" && !props.gated}>
         <button
           class="header__icon"
           onClick={props.onSettings}

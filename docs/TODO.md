@@ -156,6 +156,42 @@ was defensible while the app showed phases and tithis. It is not defensible now:
 
 ---
 
+## E5. Real places, at real precision
+
+No specification document yet. **Raised by the user, and confirmed: D-007
+promised this and it was never built.**
+
+D-007 says "manual selection searches a bundled GeoNames `cities15000` dataset
+(~25k cities, CC-BY)". `crates/geo/data/` contains `zone.tab` and
+`iso3166.tab` and nothing else. What the search actually offers is
+**418 places** — the representative city of each IANA timezone — at the
+precision `zone.tab` stores, which is degrees and **arcminutes**, about 1.9 km.
+
+Two separate deficiencies:
+
+| | |
+|---|---|
+| **Coverage** | 418 cities for the world. Most people cannot find where they live |
+| **Precision** | arcminutes. Fine for sunrise; the limit for a lagna, which moves about a degree per degree of longitude |
+
+This blocks nothing that is already built — sunrise to 1.9 km is inside a
+second — but it is the ceiling on E1. A user who can only say "Kolkata" when
+they are in Howrah gets a lagna computed for the wrong side of the river, and no
+amount of care in `swe_houses_ex` recovers that.
+
+### E5 tasks
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| 5.1 | Decide the dataset | queued | GeoNames `cities15000` as D-007 says (~25k, ~2 MB), or `cities5000` (~50k). Both CC-BY, both offline |
+| 5.2 | Bundle it, and record the attribution | queued | CC-BY needs the credit shown somewhere. The About pane |
+| 5.3 | Search that scales to 25k | queued | The current linear scan over 418 is fine; over 25k with a per-keystroke debounce it needs measuring |
+| 5.4 | Keep the timezone table as the fallback | queued | It is what makes the app work before a location is chosen, and D-007's step 3 |
+| 5.5 | Coordinates entered by hand | queued | The last resort for somewhere no dataset has. Also the only way to be exact |
+| 5.6 | Amend D-007 | queued | It describes a dataset the app has never had. That is the part that should not have survived this long |
+
+---
+
 # Shipped
 
 ## 1. Correctness — the 56 audit findings are closed

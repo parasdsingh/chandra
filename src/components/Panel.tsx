@@ -38,6 +38,7 @@ import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
 import { localeFirstWeekday } from "../lib/format";
 import { CalendarScroller } from "./CalendarScroller";
 import { MonthJump } from "./MonthJump";
+import { LocationGate, locationIsSet } from "./LocationGate";
 import { DayDetail, ErrorBlock } from "./DayDetail";
 import { Header } from "./Header";
 import {
@@ -599,6 +600,9 @@ export function Panel(props: Props): JSX.Element {
         role="dialog"
         aria-label="Chandra"
       >
+        {/* While the gate is up the header carries the app's name and nothing
+            else: there is no month to title, and a settings gear would offer a
+            way round the one thing the app is insisting on. */}
         <Header
           subject={subject()}
           subjectName={grahaInfo()?.name ?? "Chandra"}
@@ -619,15 +623,26 @@ export function Panel(props: Props): JSX.Element {
           }
           jumping={jumping()}
           onJump={() => setJumping((open) => !open)}
+          gated={!locationIsSet(props.boot)}
         />
 
         <div class="region">
+          {/* Before anything else, and not dismissible. Every figure below this
+              point is computed from where the observer stands, and until that
+              is known they would all be a guess dressed as a reading. D-029. */}
+          <Show when={!locationIsSet(props.boot)}>
+            <LocationGate
+              boot={props.boot}
+              apply={(next) => void applySettings(next)}
+            />
+          </Show>
+
           {/* Every view renders the failure it can cause. The signal used to
               reach only the day detail, so a month that failed to load showed
               nothing at all in the calendar, and a settings save that failed
               fired while the user was by definition in settings - which made
               ERROR_TEXT.SETTINGS unreachable text. */}
-          <Show when={view() === "calendar"}>
+          <Show when={locationIsSet(props.boot) && view() === "calendar"}>
             <Show
               when={error()}
               fallback={
@@ -677,7 +692,7 @@ export function Panel(props: Props): JSX.Element {
             </Show>
           </Show>
 
-          <Show when={view() === "day"}>
+          <Show when={locationIsSet(props.boot) && view() === "day"}>
             <DayDetail
               detail={detail()}
               events={selectedEvents()}
@@ -688,7 +703,7 @@ export function Panel(props: Props): JSX.Element {
             />
           </Show>
 
-          <Show when={view() === "settings"}>
+          <Show when={locationIsSet(props.boot) && view() === "settings"}>
             {/* Above the list rather than instead of it: the controls are what
                 the user needs in order to try something else. */}
             <Show when={error()}>

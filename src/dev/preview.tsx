@@ -127,6 +127,7 @@ function moonHeader(title: string) {
       onSettings={() => {}}
       jumping={false}
       onJump={() => {}}
+      gated={false}
     />
   );
 }
@@ -193,6 +194,7 @@ export function Preview(): JSX.Element {
           onSettings={() => {}}
           jumping={false}
           onJump={() => {}}
+          gated={false}
         />
         <div class="region">
           <DayDetail
@@ -260,6 +262,7 @@ export function Preview(): JSX.Element {
           onSettings={() => {}}
           jumping={false}
           onJump={() => {}}
+          gated={false}
         />
         <div class="region">
           <div class="grid-region">
@@ -340,6 +343,7 @@ export function Preview(): JSX.Element {
               onSettings={() => {}}
               jumping={false}
               onJump={() => {}}
+              gated={false}
             />
             <div class="region">
               <SettingsView

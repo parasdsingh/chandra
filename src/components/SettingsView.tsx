@@ -295,12 +295,26 @@ const INGRESS_CHOICES: { key: IngressMode; label: string }[] = [
 /** Quiet time after the last keystroke before a search is sent. */
 const SEARCH_SETTLE_MS = 180;
 
-function Location(props: SectionProps): JSX.Element {
+/**
+ * A city search that reports what was picked.
+ *
+ * Shared by the settings pane and the first-run gate. Extracted rather than
+ * copied: the debounce, the stale-answer guard and the difference between "no
+ * city matches" and "the search could not be asked" are the substance of it, and
+ * a second copy would be a second place for them to be got wrong.
+ */
+export function CitySearch(props: {
+  onPick: (city: City) => void;
+  /** Told whether a result list is showing, so a caller can fold away whatever
+   *  sits beneath it rather than be pushed off the pane. */
+  onSearchingChange?: (searching: boolean) => void;
+}): JSX.Element {
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<City[]>([]);
   const [searchFailed, setSearchFailed] = createSignal(false);
-  const [locating, setLocating] = createSignal(false);
-  const settings = () => props.boot.settings;
+
+  const searching = () => query().trim().length >= 2;
+  createEffect(() => props.onSearchingChange?.(searching()));
 
   /**
    * One search per pause, and only the newest answer counts.
@@ -347,28 +361,77 @@ function Location(props: SectionProps): JSX.Element {
     });
   });
 
-  function choose(city: City) {
-    props.apply({
-      ...settings(),
-      location: {
-        ...settings().location,
-        mode: "manual",
-        place: {
-          label: city.city,
-          zone: city.zone,
-          latitude: city.latitude,
-          longitude: city.longitude,
-          // The table carries no elevation column, so this place has none -
-          // which is `null` and not zero. Written as zero it claimed sea level
-          // for every city in the world. The user's own correction lives beside
-          // the place and still applies, so it is not copied here.
-          elevation: null,
-        },
-      },
-    });
+  function pick(city: City) {
     setQuery("");
     setResults([]);
+    props.onPick(city);
   }
+
+  return (
+    <>
+      <input
+        class="settings__search"
+        type="search"
+        placeholder="Search for a city"
+        value={query()}
+        onInput={(event) => setQuery(event.currentTarget.value)}
+      />
+
+      <Show when={searching()}>
+        <Show
+          when={results().length > 0}
+          fallback={
+            <p class="settings__empty">
+              {searchFailed()
+                ? "City search is unavailable."
+                : `No city matches “${query().trim()}”.`}
+            </p>
+          }
+        >
+          <ul class="settings__results">
+            <For each={results()}>
+              {(city) => (
+                <li>
+                  <button class="settings__result" onClick={() => pick(city)}>
+                    <span>{city.city}</span>
+                    <span class="settings__hint">{city.country}</span>
+                  </button>
+                </li>
+              )}
+            </For>
+          </ul>
+        </Show>
+      </Show>
+    </>
+  );
+}
+
+/** The settings a picked city writes. Shared for the same reason the search is. */
+export function placeFromCity(settings: Settings, city: City): Settings {
+  return {
+    ...settings,
+    location: {
+      ...settings.location,
+      mode: "manual",
+      place: {
+        label: city.city,
+        zone: city.zone,
+        latitude: city.latitude,
+        longitude: city.longitude,
+        // The table carries no elevation column, so this place has none - which
+        // is `null` and not zero. Written as zero it claimed sea level for every
+        // city in the world. The user's own correction lives beside the place
+        // and still applies, so it is not copied here.
+        elevation: null,
+      },
+    },
+  };
+}
+
+function Location(props: SectionProps): JSX.Element {
+  const [locating, setLocating] = createSignal(false);
+  const [searching, setSearching] = createSignal(false);
+  const settings = () => props.boot.settings;
 
   return (
     <div class="settings__section">
@@ -387,41 +450,14 @@ function Location(props: SectionProps): JSX.Element {
         </span>
       </div>
 
-      <input
-        class="settings__search"
-        type="search"
-        placeholder="Search for a city"
-        value={query()}
-        onInput={(event) => setQuery(event.currentTarget.value)}
+      <CitySearch
+        onPick={(city) => props.apply(placeFromCity(settings(), city))}
+        onSearchingChange={setSearching}
       />
 
-      <Show when={query().trim().length >= 2}>
-        <Show
-          when={results().length > 0}
-          fallback={
-            <p class="settings__empty">
-              {searchFailed()
-                ? "City search is unavailable."
-                : `No city matches \u201c${query().trim()}\u201d.`}
-            </p>
-          }
-        >
-          <ul class="settings__results">
-            <For each={results()}>
-              {(city) => (
-                <li>
-                  <button class="settings__result" onClick={() => choose(city)}>
-                    <span>{city.city}</span>
-                    <span class="settings__hint">{city.country}</span>
-                  </button>
-                </li>
-              )}
-            </For>
-          </ul>
-        </Show>
-      </Show>
-
-      <Show when={query().trim().length < 2}>
+      {/* Folded away while a result list is showing, so six cities do not push
+          the elevation field and the buttons off the pane. */}
+      <Show when={!searching()}>
         <div class="settings__row">
           <span class="settings__label">Elevation</span>
           <input

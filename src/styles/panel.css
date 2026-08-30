@@ -853,3 +853,44 @@
   color: inherit;
   white-space: nowrap;
 }
+
+/* ---------- the location gate ---------- */
+
+/* Before anything else, and not dismissible. It fills the region rather than
+   overlaying it: there is nothing behind it worth seeing through, because
+   everything behind it would be computed from a location nobody has given. */
+.gate {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.gate__lead {
+  font: var(--type-title);
+  letter-spacing: var(--track-title);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.gate__why {
+  font: var(--type-body);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Full width, because it is the recommended way through and the search below is
+   the fallback - not the other way round. */
+.gate__button {
+  align-self: stretch;
+  text-align: center;
+}
+
+.gate__refused {
+  font: var(--type-body);
+  color: var(--text-secondary);
+  margin: 0;
+}
