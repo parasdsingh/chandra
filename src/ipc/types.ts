@@ -378,6 +378,54 @@ export interface PlaceSetting {
   elevation: number | null;
 }
 
+/**
+ * The Lagna Kundali at an instant.
+ *
+ * One shape for all three chart formats. They differ in where on screen a rashi
+ * is drawn and what is written in the compartment; they do not differ in what is
+ * true.
+ */
+export interface Chakra {
+  unix_ms: number;
+  lagna: Lagna;
+  /** Twelve, always, in zodiacal order from Mesha. An empty rashi is present
+   *  and empty: the chart draws twelve compartments whatever stands in them. */
+  rashis: ChakraRashi[];
+  source: Source;
+}
+
+export interface Lagna {
+  rashi: string;
+  name: string;
+  longitude: number;
+  /** Degrees, arcminutes, arcseconds into the rashi. The part that goes stale
+   *  fastest — the ascendant moves about a degree every four minutes. */
+  degrees_in_rashi: [number, number, number];
+}
+
+export interface ChakraRashi {
+  rashi: string;
+  name: string;
+  /** Three letters, for a compartment with no room for `Vrishchika`. */
+  short: string;
+  /** Counted inclusively from the lagna's rashi, 1 to 12, whole sign. */
+  house: number;
+  grahas: ChakraGraha[];
+}
+
+export interface ChakraGraha {
+  graha: GrahaKey;
+  /** Two Latin letters — `Su`, `Mo`, `Ma`, `Me`, `Ju`, `Ve`, `Sa`, `Ra`, `Ke`.
+   *  Sanskrit does not abbreviate to two: Shukra and Shani are both `Sh`. */
+  short: string;
+  longitude: number;
+  degrees_in_rashi: [number, number, number];
+  retrograde: boolean;
+}
+
+/** The three chart formats in common use. */
+export type ChartFormat = "north" | "south" | "east";
+
 /** Which division a cell names when the subject enters one. */
 export type IngressMode = "off" | "rashi" | "nakshatra";
 
@@ -411,6 +459,11 @@ export interface Settings {
     yogas: boolean;
     karanas: boolean;
     muhurtas: boolean;
+  };
+  /** The Lagna Kundali: its own menu bar item, and which format it draws. */
+  chart: {
+    tray: boolean;
+    format: ChartFormat;
   };
   tray: {
     subjects: GrahaKey[];

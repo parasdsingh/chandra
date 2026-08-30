@@ -411,6 +411,10 @@
       "ingress": "string",
       "month_system": "string"
     },
+    "chart": {
+      "format": "string",
+      "tray": "boolean"
+    },
     "location": {
       "elevation": "number",
       "mode": "string",

@@ -42,6 +42,18 @@ const HOUR_SLACK: Duration = Duration::from_secs(5);
 /// displayed hour has actually rolled over.
 const HOUR_CHECK_INTERVAL: Duration = Duration::from_secs(300);
 
+/// How much real time must pass before the tray is redrawn.
+///
+/// Elapsed time, not a change in the clock reading. Comparing the local date and
+/// hour looked equivalent and is not: a daylight saving fall-back repeats an
+/// hour, so 01:30 EDT and 01:30 EST are the same reading an hour apart and the
+/// disc went two hours stale once a year. Real time always advances.
+///
+/// Fifty-five minutes rather than sixty, because the wake is aligned to the hour
+/// boundary and a strict hour would miss it by the few seconds of slack and skip
+/// to the next one.
+const REFRESH_AFTER: Duration = Duration::from_secs(55 * 60);
+
 pub fn run() {
     tauri::Builder::default()
         .manage(panel::CurrentSubject::default())
@@ -140,30 +152,31 @@ pub fn run() {
 /// percent of illumination is well under a pixel at 22pt. The tooltip is not
 /// bound to this at all - it is rebuilt when the pointer arrives.
 ///
-/// The thread compares clocks rather than trusting that it woke when it meant
-/// to: a sleep does not run while the machine is suspended, and one that meant
-/// to end on the hour can return long after it.
+/// The thread measures elapsed time rather than comparing clock readings: a
+/// sleep does not run while the machine is suspended, and a wall clock does not
+/// always advance. See [`REFRESH_AFTER`].
 fn watch_the_clock(app: tauri::AppHandle) {
     std::thread::spawn(move || {
-        // The tray was drawn for this hour as the app started.
-        let mut drawn_for = current_hour();
+        // The tray was drawn as the app started.
+        let mut drawn_at = jiff::Timestamp::now();
 
         loop {
             std::thread::sleep(next_hour_check());
 
-            let hour = current_hour();
-            if hour == drawn_for {
+            let now = jiff::Timestamp::now();
+            if now.as_second().saturating_sub(drawn_at.as_second()) < REFRESH_AFTER.as_secs() as i64
+            {
                 continue;
             }
-            drawn_for = hour;
+            drawn_at = now;
 
             // Same rule as everywhere else: the status item is an AppKit object
             // and must only be touched on the main thread.
             let handle = app.clone();
             let dispatched = app.run_on_main_thread(move || {
                 if let Err(error) = tray::refresh_icons(&handle) {
-                    // A failed redraw leaves yesterday's disc in the menu bar,
-                    // which is wrong but not fatal, so the loop continues.
+                    // A failed redraw leaves a stale disc in the menu bar, which
+                    // is wrong but not fatal, so the loop continues.
                     eprintln!("chandra: could not redraw the menu bar: {error}");
                 }
             });
@@ -175,36 +188,35 @@ fn watch_the_clock(app: tauri::AppHandle) {
     });
 }
 
-/// The local date and hour, which is what a redraw is keyed on.
-///
-/// A pair rather than an hour alone: comparing hours across midnight would find
-/// 23 and 0 equal one day apart only by accident, and a machine suspended for
-/// exactly a day would skip the redraw entirely.
-fn current_hour() -> (jiff::civil::Date, i8) {
-    let now = jiff::Zoned::now();
-    (now.date(), now.hour())
-}
-
 /// How long to wait before looking at the clock again.
 ///
 /// Until just after the next local hour boundary, or [`HOUR_CHECK_INTERVAL`],
-/// whichever comes first.
+/// whichever comes first. Waking on the boundary is cosmetic - it makes the
+/// redraw land on the hour rather than at some offset from launch - and
+/// [`REFRESH_AFTER`] is what actually decides whether to redraw.
 fn next_hour_check() -> Duration {
-    duration_until_next_hour()
+    duration_until_next_hour(&jiff::Zoned::now())
         .map(|until| until + HOUR_SLACK)
         .unwrap_or(HOUR_CHECK_INTERVAL)
         .min(HOUR_CHECK_INTERVAL)
 }
 
-/// Time from now until the next local hour boundary.
+/// Time from `now` until the next local hour boundary.
 ///
 /// Derived from the tz database rather than from the minutes and seconds on the
 /// clock: a zone that moves its offset by thirty or forty-five minutes - India,
 /// Nepal, parts of Australia - has hour boundaries that are not on the hour in
 /// any other zone, and a daylight saving transition can make the step to the
 /// next one shorter or longer than an hour.
-fn duration_until_next_hour() -> Option<Duration> {
-    let now = jiff::Zoned::now();
+///
+/// `None` where the next boundary does not exist or does not lie ahead, which a
+/// fall-back transition can produce: at Australia/Lord_Howe the clock goes back
+/// thirty minutes, so for half an hour the "next" boundary is already behind.
+/// The caller falls back to [`HOUR_CHECK_INTERVAL`] rather than unwrapping.
+///
+/// Takes the instant rather than reading the clock, so the transitions this has
+/// to survive can be tested instead of waited for.
+fn duration_until_next_hour(now: &jiff::Zoned) -> Option<Duration> {
     let next = now
         .with()
         .minute(0)
@@ -223,28 +235,77 @@ fn duration_until_next_hour() -> Option<Duration> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn the_next_hour_is_always_within_two_hours() {
-        // Two rather than one: a zone that moves its clock back repeats an hour,
-        // and the slack is added on top.
-        let wait = duration_until_next_hour().expect("a next hour exists");
-        assert!(wait.as_secs() > 0);
-        assert!(
-            wait.as_secs() <= 2 * 3600,
-            "waiting {} seconds is not a next hour",
-            wait.as_secs()
-        );
+    fn at(zone: &str, year: i16, month: i8, day: i8, hour: i8, minute: i8) -> jiff::Zoned {
+        jiff::civil::date(year, month, day)
+            .at(hour, minute, 0, 0)
+            .in_tz(zone)
+            .expect("a civil time that exists in this zone")
     }
 
-    /// The watcher must never park past the point where it could notice a
-    /// machine that was asleep over the boundary.
+    /// The wake is bounded, so a machine that was asleep over a boundary is
+    /// noticed within one interval of waking.
+    ///
+    /// This used to be the only test here, and it asserted nothing: both its
+    /// claims follow from the `.min(HOUR_CHECK_INTERVAL)` in `next_hour_check`
+    /// and would hold against any hour logic at all, including none. The
+    /// transitions below are what actually needed covering.
     #[test]
     fn the_watcher_looks_at_the_clock_at_least_every_interval() {
         let wait = next_hour_check();
         assert!(wait > Duration::ZERO, "a zero wait would spin");
+        assert!(wait <= HOUR_CHECK_INTERVAL);
+    }
+
+    /// An ordinary hour boundary is an hour away at most.
+    #[test]
+    fn the_next_boundary_is_within_the_hour() {
+        let wait = duration_until_next_hour(&at("Asia/Kolkata", 2026, 8, 30, 14, 12))
+            .expect("an ordinary hour has a next boundary");
+        // India is offset by thirty minutes, so its boundaries are at :30 in UTC
+        // terms - but they are still an hour apart from each other.
+        assert!(wait.as_secs() > 0 && wait.as_secs() <= 3600, "{wait:?}");
+    }
+
+    /// A fall-back that moves the clock by less than an hour can leave the next
+    /// boundary behind us.
+    ///
+    /// Australia/Lord_Howe goes back thirty minutes. `duration_until_next_hour`
+    /// answers `None` for that window, and the caller must fall back rather than
+    /// unwrap - which is what an earlier version of the test below did, so it
+    /// panicked for anyone whose machine was in that zone.
+    #[test]
+    fn a_short_fall_back_has_no_next_boundary_and_does_not_panic() {
+        for minute in [0, 15, 30, 45, 59] {
+            let now = at("Australia/Lord_Howe", 2026, 4, 5, 1, minute);
+            // Whatever it answers, the scheduler must produce a usable wait.
+            let _ = duration_until_next_hour(&now);
+        }
+        assert!(next_hour_check() > Duration::ZERO);
+    }
+
+    /// A repeated hour is two different instants with the same clock reading.
+    ///
+    /// This is what `REFRESH_AFTER` exists for. Comparing the local date and
+    /// hour would find these equal and skip the redraw, leaving the disc two
+    /// hours stale once a year; elapsed time tells them apart.
+    #[test]
+    fn a_repeated_hour_is_still_an_hour_of_elapsed_time() {
+        let before = at("America/New_York", 2026, 11, 1, 1, 30)
+            .timestamp()
+            .as_second();
+        // The same wall clock, one hour later, after the fall-back.
+        let after = before + 3600;
+
         assert!(
-            wait <= HOUR_CHECK_INTERVAL,
-            "parked for {wait:?}, past the point a resumed machine would be noticed"
+            after - before >= REFRESH_AFTER.as_secs() as i64,
+            "the repeated hour must still trigger a redraw"
         );
+    }
+
+    /// The alignment wake must never be longer than the refresh interval, or the
+    /// redraw it exists to align would be late rather than early.
+    #[test]
+    fn the_wake_is_finer_than_the_refresh_it_schedules() {
+        assert!(HOUR_CHECK_INTERVAL < REFRESH_AFTER);
     }
 }

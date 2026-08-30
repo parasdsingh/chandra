@@ -439,7 +439,10 @@ Measured over twenty years, sampled daily:
 | Node type | Retrograde | Direct spells |
 |---|---|---|
 | Mean | 100.0% of days | none in 20 years |
-| True (the default) | 74.1% | 503 in 20 years — about 25 a year, averaging 3.8 days |
+| True | 74.1% | 503 in 20 years — about 25 a year, averaging 3.8 days |
+
+At the time this was written the true node was the default. **D-027 changed that**; the mean node
+is now what a fresh install computes, which makes the first row the one that describes most users.
 
 The true node oscillates about the mean with a fortnightly term whose rate of change exceeds the
 mean retrograde rate of 0.0529°/day for part of every half draconic month, so it genuinely turns

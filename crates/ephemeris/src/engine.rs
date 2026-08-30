@@ -19,11 +19,17 @@ const SEFLG_SPEED: i32 = 256;
 const SEFLG_SIDEREAL: i32 = 64 * 1024;
 
 /// House system letter. `W` is whole sign: the ascendant's own rashi is the
-/// first house and each house is one whole rashi.
+/// first house and each house is one whole rashi, which is what jyotisha uses.
 ///
-/// The ascendant itself does not depend on this - Swiss Ephemeris fills
-/// `ascmc[0]` before it divides the houses - but a system must be named, and
-/// whole sign is the one jyotisha uses.
+/// An earlier comment here claimed the ascendant does not depend on the system
+/// because Swiss Ephemeris fills `ascmc[0]` before dividing the houses. That is
+/// false, and an audit said so: `swehouse.c` rewrites `hsp->ac` on the whole
+/// sign path, and the sidereal path substitutes `E` for `W` before dividing.
+///
+/// The value is right anyway. The rewrite is guarded by a sign test that a scan
+/// of every ARMC from 0 to 360 at latitudes 51.5 to 90 never trips, so no
+/// correction ever ships - but the safety is empirical, not structural, which is
+/// a different claim from the one that was written here.
 const SE_HSYS_WHOLE_SIGN: i32 = b'W' as i32;
 
 /// Pseudo-body that makes `swe_calc_ut` return the obliquity and nutation
@@ -385,14 +391,20 @@ impl Engine {
             longitude: observer.longitude,
             sidereal: true,
         })?;
+        // The geometry is exact wherever the clock is, but the ayanamsa applied
+        // to it is not: outside 1800-2399 `swe_houses_ex` resolves it from the
+        // analytic fallback like everything else, and discards the flag word
+        // that would have said so. Asked here instead, the same way `rise_set`
+        // asks - one call whose answer is thrown away and whose flags are kept.
+        //
+        // `Source::Swieph` used to be hardcoded, which made the lagna the one
+        // figure in the app that claimed exactness it had not checked.
+        let flags = SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_SIDEREAL;
+        let (_, returned) = calc_raw(jd_ut, se_body::SUN, flags, "ascendant")?;
+
         Ok(Reading {
             degrees: sidereal.ascendant,
-            // `swe_houses_ex` reports no flag word, so there is nothing to read
-            // a theory off. The ascendant is geometry over the sidereal time and
-            // the obliquity rather than a body's position, and neither of those
-            // comes from the data files - so it is exact wherever the clock is,
-            // and saying `Swieph` here states that rather than assuming it.
-            source: Source::Swieph,
+            source: Source::from_returned_flags(returned),
         })
     }
 

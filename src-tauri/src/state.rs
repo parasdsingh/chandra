@@ -147,7 +147,15 @@ impl AppState {
         elevation: Option<f64>,
     ) -> Result<()> {
         let mut settings = self.settings();
-        if settings.location.mode == crate::settings::LocationMode::Manual {
+        // A manual place is authoritative and is never overridden (D-007), so a
+        // device fix arriving while one is set is discarded. But only where one
+        // is actually set: `mode: manual` with no place is not a choice, it is
+        // the state the location gate exists to end, and refusing there made
+        // "Use this Mac" a silent no-op that the gate then reported as a
+        // refusal.
+        if settings.location.mode == crate::settings::LocationMode::Manual
+            && settings.location.place.is_some()
+        {
             return Ok(());
         }
 

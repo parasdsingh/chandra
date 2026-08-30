@@ -195,12 +195,20 @@ export function Panel(props: Props): JSX.Element {
    * the fetch; what it returns is put in `months` and read from there.
    */
   function monthResource(delta: number) {
-    const key = createMemo(() => ({
-      subject: subject(),
-      context: context(),
-      anchor: anchor(),
-      offset: offset() + delta,
-    }));
+    const key = createMemo(() =>
+      // Nothing is fetched while the gate is up. A month computed from the
+      // timezone centroid would be wrong in exactly the way the gate exists to
+      // prevent - and it would be *cached* wrong, so the first month seen after
+      // a location was chosen would still be the guess.
+      locationIsSet(props.boot)
+        ? {
+            subject: subject(),
+            context: context(),
+            anchor: anchor(),
+            offset: offset() + delta,
+          }
+        : undefined,
+    );
 
     createResource(key, async (current) => {
       if (

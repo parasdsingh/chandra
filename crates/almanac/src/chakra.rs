@@ -104,12 +104,17 @@ const fn chart_short(graha: Graha) -> &'static str {
 pub fn at(engine: &Engine, unix_ms: i64, observer: Observer) -> Result<Chakra> {
     let jd = chandra_ephemeris::unix_seconds_to_jd(unix_ms as f64 / 1000.0);
 
+    // Positions first, then the ascendant, and the order matters less than the
+    // fact that both are read before anything is built from either.
+    //
+    // These take the engine lock separately, so a reconfigure can land between
+    // them and give a chart whose lagna is on one ayanamsa and whose grahas are
+    // on another - a whole rashi apart between Lahiri and Raman. `Almanac`
+    // watches the cache generation across this call and recomputes if it moved,
+    // which is what makes the pair atomic; nothing here can do it alone.
+    let positions = engine.positions(jd, &Graha::ALL)?;
     let ascendant = engine.ascendant(jd, observer)?;
     let lagna_rashi = Rashi::from_longitude(ascendant.degrees);
-
-    // One call for all nine, as `standing::at` does. Nine separate calls would
-    // read nine slightly different instants for a chart that claims one.
-    let positions = engine.positions(jd, &Graha::ALL)?;
 
     let mut rashis: Vec<ChakraRashi> = Rashi::ALL
         .into_iter()

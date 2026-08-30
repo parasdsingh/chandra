@@ -9,6 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type {
   Bootstrap,
+  Chakra,
   City,
   DayDetail,
   GrahaKey,
@@ -60,6 +61,16 @@ export const monthIndex = (
   offset: number,
   firstWeekday: number,
 ) => invoke<MonthIndex>("month_index", { anchorUnixMs, offset, firstWeekday });
+
+/**
+ * The Lagna Kundali at an instant.
+ *
+ * The instant is passed rather than read in the back end, so the front end
+ * decides how often it wants a new chart and the same moment can be asked for
+ * twice.
+ */
+export const chakra = (unixMs: number) =>
+  invoke<Chakra>("chakra", { unixMs });
 
 export const dayDetail = (
   graha: GrahaKey,

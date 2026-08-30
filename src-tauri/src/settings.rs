@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 6;
+pub const SCHEMA_VERSION: u32 = 7;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -28,6 +28,7 @@ pub struct Settings {
     pub sidereal: SiderealSetting,
     pub calendar: CalendarSetting,
     pub panchanga: PanchangaSetting,
+    pub chart: ChartSetting,
     pub tray: TraySetting,
     pub appearance: AppearanceSetting,
 }
@@ -90,6 +91,53 @@ impl AppearanceSetting {
             self.scale.clamp(Self::MINIMUM, Self::MAXIMUM)
         } else {
             1.0
+        }
+    }
+}
+
+/// The Lagna Kundali: whether it has a menu bar item, and which format it draws.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChartSetting {
+    /// Its own status item. On by default, which is the first time a new install
+    /// gets two.
+    pub tray: bool,
+    pub format: ChartFormat,
+}
+
+/// The three chart formats in common use.
+///
+/// They differ in where on screen a rashi is drawn and what is written in the
+/// compartment. They do not differ in what is true, which is why one payload
+/// serves all three.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChartFormat {
+    /// Houses fixed, signs move. House 1 is the top diamond. Cannot be drawn
+    /// without a lagna, which is why a location is mandatory.
+    #[default]
+    North,
+    /// Signs fixed, houses move. Meena top-left, clockwise.
+    South,
+    /// Same geometry as South, different origin and direction.
+    East,
+}
+
+impl ChartFormat {
+    pub const ALL: [ChartFormat; 3] = [ChartFormat::North, ChartFormat::South, ChartFormat::East];
+
+    pub const fn key(self) -> &'static str {
+        match self {
+            ChartFormat::North => "north",
+            ChartFormat::South => "south",
+            ChartFormat::East => "east",
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            ChartFormat::North => "North Indian",
+            ChartFormat::South => "South Indian",
+            ChartFormat::East => "East Indian",
         }
     }
 }
@@ -219,6 +267,10 @@ impl Default for Settings {
                 ingress: IngressSetting::Off,
             },
             panchanga: PanchangaSetting::default(),
+            chart: ChartSetting {
+                tray: true,
+                format: ChartFormat::North,
+            },
             tray: TraySetting {
                 // Only the moon, which is permanent and not listed here.
                 subjects: Vec::new(),
@@ -422,6 +474,23 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         }
         value["schema_version"] = serde_json::Value::from(6u32);
         version = 6;
+    }
+
+    // 6 -> 7. The Lagna Kundali arrived, with its own menu bar item and a choice
+    // of three formats. A file written before it means the state it was in,
+    // which is that the feature did not exist - but the item ships on, so an
+    // existing install gets it too rather than having to find a switch for
+    // something it has never seen.
+    if version == 6 {
+        value
+            .as_object_mut()
+            .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
+            .insert(
+                "chart".into(),
+                serde_json::json!({ "tray": true, "format": "north" }),
+            );
+        value["schema_version"] = serde_json::Value::from(7u32);
+        version = 7;
     }
 
     match version {

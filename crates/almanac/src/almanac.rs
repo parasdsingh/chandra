@@ -615,8 +615,32 @@ impl Almanac {
     /// method here: a chart drawn for one place while the calendar beside it is
     /// drawn for another would be two apps in one window.
     pub fn chakra(&self, unix_ms: i64) -> Result<chakra::Chakra> {
-        let settings = self.settings_snapshot()?;
-        chakra::at(&self.engine, unix_ms, settings.location.observer)
+        // A chart reads the nine positions and the ascendant in two calls, each
+        // taking the engine lock on its own. A reconfigure landing between them
+        // would give a lagna on one ayanamsa and grahas on another - a whole
+        // rashi apart between Lahiri and Raman, and nothing on screen would say
+        // so.
+        //
+        // The generation is the same marker the cache uses to refuse a value
+        // computed across a reconfigure. Here it decides whether to try again
+        // rather than what to store, because a chart is not cached: it is a
+        // reading of now, and now has moved by the time it would be asked for
+        // twice.
+        //
+        // Bounded, because a caller reconfiguring in a tight loop must not spin
+        // this thread. Three attempts is already far past what a person can do
+        // with a settings pane.
+        for _ in 0..3 {
+            let generation = self.generation()?;
+            let settings = self.settings_snapshot()?;
+            let built = chakra::at(&self.engine, unix_ms, settings.location.observer)?;
+            if self.generation()? == generation {
+                return Ok(built);
+            }
+        }
+        Err(Error::TimeZone(
+            "the configuration kept changing while the chart was being read".into(),
+        ))
     }
 
     /// What the menu bar needs: the Moon's current phase, and where each enabled

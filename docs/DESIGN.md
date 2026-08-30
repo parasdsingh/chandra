@@ -644,7 +644,7 @@ alignment: it sits with the word it qualifies.
 
 ### 7.1 The moon disc — live-rendered
 
-Drawn per day in `crates/glyph` with `tiny-skia`, applied via
+Drawn hourly in `crates/glyph` with `tiny-skia` (D-028), applied via
 `set_icon_with_as_template(true)` (D-008).
 
 | Property | Value |
@@ -694,12 +694,19 @@ half-ellipse. Each half is 2 cubic Béziers (one per quadrant) with the handle c
 
 | Condition | Render |
 |---|---|
-| `k < 0.02` | ring only at alpha 0.78, no fill |
+| `k < 0.02` | ring only at alpha **1.00**, no fill |
 | `k > 0.98` | solid disc at alpha 1.00, ring omitted |
-| otherwise | lit fill at alpha 1.00 + ring at alpha 0.55 |
+| otherwise | lit fill at alpha 1.00 + ring at alpha **0.90** |
 
-**Refresh.** Redrawn on the local hour (D-028), and on every settings change, panel open and
-location answer. The value used is the illumination **now**.
+Those two alphas read 0.78 and 0.55 here until an audit checked them against
+`crates/glyph/src/moon.rs:25,28`. They were the values from before the revision
+recorded two paragraphs above §7.1, which raised the ring "at near-full opacity
+to match the optical weight of the system icons" and then left the table saying
+what it used to say.
+
+**Refresh.** Redrawn once an hour of elapsed time has passed (D-028), and whenever settings are
+applied, the tray is rebuilt, or a device location answers. Not on a panel open: opening the panel
+does not touch the tray. The value used is the illumination **now**.
 
 The disc and the grid cell therefore answer different questions and can differ within a day:
 the cell is the illumination at that day's local noon, the disc is the illumination at this

@@ -98,7 +98,7 @@ function isCombust(detail: Detail | undefined): boolean {
  * than its state. Both halves of that were wrong.
  *
  * Measured over twenty years: a *mean* node is retrograde on 100% of days, and
- * a *true* node - which is what Chandra uses by default - on 74.1%, turning
+ * a *true* node on 74.1%, turning
  * direct about twenty-five times a year for a little under four days at a time.
  * The true node oscillates about the mean with a fortnightly term, and that
  * oscillation outruns the mean retrograde rate for part of every half draconic
