@@ -444,6 +444,15 @@ export function Panel(props: Props): JSX.Element {
       void ipc.closePanel();
       return;
     }
+    // Nothing reaches the rest of the panel while the gate is up. Every key
+    // below this either navigates a calendar that is not showing or opens a view
+    // that is not reachable - Enter set the view to `day`, invisibly, so picking
+    // a city afterwards opened the app on a day detail nobody asked for.
+    //
+    // The gate's own field keeps its keys: this handler is on the panel, and
+    // typing into an input never reaches it.
+    if (!locationIsSet(props.boot)) return;
+
     if (event.metaKey && event.key === ",") {
       event.preventDefault();
       batch(() => {
@@ -634,6 +643,7 @@ export function Panel(props: Props): JSX.Element {
             <LocationGate
               boot={props.boot}
               apply={(next) => void applySettings(next)}
+              error={error()}
             />
           </Show>
 

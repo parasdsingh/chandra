@@ -13,6 +13,7 @@ use jiff::tz::TimeZone;
 use serde::{Deserialize, Serialize};
 
 use crate::cache::Lru;
+use crate::chakra;
 use crate::day::DayOptions;
 use crate::error::{Error, Result};
 use crate::lunar::{self, LunarMonth, MonthSystem};
@@ -606,6 +607,16 @@ impl Almanac {
             settings.location.observer,
             options,
         )
+    }
+
+    /// The Lagna Kundali at an instant.
+    ///
+    /// The observer is read from settings rather than passed, like every other
+    /// method here: a chart drawn for one place while the calendar beside it is
+    /// drawn for another would be two apps in one window.
+    pub fn chakra(&self, unix_ms: i64) -> Result<chakra::Chakra> {
+        let settings = self.settings_snapshot()?;
+        chakra::at(&self.engine, unix_ms, settings.location.observer)
     }
 
     /// What the menu bar needs: the Moon's current phase, and where each enabled

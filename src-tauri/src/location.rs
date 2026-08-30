@@ -162,7 +162,11 @@ pub enum Outcome {
     Located {
         latitude: f64,
         longitude: f64,
-        elevation: f64,
+        /// `None` where CoreLocation reported the vertical fix as invalid,
+        /// which on a Mac without GPS is every time. Not zero: that is the
+        /// altitude the framework fills in regardless, and storing it claimed a
+        /// measurement nobody made.
+        elevation: Option<f64>,
     },
     /// The user, or a policy, said no. Not retried.
     Denied,
@@ -220,14 +224,30 @@ mod platform {
                 };
                 let coordinate = unsafe { location.coordinate() };
                 let altitude = unsafe { location.altitude() };
+                let vertical_accuracy = unsafe { location.verticalAccuracy() };
 
                 self.deliver(Outcome::Located {
                     latitude: coordinate.latitude,
                     longitude: coordinate.longitude,
-                    // A negative altitude below sea level is physically possible
-                    // but is far more often a poor vertical fix, and a negative
-                    // elevation would shift rise times the wrong way.
-                    elevation: altitude.max(0.0),
+                    // CoreLocation says a vertical fix is invalid by returning a
+                    // negative accuracy, and it returns `altitude` as 0.0
+                    // anyway. A Mac with no GPS - which is most of them - takes
+                    // that path every time, so reading the altitude without
+                    // reading the accuracy stored a fabricated sea level and the
+                    // settings pane printed it as `0 m`, measured.
+                    //
+                    // That is precisely the confusion `Option<f64>` was
+                    // introduced to end, arriving through the one door that had
+                    // not been checked.
+                    elevation: if vertical_accuracy > 0.0 {
+                        // A negative altitude below sea level is physically
+                        // possible but is far more often a poor fix, and a
+                        // negative elevation would shift rise times the wrong
+                        // way.
+                        Some(altitude.max(0.0))
+                    } else {
+                        None
+                    },
                 });
             }
 

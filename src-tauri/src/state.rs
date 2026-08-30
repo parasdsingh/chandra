@@ -144,7 +144,7 @@ impl AppState {
         &self,
         latitude: f64,
         longitude: f64,
-        elevation: f64,
+        elevation: Option<f64>,
     ) -> Result<()> {
         let mut settings = self.settings();
         if settings.location.mode == crate::settings::LocationMode::Manual {
@@ -161,9 +161,11 @@ impl AppState {
             zone: zone.zone,
             latitude,
             longitude,
-            // CoreLocation answered, so this is a height something measured -
-            // poorly, which is why the manual correction exists, but measured.
-            elevation: Some(elevation),
+            // Passed through as it arrived. `Some` only where CoreLocation
+            // reported the vertical fix as valid; on a Mac with no GPS it does
+            // not, and `None` is then the honest answer rather than the 0.0 the
+            // framework hands back anyway.
+            elevation,
         });
 
         self.apply(settings).map(|_| ())

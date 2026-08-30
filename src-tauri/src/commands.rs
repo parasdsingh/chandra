@@ -4,6 +4,7 @@
 //! ephemeris engine is a mutex-guarded C library (`docs/DECISIONS.md` D-005) and
 //! blocking Tauri's async runtime on it would stall every other command.
 
+use chandra_almanac::chakra::Chakra;
 use chandra_almanac::lunar::MonthSystem;
 use chandra_almanac::month::{DayDetail, GrahaMonth, MonthIndex, MoonMonth};
 use chandra_almanac::time::DateKey;
@@ -195,6 +196,20 @@ pub async fn day_detail(
             .almanac
             .day_detail(graha, date, options)
             .map_err(AppError::from)
+    })
+    .await
+}
+
+/// The Lagna Kundali at an instant.
+///
+/// Takes the instant from the caller rather than reading the clock here, for the
+/// same reason `snapshot` does: the front end decides how often it wants a new
+/// one, and a command that read its own clock could not be asked for the same
+/// moment twice.
+#[tauri::command]
+pub async fn chakra(app: AppHandle, unix_ms: i64) -> Result<Chakra> {
+    blocking(app, move |state| {
+        state.almanac.chakra(unix_ms).map_err(AppError::from)
     })
     .await
 }

@@ -1,0 +1,211 @@
+//! The Lagna Kundali: where the nine grahas stand right now, and what is rising.
+//!
+//! Not a birth chart. There is no birth time and no birth place, and nothing
+//! here is read against a natal position - calling it a kundali without the
+//! `lagna` qualifier, or calling it gochara, would both claim a natal chart the
+//! app does not have and will never ask for.
+//!
+//! One shape serves all three chart formats. North Indian, South Indian and East
+//! Indian differ in where on screen a rashi is drawn and what is written in the
+//! compartment; they do not differ in what is true. So this says which rashi
+//! holds what, and which rashi is rising, and leaves the drawing to the front
+//! end.
+
+use chandra_ephemeris::{Engine, Graha, Observer, Source};
+use serde::{Deserialize, Serialize};
+
+use crate::error::Result;
+use crate::zodiac::{degrees_in_rashi, Rashi};
+
+/// The whole chart at one instant.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Chakra {
+    pub unix_ms: i64,
+    /// The rising point. Every format needs it: South and East Indian mark its
+    /// cell, and North Indian is built on it - house 1 *is* the lagna's rashi,
+    /// so without this there is no North Indian chart at all.
+    pub lagna: Lagna,
+    /// Twelve, always, in zodiacal order from Mesha. A rashi with nothing in it
+    /// is present and empty rather than absent: the chart draws twelve
+    /// compartments whatever stands in them.
+    pub rashis: Vec<ChakraRashi>,
+    pub source: Source,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Lagna {
+    pub rashi: Rashi,
+    pub name: String,
+    /// Sidereal longitude, 0 to 360.
+    pub longitude: f64,
+    /// The same, as degrees, arcminutes and arcseconds within the rashi. How far
+    /// into the sign it has risen is the part that goes stale fastest - the
+    /// ascendant moves about a degree every four minutes.
+    pub degrees_in_rashi: (u32, u32, f64),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChakraRashi {
+    pub rashi: Rashi,
+    pub name: String,
+    /// Three letters, for a compartment that has no room for `Vrishchika`.
+    pub short: String,
+    /// Counted from the lagna's rashi, 1 to 12, whole sign.
+    ///
+    /// Carried rather than derived in the front end because the count is the one
+    /// piece of jyotisha in the chart, and `standing.rs` already owns that
+    /// arithmetic. Two implementations of "which house is this" would be two
+    /// chances to be off by one.
+    pub house: u8,
+    pub grahas: Vec<ChakraGraha>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChakraGraha {
+    pub graha: Graha,
+    /// Two Latin letters: `Su`, `Mo`, `Ma`, `Me`, `Ju`, `Ve`, `Sa`, `Ra`, `Ke`,
+    /// which is the published chart convention. Sanskrit does not abbreviate to
+    /// two - Shukra and Shani are both `Sh`.
+    ///
+    /// Owned, like every other string on a payload: a chart is serialised and
+    /// `Deserialize` cannot produce a `&'static str`.
+    pub short: String,
+    pub longitude: f64,
+    pub degrees_in_rashi: (u32, u32, f64),
+    /// Marked on the chart. It is the one state the menu bar carries too
+    /// (D-022), and the only one a compartment has room for.
+    pub retrograde: bool,
+}
+
+/// Two-letter chart forms, the published convention.
+///
+/// `Ma` and `Me` are the one pair at risk of being read for each other. The
+/// spoken label never carries an abbreviation and says `Mangala` and `Budha` in
+/// full, which is the same mitigation every other abbreviation in the app uses.
+const fn chart_short(graha: Graha) -> &'static str {
+    match graha {
+        Graha::Surya => "Su",
+        Graha::Chandra => "Mo",
+        Graha::Mangala => "Ma",
+        Graha::Budha => "Me",
+        Graha::Guru => "Ju",
+        Graha::Shukra => "Ve",
+        Graha::Shani => "Sa",
+        Graha::Rahu => "Ra",
+        Graha::Ketu => "Ke",
+    }
+}
+
+/// The chart at an instant, for an observer.
+///
+/// The observer matters here in a way it does not for a position: two people
+/// reading the same minute in different cities have the same grahas in the same
+/// rashis and a different lagna.
+pub fn at(engine: &Engine, unix_ms: i64, observer: Observer) -> Result<Chakra> {
+    let jd = chandra_ephemeris::unix_seconds_to_jd(unix_ms as f64 / 1000.0);
+
+    let ascendant = engine.ascendant(jd, observer)?;
+    let lagna_rashi = Rashi::from_longitude(ascendant.degrees);
+
+    // One call for all nine, as `standing::at` does. Nine separate calls would
+    // read nine slightly different instants for a chart that claims one.
+    let positions = engine.positions(jd, &Graha::ALL)?;
+
+    let mut rashis: Vec<ChakraRashi> = Rashi::ALL
+        .into_iter()
+        .map(|rashi| ChakraRashi {
+            rashi,
+            name: rashi.name().to_string(),
+            short: rashi.short().to_string(),
+            // Inclusive from the lagna, so the lagna's own rashi is house 1.
+            house: ((rashi.index() + 12 - lagna_rashi.index()) % 12) as u8 + 1,
+            grahas: Vec::new(),
+        })
+        .collect();
+
+    for (graha, position) in Graha::ALL.into_iter().zip(positions.iter()) {
+        let rashi = Rashi::from_longitude(position.longitude);
+        rashis[rashi.index()].grahas.push(ChakraGraha {
+            graha,
+            short: chart_short(graha).to_string(),
+            longitude: position.longitude,
+            degrees_in_rashi: degrees_in_rashi(position.longitude),
+            retrograde: position.is_retrograde(),
+        });
+    }
+
+    // Within a compartment, in the order they have travelled into it. A chart
+    // that listed them in `Graha::ALL` order would put Surya above Chandra
+    // whichever was further through the sign, which is not what a reader
+    // checking a conjunction wants to see.
+    for rashi in &mut rashis {
+        rashi
+            .grahas
+            .sort_by(|a, b| a.longitude.total_cmp(&b.longitude));
+    }
+
+    Ok(Chakra {
+        unix_ms,
+        lagna: Lagna {
+            rashi: lagna_rashi,
+            name: lagna_rashi.name().to_string(),
+            longitude: ascendant.degrees,
+            degrees_in_rashi: degrees_in_rashi(ascendant.degrees),
+        },
+        rashis,
+        source: Source::weakest(
+            [ascendant.source]
+                .into_iter()
+                .chain(positions.iter().map(|p| p.source)),
+        ),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Houses count inclusively from the lagna, so the lagna's own rashi is the
+    /// first and the twelfth is the one behind it.
+    #[test]
+    fn the_lagna_rashi_is_the_first_house() {
+        for lagna in Rashi::ALL {
+            let houses: Vec<u8> = Rashi::ALL
+                .into_iter()
+                .map(|rashi| ((rashi.index() + 12 - lagna.index()) % 12) as u8 + 1)
+                .collect();
+
+            assert_eq!(
+                houses[lagna.index()],
+                1,
+                "{lagna:?} rising must be the first house"
+            );
+
+            let mut seen: Vec<u8> = houses.clone();
+            seen.sort_unstable();
+            assert_eq!(
+                seen,
+                (1..=12).collect::<Vec<u8>>(),
+                "{lagna:?} rising does not produce each house exactly once"
+            );
+
+            // The seventh from the lagna is the sign opposite it, which is the
+            // check a reader would make first.
+            let opposite = Rashi::ALL[(lagna.index() + 6) % 12];
+            assert_eq!(houses[opposite.index()], 7);
+        }
+    }
+
+    /// Nine distinct two-letter forms. `Shukra` and `Shani` are why these are
+    /// Latin rather than Sanskrit, so a collision here would defeat the reason
+    /// they exist.
+    #[test]
+    fn every_graha_has_its_own_two_letter_form() {
+        let forms: std::collections::BTreeSet<&str> =
+            Graha::ALL.iter().map(|&g| chart_short(g)).collect();
+        assert_eq!(forms.len(), 9, "two grahas share a chart abbreviation");
+        for graha in Graha::ALL {
+            assert_eq!(chart_short(graha).chars().count(), 2, "{graha:?}");
+        }
+    }
+}

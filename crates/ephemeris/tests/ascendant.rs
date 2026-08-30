@@ -9,6 +9,14 @@
 //! The geographic latitude appears in the closed form below, so a transposed
 //! argument cannot agree. That is the whole point of choosing this check over
 //! the cheaper one - see `docs/design/kundali.md` §2.2.1.
+//!
+//! **What this does and does not prove.** The derivation shares its sidereal
+//! time and its obliquity with the code it checks, because both come from the
+//! same library - so the residual is exactly zero, and that is the signature of
+//! shared inputs rather than of unusual accuracy. What is being guarded is this
+//! crate's *use* of the library: the flag word, the argument order, the quadrant
+//! and the units. The library's own arithmetic is not under test and does not
+//! need to be; it is the reference every published table is computed from.
 
 use std::f64::consts::PI;
 use std::path::PathBuf;
@@ -138,12 +146,22 @@ fn instants() -> Vec<f64> {
     out
 }
 
-/// Latitudes from the equator to the edge of the temperate zone.
+/// Latitudes from the equator to inside both polar circles.
 ///
-/// Polar latitudes are excluded deliberately: inside the polar circle the
-/// ecliptic can lie wholly above or below the horizon and there is no rising
-/// point to agree about. That case is its own decision, not this test's.
-const LATITUDES: [f64; 7] = [0.0, 12.9716, -12.9716, 23.4, -23.4, 51.5, -35.3];
+/// An earlier version stopped at the temperate zone, on the reasoning that
+/// "inside the polar circle the ecliptic can lie wholly above or below the
+/// horizon and there is no rising point to agree about". That is false, and an
+/// audit said so. The ecliptic is a great circle and so is the horizon, and two
+/// great circles on a sphere always intersect, at two points. There is always an
+/// ascendant. What breaks inside the polar circle is *house division* - which
+/// this does not use, and which whole sign does not need.
+///
+/// So the polar latitudes are tested rather than excused. ±89 rather than ±90:
+/// at exactly the pole `tan(phi)` is infinite and the closed form has no value
+/// to compare, which is a property of the formula rather than of the sky.
+const LATITUDES: [f64; 11] = [
+    0.0, 12.9716, -12.9716, 23.4, -23.4, 51.5, -35.3, 71.0, -71.0, 89.0, -89.0,
+];
 
 #[test]
 fn the_ascendant_agrees_with_an_independent_derivation() {
@@ -198,7 +216,7 @@ fn the_ascendant_agrees_with_an_independent_derivation() {
         }
     }
 
-    assert!(checked >= 600, "only {checked} cases checked");
+    assert!(checked >= 1000, "only {checked} cases checked");
     assert_eq!(
         rising_signs.len(),
         12,

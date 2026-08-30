@@ -23,11 +23,16 @@ import { createSignal, Show } from "solid-js";
 
 import * as ipc from "../ipc";
 import type { Bootstrap, Settings } from "../ipc/types";
+import { ErrorBlock } from "./DayDetail";
 import { CitySearch, placeFromCity } from "./SettingsView";
 
 interface Props {
   boot: Bootstrap;
   apply: (next: Settings) => void;
+  /** A failure from the last apply. Shown here because every other place the
+   *  panel reports one sits behind the gate, so behind it a failed save made
+   *  the result list vanish and put nothing in its place. */
+  error: { code: string; message: string } | undefined;
 }
 
 export function LocationGate(props: Props): JSX.Element {
@@ -37,6 +42,10 @@ export function LocationGate(props: Props): JSX.Element {
 
   return (
     <div class="gate" role="region" aria-label="Set your location">
+      {/* Folded away while a result list is showing, so six cities have room.
+          The button below is not folded with it: it is the recommended way
+          through, and hiding it behind an empty search left a reader whose
+          search failed with nothing to press. */}
       <Show when={!searching()}>
         <p class="gate__lead">Chandra needs to know where you are.</p>
         <p class="gate__why">
@@ -46,39 +55,43 @@ export function LocationGate(props: Props): JSX.Element {
         </p>
       </Show>
 
+      <button
+        class="settings__button gate__button"
+        disabled={locating()}
+        onClick={() => {
+          setLocating(true);
+          setRefused(false);
+          void ipc
+            .requestDeviceLocation()
+            .then((resolved) => {
+              // A refusal is a normal answer, not an error - macOS simply does
+              // not say which it was. If the provenance did not change, the ask
+              // did not land, and the search below is the way through rather
+              // than a dead end.
+              if (resolved.provenance !== "core_location") setRefused(true);
+            })
+            .catch(() => setRefused(true))
+            .finally(() => setLocating(false));
+        }}
+      >
+        {locating() ? "Asking macOS…" : "Use this Mac"}
+      </button>
+
+      <Show when={refused()}>
+        <p class="gate__refused">
+          macOS did not give a location. Search for your city instead.
+        </p>
+      </Show>
+
       <CitySearch
         onPick={(city) => props.apply(placeFromCity(props.boot.settings, city))}
         onSearchingChange={setSearching}
       />
 
-      <Show when={!searching()}>
-        <button
-          class="settings__button gate__button"
-          disabled={locating()}
-          onClick={() => {
-            setLocating(true);
-            setRefused(false);
-            void ipc
-              .requestDeviceLocation()
-              .then((resolved) => {
-                // A refusal is a normal answer, not an error - macOS simply
-                // does not say which it was. If the provenance did not change,
-                // the ask did not land, and the city search below is the way
-                // through rather than a dead end.
-                if (resolved.provenance !== "core_location") setRefused(true);
-              })
-              .catch(() => setRefused(true))
-              .finally(() => setLocating(false));
-          }}
-        >
-          {locating() ? "Asking macOS…" : "Use this Mac"}
-        </button>
-
-        <Show when={refused()}>
-          <p class="gate__refused">
-            macOS did not give a location. Search for your city instead.
-          </p>
-        </Show>
+      <Show when={props.error}>
+        {(problem) => (
+          <ErrorBlock code={problem().code} message={problem().message} />
+        )}
       </Show>
     </div>
   );

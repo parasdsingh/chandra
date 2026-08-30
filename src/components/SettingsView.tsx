@@ -464,16 +464,25 @@ function Location(props: SectionProps): JSX.Element {
             class="settings__number"
             type="number"
             step="10"
-            value={props.boot.location.elevation}
+            placeholder="not set"
+            // The correction the user typed, not the resolved elevation.
+            // Showing the resolved figure put a number in a field the user had
+            // left empty, so clearing it looked like it had not worked.
+            value={settings().location.elevation ?? ""}
             onChange={(event) => {
               // The observer's own correction, not part of the place. Writing a
               // whole place around it made a timezone-derived location report
               // itself as having come from this Mac.
+              const typed = event.currentTarget.value.trim();
               props.apply({
                 ...settings(),
                 location: {
                   ...settings().location,
-                  elevation: Number(event.currentTarget.value),
+                  // Empty means "I do not know", not zero. `Number("")` is 0,
+                  // so clearing the field used to assert sea level - the same
+                  // confusion `Option<f64>` exists to prevent, arriving from
+                  // the keyboard.
+                  elevation: typed === "" ? null : Number(typed),
                 },
               });
             }}
@@ -499,31 +508,12 @@ function Location(props: SectionProps): JSX.Element {
               {locating() ? "Asking macOS…" : "Use this Mac"}
             </button>
           </Show>
-          {/* Offered whenever a stored place is standing in for the timezone,
-              which includes a cached device fix. Showing it only in manual mode
-              left an automatic place with no way back to the chain. */}
-          <Show
-            when={
-              settings().location.mode === "manual" ||
-              settings().location.place !== null
-            }
-          >
-            <button
-              class="settings__button"
-              onClick={() =>
-                props.apply({
-                  ...settings(),
-                  location: {
-                    ...settings().location,
-                    mode: "automatic",
-                    place: null,
-                  },
-                })
-              }
-            >
-              Use my timezone
-            </button>
-          </Show>
+          {/* "Use my timezone" was here. It cleared the stored place, which
+              since D-029 means having no location at all - so it dropped the
+              user straight back behind the unskippable gate, with no way to
+              undo it except to pick a city, which is what they had. A control
+              whose only outcome is a state the app refuses to run in is not a
+              choice. */}
         </div>
       </Show>
     </div>

@@ -78,7 +78,7 @@ fn build_item(app: &AppHandle, id: String, subject: Graha) -> Result<()> {
                 // at most an hour old, and there is nowhere to report a tooltip
                 // to anyway.
                 TrayIconEvent::Enter { .. } => {
-                    let _ = refresh_tooltip(&handle, icon, subject);
+                    refresh_tooltip(&handle, icon.id().clone(), subject);
                 }
                 _ => {}
             }
@@ -174,32 +174,52 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
 
 /// Rebuilds one item's tooltip from this instant.
 ///
-/// Only the tooltip, and only this item. The icon is left alone: redrawing it on
-/// hover would put an ephemeris call and a rasterise between the pointer
-/// arriving and the menu bar settling, for a change too small to see - the disc
-/// moves less than a pixel in the hour this is bridging.
-fn refresh_tooltip(app: &AppHandle, icon: &tauri::tray::TrayIcon, subject: Graha) -> Result<()> {
-    let state = app.state::<AppState>();
-    let system = state.settings().calendar.month_system;
+/// Off the main thread. This runs from the tray icon's event callback, which
+/// `tao` delivers on the main thread - and `Engine`'s own contract is that it is
+/// called "from a blocking pool, never from a UI thread" (`engine.rs`). An
+/// ephemeris call there takes the engine mutex and can be made to wait behind a
+/// month being assembled, which would stall the menu bar and every window with
+/// it. The first version of this did exactly that.
+///
+/// macOS waits about a second before showing a tooltip, so there is room to
+/// compute one in between and still have it be the text that appears. Setting it
+/// goes back to the main thread, because a status item is an AppKit object.
+///
+/// Only the tooltip, and only this item. Redrawing the icon here would put a
+/// rasterise in the same window for a change smaller than a pixel.
+fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: Graha) {
+    let handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = handle.state::<AppState>();
+        let system = state.settings().calendar.month_system;
 
-    // Asked for only the subject this item carries, not for the whole row: the
-    // pointer is over one item and the other tooltips are not about to be read.
-    let subjects = if subject == Graha::Chandra {
-        Vec::new()
-    } else {
-        vec![subject]
-    };
-    let now = jiff::Timestamp::now().as_millisecond();
-    let snapshot = state.almanac.now(now, &subjects).map_err(AppError::from)?;
+        // Asked for only the subject this item carries. The pointer is over one
+        // item and the other tooltips are not about to be read.
+        let subjects = if subject == Graha::Chandra {
+            Vec::new()
+        } else {
+            vec![subject]
+        };
+        let now = jiff::Timestamp::now().as_millisecond();
+        let Ok(snapshot) = state.almanac.now(now, &subjects) else {
+            // The item keeps the text it had, which is at most an hour old.
+            // There is nowhere to report a tooltip failure to.
+            return;
+        };
 
-    let tooltip = if subject == Graha::Chandra {
-        moon_tooltip(&snapshot, system)
-    } else {
-        graha_tooltip(subject, snapshot.grahas.first())
-    };
+        let tooltip = if subject == Graha::Chandra {
+            moon_tooltip(&snapshot, system)
+        } else {
+            graha_tooltip(subject, snapshot.grahas.first())
+        };
 
-    icon.set_tooltip(Some(tooltip))
-        .map_err(|e| AppError::Engine(format!("cannot set the {} tooltip: {e}", subject.name())))
+        let for_main = handle.clone();
+        let _ = handle.run_on_main_thread(move || {
+            if let Some(item) = for_main.tray_by_id(&id) {
+                let _ = item.set_tooltip(Some(tooltip));
+            }
+        });
+    });
 }
 
 /// What the moon item says on hover, in the calendar that is in force.

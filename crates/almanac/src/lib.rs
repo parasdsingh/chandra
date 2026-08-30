@@ -8,6 +8,7 @@ mod almanac;
 mod cache;
 
 pub mod angles;
+pub mod chakra;
 pub mod day;
 pub mod error;
 pub mod events;
