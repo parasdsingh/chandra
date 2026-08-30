@@ -26,7 +26,7 @@ interface Props {
   /** Whether the month in view is intercalary, so `Adhika` can be set apart. */
   adhika: boolean;
   selected: DateKey | null;
-  view: "calendar" | "day" | "settings";
+  view: "calendar" | "day" | "settings" | "chart";
   onBack: () => void;
   onSettings: () => void;
   /** Opens the month and year picker. Only the calendar has one to open. */
@@ -100,13 +100,23 @@ export function Header(props: Props): JSX.Element {
 
   return (
     <header class="header">
-      {/* Nothing to go back to while the gate is up, and nowhere to go: the
-          leading slot is empty rather than holding a control that would do
-          nothing. */}
+      {/* The leading slot is empty rather than holding a control that would do
+          nothing, in two cases.
+
+          While the gate is up there is nothing to go back to and nowhere to go.
+
+          On the chart there is no hierarchy to climb: it is reached from its own
+          status item and is a peer of the calendar, not a step inside it. A
+          chevron there would also leave the back end still believing the chart
+          was showing, so its own item would hide the panel rather than return
+          to it. */}
       <Show
         when={isCalendar()}
         fallback={
-          <Show when={!props.gated} fallback={<span class="header__icon" />}>
+          <Show
+            when={!props.gated && props.view !== "chart"}
+            fallback={<span class="header__icon" />}
+          >
             <button
               class="header__icon"
               onClick={props.onBack}

@@ -511,7 +511,9 @@ export interface Bootstrap {
   settings: Settings;
   location: Resolved;
   /** Which subject the panel is showing; the tray sets it before opening. */
-  subject: GrahaKey;
+  /** Which subject the panel is showing: a graha's key, or `chart` for the
+   *  Lagna Kundali, which has its own status item and is not a graha. */
+  subject: GrahaKey | "chart";
   subjects: GrahaKey[];
   /**
    * Whether the system's popover material is behind the panel. The panel paints

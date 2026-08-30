@@ -122,7 +122,10 @@ impl AppState {
             *self.location.write().expect("location lock") = resolved;
         }
 
-        let tray_changed = next.tray != previous.tray;
+        // The chart's own item counts: switching it on or off adds or removes a
+        // status item exactly as a graha toggle does, and rebuilding is how a
+        // status item comes and goes.
+        let tray_changed = next.tray != previous.tray || next.chart.tray != previous.chart.tray;
         let scale_changed = next.appearance != previous.appearance;
         *self.settings.write().expect("settings lock") = next;
 

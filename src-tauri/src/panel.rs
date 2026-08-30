@@ -158,7 +158,7 @@ fn apply_material_with_radius(_window: &WebviewWindow, _radius: f64) -> bool {
 ///
 /// `tray_rect` is the clicked item's rectangle on screen, taken from the click
 /// event itself.
-pub fn toggle(app: &AppHandle, subject: Graha, tray_rect: Rect) {
+pub fn toggle(app: &AppHandle, subject: Subject, tray_rect: Rect) {
     let Some(window) = app.get_webview_window(PANEL_LABEL) else {
         return;
     };
@@ -352,10 +352,32 @@ pub async fn request_device_location(app: &AppHandle) {
 ///
 /// Held in Tauri's managed state rather than in [`AppState`] because it is
 /// window state, not almanac state, and the two have different lifetimes.
-#[derive(Default)]
-pub struct CurrentSubject(std::sync::Mutex<Option<Graha>>);
+/// What a panel is currently showing.
+///
+/// A graha, or the chart. The chart is not a graha and pretending it was one -
+/// by giving it Chandra's identity and a flag beside it - would have put the
+/// distinction in two places, so it is one type with two cases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Subject {
+    Graha(Graha),
+    /// The Lagna Kundali. Its own status item, and its own panel.
+    Chart,
+}
 
-fn current_subject(app: &AppHandle) -> Option<Graha> {
+impl Subject {
+    /// The key the front end switches on: a graha's own key, or `chart`.
+    pub fn key(self) -> &'static str {
+        match self {
+            Subject::Graha(graha) => graha.key(),
+            Subject::Chart => "chart",
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct CurrentSubject(std::sync::Mutex<Option<Subject>>);
+
+fn current_subject(app: &AppHandle) -> Option<Subject> {
     *app.state::<CurrentSubject>()
         .0
         .lock()
@@ -368,11 +390,11 @@ fn current_subject(app: &AppHandle) -> Option<Graha> {
 /// one-shot: a webview that has not finished registering its listener misses it
 /// and shows the Moon under whichever tray item was clicked. Reading the
 /// authoritative value on mount closes that window.
-pub fn subject_or_default(app: &AppHandle) -> Graha {
-    current_subject(app).unwrap_or(Graha::Chandra)
+pub fn subject_or_default(app: &AppHandle) -> Subject {
+    current_subject(app).unwrap_or(Subject::Graha(Graha::Chandra))
 }
 
-fn set_current_subject(app: &AppHandle, subject: Graha) {
+fn set_current_subject(app: &AppHandle, subject: Subject) {
     *app.state::<CurrentSubject>()
         .0
         .lock()

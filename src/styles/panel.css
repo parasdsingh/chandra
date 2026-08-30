@@ -894,3 +894,71 @@
   color: var(--text-secondary);
   margin: 0;
 }
+
+/* ---------- the Lagna Kundali ---------- */
+
+.chakra-view {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: var(--s-3) var(--s-5) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.chakra {
+  display: block;
+  /* The chart is square and the region is not, so it is the width that binds. */
+  max-width: 100%;
+  height: auto;
+}
+
+.chakra__cell {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+/* The rising sign. A ground rather than the accent: gold means today and
+   nothing else (D-023), and a chart is entirely today. */
+.chakra__cell.is-lagna {
+  fill: var(--surface-hover);
+}
+
+/* The diagonal that marks the lagna in the South and East Indian charts, which
+   is the published convention. The North Indian chart needs none: its lagna is
+   house 1 and house 1 is always the top compartment. */
+.chakra__lagna-stroke {
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+}
+
+/* The compartment's own name, set quieter than its contents: it is the fixed
+   part of the chart and the grahas are what changed. */
+.chakra__label {
+  font: 400 9px / 1 var(--font-stack);
+  letter-spacing: 0.2px;
+  fill: var(--text-secondary);
+}
+
+.chakra__graha {
+  font: 600 11px / 1 var(--font-stack);
+  fill: var(--text-primary);
+}
+
+.chakra__lagna-line {
+  font: var(--type-body);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+}
+
+.chakra__gloss {
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+}

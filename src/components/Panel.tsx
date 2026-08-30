@@ -35,10 +35,11 @@ import type {
 } from "../ipc/types";
 import { isAppError } from "../ipc/types";
 import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
-import { localeFirstWeekday } from "../lib/format";
+import { formatTime, localeFirstWeekday } from "../lib/format";
 import { CalendarScroller } from "./CalendarScroller";
 import { MonthJump } from "./MonthJump";
 import { LocationGate, locationIsSet } from "./LocationGate";
+import { Chakra } from "./Chakra";
 import { DayDetail, ErrorBlock } from "./DayDetail";
 import { Header } from "./Header";
 import {
@@ -47,7 +48,7 @@ import {
   type SettingsSection,
 } from "./SettingsView";
 
-type View = "calendar" | "day" | "settings";
+type View = "calendar" | "day" | "settings" | "chart";
 
 interface Props {
   boot: Bootstrap;
@@ -64,7 +65,13 @@ export function Panel(props: Props): JSX.Element {
    * reloaded now, so a `new Date()` evaluated during render would leave a panel
    * left open overnight ringing yesterday.
    */
-  const [subject, setSubject] = createSignal<GrahaKey>(props.boot.subject);
+  const [subject, setSubject] = createSignal<GrahaKey>(
+    // `chart` is not a graha. The chart borrows the moon's calendar for the
+    // views behind it, which is the one subject always present.
+    props.boot.subject === "chart"
+      ? "chandra"
+      : (props.boot.subject as GrahaKey),
+  );
   const [today, setToday] = createSignal<DateKey>(
     todayIn(props.boot.location.zone),
   );
@@ -75,8 +82,36 @@ export function Panel(props: Props): JSX.Element {
     noonAnchor(todayIn(props.boot.location.zone), props.boot.location.zone),
   );
   const [offset, setOffset] = createSignal(0);
-  const [view, setView] = createSignal<View>("calendar");
+  const [view, setView] = createSignal<View>(
+    // The chart has its own status item, so the panel can be opened straight
+    // onto it. `subject` is a graha key or `chart`; only the second is a view.
+    props.boot.subject === "chart" ? "chart" : "calendar",
+  );
+
+  /**
+   * The chart, refetched on a timer while it is the view.
+   *
+   * The lagna moves about a degree every four minutes, so a chart left open is
+   * wrong within the hour. A minute is finer than the arcminute it prints and
+   * coarser than anything a reader would notice moving.
+   */
+  const [chartAt, setChartAt] = createSignal(Date.now());
+  createEffect(() => {
+    if (view() !== "chart") return;
+    const timer = window.setInterval(() => setChartAt(Date.now()), 60_000);
+    onCleanup(() => window.clearInterval(timer));
+  });
+
+  const [chart] = createResource(
+    () =>
+      view() === "chart" && locationIsSet(props.boot) ? chartAt() : undefined,
+    (at) => ipc.chakra(at),
+  );
   const [section, setSection] = createSignal<SettingsSection>("root");
+  /** Where settings was opened from, so closing it goes back there rather than
+   *  always to the calendar - which dropped anyone who opened settings from the
+   *  chart onto a view they had not asked for. */
+  const [settingsFrom, setSettingsFrom] = createSignal<View>("calendar");
   const [selected, setSelected] = createSignal<DateKey | null>(null);
   // Not a `view`: the header stays, because the header's title is the control
   // that opened this and has to keep saying so.
@@ -417,7 +452,7 @@ export function Panel(props: Props): JSX.Element {
         setSection("root");
         return;
       }
-      setView("calendar");
+      setView(view() === "settings" ? settingsFrom() : "calendar");
       setSection("root");
     });
   }
@@ -464,6 +499,7 @@ export function Panel(props: Props): JSX.Element {
     if (event.metaKey && event.key === ",") {
       event.preventDefault();
       batch(() => {
+        setSettingsFrom(view());
         setView("settings");
         setSection("root");
       });
@@ -477,6 +513,11 @@ export function Panel(props: Props): JSX.Element {
       // it before it reaches the selection underneath - otherwise one press
       // cleared a ring the user could not see and left the picker open.
       if (jumping()) setJumping(false);
+      // The chart has its own status item, so it is a peer of the calendar and
+      // not a step inside it. Escaping to the calendar would also leave the back
+      // end still believing the chart is showing, so its own item would then
+      // hide the panel instead of returning to it.
+      else if (view() === "chart") void ipc.closePanel();
       else if (view() !== "calendar") back();
       else if (selected()) setSelected(null);
       else void ipc.closePanel();
@@ -536,16 +577,30 @@ export function Panel(props: Props): JSX.Element {
    * Idempotent, because it is called twice for every open - once from the event
    * the backend sends as it shows the window, once when the window takes focus.
    */
-  function open(next: GrahaKey) {
+  /**
+   * A tray item was clicked. The payload is a graha's key, or `chart`.
+   *
+   * `chart` is not a subject: the Lagna Kundali has its own status item but no
+   * calendar of its own, so it opens as a *view* and leaves the subject at the
+   * moon, which is the one that is always present. Passing it through as a
+   * subject sent `chart` to `graha_month`, which refused it - the panel opened
+   * on an error every time its own item was clicked.
+   */
+  function open(next: GrahaKey | "chart") {
+    const chart = next === "chart";
     const now = todayIn(props.boot.location.zone);
     batch(() => {
-      setSubject(next);
+      setSubject(chart ? "chandra" : next);
       setToday(now);
       setAnchor(noonAnchor(now, timeZone()));
       setOffset(0);
       setVisibleDelta(0);
       setSelected(null);
-      setView("calendar");
+      setView(chart ? "chart" : "calendar");
+      // The chart is a reading of now, and `chartAt` only advances on its own
+      // timer while the chart is the view. Without this, reopening it after any
+      // gap fetched the moment it was last showing.
+      if (chart) setChartAt(Date.now());
       setSection("root");
       setError(undefined);
       setOpened((count) => count + 1);
@@ -563,7 +618,7 @@ export function Panel(props: Props): JSX.Element {
     onCleanup(() => window.removeEventListener("keydown", listener));
 
     const opened = listen<string>("chandra://open", (event) =>
-      open(event.payload as GrahaKey),
+      open(event.payload as GrahaKey | "chart"),
     );
     onCleanup(() => void opened.then((unlisten) => unlisten()));
   });
@@ -573,6 +628,11 @@ export function Panel(props: Props): JSX.Element {
 
   const headerTitle = () => {
     if (view() === "settings") return SECTION_TITLES[section()];
+    // The Sanskrit name, glossed in the line beneath it - the same shape the
+    // day view uses, where the header names the day and the line below places
+    // it. `Gochara` was considered and dropped: in common usage it means
+    // transits read against a natal chart, which this app does not have.
+    if (view() === "chart") return "Lagna Kundali";
     // A lunar day is called by its tithi, so that is what the header says, and
     // the civil date it also has moves to the line below. In solar mode the
     // western date *is* the name, so the header is left empty and `Header`
@@ -719,6 +779,50 @@ export function Panel(props: Props): JSX.Element {
               lunar={lunar()}
               error={error()}
             />
+          </Show>
+
+          <Show when={locationIsSet(props.boot) && view() === "chart"}>
+            <div class="chakra-view">
+              <Show
+                when={chart()}
+                fallback={
+                  <Show when={chart.error}>
+                    <ErrorBlock
+                      code={toError(chart.error).code}
+                      message={toError(chart.error).message}
+                    />
+                  </Show>
+                }
+              >
+                {(data) => (
+                  <>
+                    {/* One line, not two. The region is 264px and the chart
+                        needs 208 of it; a second caption would have pushed the
+                        chart into a scroll, and a chart you cannot see whole is
+                        not a chart. The English gloss, the instant and the
+                        lagna's degree all fit here. */}
+                    <p class="chakra__gloss">
+                      Ascendant chart &middot;{" "}
+                      {formatTime(
+                        { unix_ms: data().unix_ms, day_offset: 0 },
+                        { timeZone: timeZone() },
+                      )}{" "}
+                      &middot; {data().lagna.name}{" "}
+                      {data().lagna.degrees_in_rashi[0]}&deg;
+                      {String(data().lagna.degrees_in_rashi[1]).padStart(
+                        2,
+                        "0",
+                      )}
+                      &prime;
+                    </p>
+                    <Chakra
+                      data={data()}
+                      format={props.boot.settings.chart.format}
+                    />
+                  </>
+                )}
+              </Show>
+            </div>
           </Show>
 
           <Show when={locationIsSet(props.boot) && view() === "settings"}>

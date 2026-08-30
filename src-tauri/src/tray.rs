@@ -7,7 +7,7 @@
 use chandra_almanac::lunar::MonthSystem;
 use chandra_almanac::{Snapshot, SnapshotGraha};
 use chandra_ephemeris::Graha;
-use chandra_glyph::{graha_icon, moon_icon, Tint};
+use chandra_glyph::{chart_icon, graha_icon, moon_icon, Tint};
 use tauri::image::Image;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
@@ -21,6 +21,9 @@ use crate::state::AppState;
 /// The moon item *is* Chandra's item; enabling Chandra in settings does not add
 /// a second one (`docs/DECISIONS.md` D-019).
 pub const MOON_ID: &str = "chandra.moon";
+
+/// The Lagna Kundali's own status item.
+pub const CHART_ID: &str = "chandra.chart";
 
 /// Backing scale for tray icons. Rendering at 2x and letting macOS map the
 /// buffer onto the 22pt slot keeps the disc crisp on Retina, and downscales
@@ -41,15 +44,25 @@ pub fn build(app: &AppHandle) -> Result<()> {
     // left to right, in the same order the settings list offers them - and the
     // moon, created first, sits at the right-hand end where it stays put
     // whatever else is switched on.
-    build_item(app, MOON_ID.to_string(), Graha::Chandra)?;
+    build_item(
+        app,
+        MOON_ID.to_string(),
+        panel::Subject::Graha(Graha::Chandra),
+    )?;
     for graha in subjects.into_iter().rev() {
-        build_item(app, tray_id(graha), graha)?;
+        build_item(app, tray_id(graha), panel::Subject::Graha(graha))?;
+    }
+    // Last, so it sits at the left-hand end of the row: it is the one item that
+    // is not a subject in the calendar's sense, and putting it among the grahas
+    // would read as a tenth one.
+    if app.state::<AppState>().settings().chart.tray {
+        build_item(app, CHART_ID.to_string(), panel::Subject::Chart)?;
     }
 
     refresh_icons(app)
 }
 
-fn build_item(app: &AppHandle, id: String, subject: Graha) -> Result<()> {
+fn build_item(app: &AppHandle, id: String, subject: panel::Subject) -> Result<()> {
     let handle = app.clone();
     TrayIconBuilder::with_id(id)
         // Left click opens the panel, so a menu on left click would swallow it.
@@ -87,7 +100,7 @@ fn build_item(app: &AppHandle, id: String, subject: Graha) -> Result<()> {
         .map_err(|e| {
             AppError::Engine(format!(
                 "cannot create the {} tray item: {e}",
-                subject.name()
+                subject.key()
             ))
         })?;
     Ok(())
@@ -102,6 +115,7 @@ pub fn rebuild(app: &AppHandle) -> Result<()> {
         app.remove_tray_by_id(&tray_id(graha));
     }
     app.remove_tray_by_id(MOON_ID);
+    app.remove_tray_by_id(CHART_ID);
     build(app)
 }
 
@@ -149,6 +163,17 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
         .map_err(|e| AppError::Engine(format!("cannot set the moon tooltip: {e}")))?;
     }
 
+    if let Some(item) = app.tray_by_id(CHART_ID) {
+        let icon = chart_icon(ICON_SCALE, tint)
+            .map_err(|e| AppError::Engine(format!("cannot draw the chart icon: {e}")))?;
+        item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
+            .map_err(|e| AppError::Engine(format!("cannot set the chart icon: {e}")))?;
+        // The tooltip is rebuilt on hover, which is what makes the lagna in it
+        // current to the second. This is the text before the first hover.
+        item.set_tooltip(Some("Lagna Kundali"))
+            .map_err(|e| AppError::Engine(format!("cannot set the chart tooltip: {e}")))?;
+    }
+
     for graha in subjects {
         let Some(item) = app.tray_by_id(&tray_id(graha)) else {
             continue;
@@ -187,7 +212,7 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
 ///
 /// Only the tooltip, and only this item. Redrawing the icon here would put a
 /// rasterise in the same window for a change smaller than a pixel.
-fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: Graha) {
+fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: panel::Subject) {
     let handle = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let state = handle.state::<AppState>();
@@ -195,10 +220,9 @@ fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: Graha)
 
         // Asked for only the subject this item carries. The pointer is over one
         // item and the other tooltips are not about to be read.
-        let subjects = if subject == Graha::Chandra {
-            Vec::new()
-        } else {
-            vec![subject]
+        let subjects = match subject {
+            panel::Subject::Graha(Graha::Chandra) | panel::Subject::Chart => Vec::new(),
+            panel::Subject::Graha(graha) => vec![graha],
         };
         let now = jiff::Timestamp::now().as_millisecond();
         let Ok(snapshot) = state.almanac.now(now, &subjects) else {
@@ -207,10 +231,12 @@ fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: Graha)
             return;
         };
 
-        let tooltip = if subject == Graha::Chandra {
-            moon_tooltip(&snapshot, system)
-        } else {
-            graha_tooltip(subject, snapshot.grahas.first())
+        let tooltip = match subject {
+            panel::Subject::Graha(Graha::Chandra) => moon_tooltip(&snapshot, system),
+            panel::Subject::Graha(graha) => graha_tooltip(graha, snapshot.grahas.first()),
+            // The lagna, which is the one thing on this chart that changes fast
+            // enough to be worth a hover - about a degree every four minutes.
+            panel::Subject::Chart => chart_tooltip(&handle),
         };
 
         let for_main = handle.clone();
@@ -234,6 +260,24 @@ fn moon_tooltip(snapshot: &Snapshot, system: MonthSystem) -> String {
         format!("Chandra - {}", snapshot.tithi)
     } else {
         format!("Chandra - {}", snapshot.phase.label())
+    }
+}
+
+/// What the chart item says on hover: what is rising, and how far into it.
+fn chart_tooltip(app: &AppHandle) -> String {
+    let state = app.state::<AppState>();
+    let now = jiff::Timestamp::now().as_millisecond();
+    match state.almanac.chakra(now) {
+        Ok(chart) => {
+            let (degrees, minutes, _) = chart.lagna.degrees_in_rashi;
+            format!(
+                "Lagna - {} {degrees}\u{00b0}{minutes:02}\u{2032}",
+                chart.lagna.name
+            )
+        }
+        // The item still names itself. A tooltip is not the place to report that
+        // an ephemeris call failed.
+        Err(_) => "Lagna Kundali".to_string(),
     }
 }
 

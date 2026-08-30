@@ -29,7 +29,8 @@ pub struct Bootstrap {
     pub settings: Settings,
     pub location: Resolved,
     /// Which subject the panel is currently showing.
-    pub subject: Graha,
+    /// Which subject the panel is showing: a graha's key, or `chart`.
+    pub subject: String,
     pub subjects: Vec<Graha>,
     /// Whether the system's popover material is behind the panel. The panel is
     /// a scrim over that material, so where it is absent the front end has to
@@ -79,7 +80,7 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
             settings
         },
         location: state.location(),
-        subject: panel::subject_or_default(&app),
+        subject: panel::subject_or_default(&app).key().to_string(),
         subjects: state.tray_subjects(),
         panel_material: panel::has_material(&app),
         library_version: state.almanac.library_version().map_err(AppError::from)?,

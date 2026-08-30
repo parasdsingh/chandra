@@ -29,6 +29,12 @@ pub enum RenderError {
 
     #[error("cannot allocate a {width}x{height} pixmap")]
     Allocation { width: u32, height: u32 },
+
+    /// A path builder produced nothing. Only reachable if a shape was described
+    /// with no segments, which for the shapes in this crate would be a bug
+    /// rather than an input the caller can fix.
+    #[error("the {0} path is empty")]
+    EmptyPath(&'static str),
 }
 
 /// A rendered icon: straight (non-premultiplied) RGBA, ready for
@@ -147,6 +153,68 @@ const MARK_CLEARANCE: f32 = 0.8;
 /// most watched, and at 22 points one mark is all that stays legible; everything
 /// else a graha can be doing is named in the calendar, where there is room for
 /// words.
+/// The Lagna Kundali's menu bar icon.
+///
+/// Two concentric squares, the outer one rotated - the North Indian chart's own
+/// construction reduced to what survives at 22 points. Not a graha glyph,
+/// because the chart is not a graha and a tenth symbol in that alphabet would
+/// read as one.
+///
+/// Static. The chart behind it changes constantly and none of that is legible at
+/// this size; what changes is in the tooltip, which is rebuilt on hover.
+pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
+    let size = SLOT_POINTS as u32 * scale;
+    let mut pixmap = Pixmap::new(size, size).ok_or(RenderError::Allocation {
+        width: size,
+        height: size,
+    })?;
+
+    let (r, g, b) = tint.components();
+    let mut paint = Paint {
+        anti_alias: true,
+        ..Paint::default()
+    };
+    paint.set_color_rgba8(r, g, b, u8::MAX);
+
+    // Inset so the square reads at the same optical weight as the round glyphs
+    // beside it: a square that fills its slot looks larger than a disc that
+    // does, because it has more area at the corners.
+    let inset = SLOT_POINTS * 0.18 * scale as f32;
+    let edge = size as f32 - inset * 2.0;
+
+    let mut outer = tiny_skia::PathBuilder::new();
+    outer.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
+        RenderError::Allocation {
+            width: size,
+            height: size,
+        },
+    )?);
+    let outer = outer
+        .finish()
+        .ok_or(RenderError::EmptyPath("chart square"))?;
+    pixmap.stroke_path(&outer, &paint, &glyph_stroke(), Transform::identity(), None);
+
+    // The inner diamond: the midpoints of the outer square's sides, which is the
+    // line the North Indian chart is built from.
+    let middle = size as f32 / 2.0;
+    let mut inner = tiny_skia::PathBuilder::new();
+    inner.move_to(middle, inset);
+    inner.line_to(size as f32 - inset, middle);
+    inner.line_to(middle, size as f32 - inset);
+    inner.line_to(inset, middle);
+    inner.close();
+    let inner = inner
+        .finish()
+        .ok_or(RenderError::EmptyPath("chart diamond"))?;
+    pixmap.stroke_path(&inner, &paint, &glyph_stroke(), Transform::identity(), None);
+
+    Ok(Icon {
+        rgba: pixmap.take(),
+        width: size,
+        height: size,
+    })
+}
+
 pub fn graha_icon(
     graha: Graha,
     scale: u32,

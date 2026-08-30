@@ -26,6 +26,7 @@ import type {
   Bootstrap,
   City,
   GrahaKey,
+  ChartFormat,
   IngressMode,
   MonthSystem,
   Resolved,
@@ -37,6 +38,7 @@ export type SettingsSection =
   | "root"
   | "calendar"
   | "panchanga"
+  | "chart"
   | "location"
   | "astrology"
   | "menubar"
@@ -47,6 +49,7 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   root: "Settings",
   calendar: "Calendar",
   panchanga: "Panchanga",
+  chart: "Lagna Kundali",
   location: "Location",
   astrology: "Astrology",
   menubar: "Menu bar",
@@ -72,6 +75,9 @@ export function SettingsView(props: Props): JSX.Element {
       </Show>
       <Show when={props.section === "panchanga"}>
         <Panchanga boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "chart"}>
+        <Chart boot={props.boot} apply={props.apply} />
       </Show>
       <Show when={props.section === "location"}>
         <Location boot={props.boot} apply={props.apply} />
@@ -117,6 +123,13 @@ function Root(props: {
       value: () => shortSystem(settings().calendar.month_system),
     },
     { id: "panchanga", value: () => limbCount(settings()) },
+    {
+      id: "chart",
+      value: () =>
+        settings().chart.tray
+          ? CHART_FORMATS.find((f) => f.key === settings().chart.format)!.label
+          : "Off",
+    },
     { id: "location", value: () => props.boot.location.label },
     { id: "astrology", value: () => ayanamsaLabel().split(" ")[0] ?? "" },
     {
@@ -628,6 +641,67 @@ function Panchanga(props: SectionProps): JSX.Element {
     </div>
   );
 }
+
+/**
+ * The Lagna Kundali: whether it has a menu bar item, and which format it draws.
+ *
+ * All three common formats, because they differ only in where a rashi is drawn.
+ * North Indian is the default: it is the one most likely to be recognised, and
+ * it is the only one that cannot be drawn without a lagna - which is why a
+ * location is now required (D-029).
+ */
+function Chart(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <Toggle
+        label="Menu bar item"
+        on={settings().chart.tray}
+        onToggle={() =>
+          props.apply({
+            ...settings(),
+            chart: { ...settings().chart, tray: !settings().chart.tray },
+          })
+        }
+      />
+
+      <p class="settings__hint settings__hint--foot">
+        Its own item, at the left of the row. The chart it opens is where the
+        nine grahas stand now, not a birth chart.
+      </p>
+
+      <ChoiceGroup label="Format">
+        <For each={CHART_FORMATS}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().chart.format === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  chart: { ...settings().chart, format: choice.key },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
+
+      <p class="settings__hint settings__hint--foot">
+        North Indian fixes the houses and moves the signs through them, so the
+        rising sign is always the top compartment. South and East Indian fix the
+        signs and mark the rising one with a stroke.
+      </p>
+    </div>
+  );
+}
+
+const CHART_FORMATS: { key: ChartFormat; label: string }[] = [
+  { key: "north", label: "North Indian" },
+  { key: "south", label: "South Indian" },
+  { key: "east", label: "East Indian" },
+];
 
 function MenuBar(props: SectionProps): JSX.Element {
   const settings = () => props.boot.settings;
