@@ -119,8 +119,12 @@
   margin: 0;
   min-width: 0;
   cursor: default;
-  font: inherit;
-  letter-spacing: inherit;
+  /* No `font: inherit`. It was here to undo the system font a button gets by
+     default, but this element also carries `.header__label`, which sets the
+     title face - and `inherit` came later in the cascade and won. The calendar's
+     title was rendering at the inherited body size while every other view's
+     rendered at `--type-title`, which is why the two headers looked like
+     different fonts. `.header__label` is the one that should decide. */
 }
 
 /* A ground, not an underline. The underline was tried and removed everywhere
@@ -901,10 +905,15 @@
    width, and every pixel of side padding costs two pixels of chart - it is
    square, so width lost is height lost as well. `.panel` has no horizontal
    padding of its own, so the region already reaches the window's edges. */
+/* Padded to sit like the calendar's grid does, not to fill the window.
+   Full bleed was tried and the chart's frame ran into the panel's own border,
+   which reads as a drawing that did not fit rather than one that was placed. The
+   bottom matches `.grid-region`'s top inset, so the two views end at the same
+   distance from the panel's edge. */
 .chakra-view {
   height: 100%;
   overflow: hidden;
-  padding: 0 0 var(--s-4);
+  padding: 0 var(--s-3) var(--s-2);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -965,15 +974,40 @@
   fill: var(--text-primary);
 }
 
-/* Exalted: heavier. Debilitated: dimmer. Weight and presence, not hue, so the
-   pair reads as a scale rather than as two unrelated colours - and so it still
-   reads for anyone the colour would not reach. */
+/* Exalted and debilitated, as light rather than as weight.
+
+   Weight was tried first and failed on its own terms: at 11px on a translucent
+   ground, 700 against 400 is a difference you have to look for, and the whole
+   point is that you should not have to. Dimming failed worse - it put the graha
+   at the same value as the compartment's own caption, so a debilitated body read
+   as a label.
+
+   So the pair is drawn as luminance. Exalted glows; debilitated is the same
+   colour as every other graha but sits behind a soft dark halo, which reads as
+   set back rather than as faded. Both keep --text-primary, so neither can be
+   mistaken for the caption, and both keep the weight difference as a second
+   carrier for anyone the glow does not reach.
+
+   Not a hue: D-023 allows colour to depict and forbids it encoding, and
+   "exalted" is a value, not a thing that looks a particular colour. Light and
+   shadow are the depiction - a graha at its strongest and one at its weakest. */
 .chakra__graha.is-exalted {
   font-weight: 700;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
 }
 
+/* Debilitated is italic, not dark.
+   A dark halo was the symmetric answer to the glow and it is invisible: the
+   panel's ground is already near black, so shadow has nothing to darken. Dimming
+   was tried before that and put the graha at the same value as the compartment's
+   caption, so it read as a label rather than as a body.
+   Italic is legible at 11px, is used nowhere else in the app, and cannot be
+   mistaken for either. The slight fade reinforces it without reaching the
+   caption's value. */
 .chakra__graha.is-debilitated {
-  fill: var(--text-secondary);
+  font-style: italic;
+  fill: var(--text-primary);
+  opacity: 0.78;
 }
 
 /* Own sign is deliberately not drawn. It was, with an underline, and D-024 is

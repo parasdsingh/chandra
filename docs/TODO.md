@@ -43,10 +43,21 @@ the rashi holding the lagna.
 | 1.6a | ~~Location quality gate~~ | superseded | Answered by **E4**: a location becomes mandatory, so there is no centroid case to gate |
 | 1.7 | Chart format setting, and the schema migration | ready | §6. Schema 7 |
 | 1.8 | Panel view and the header title | ready | §5.1–5.3 |
-| 1.9 | Tray item, **on by default**, live lagna in the tooltip | ready | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
+| 1.9 | ~~Tray item, **on by default**, live lagna in the tooltip~~ | done | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
 | 1.10 | Spoken form of the chart | ready | §7. A list, not a grid |
 | 1.11 | Degraded states: no lagna, outside the range, polar | ready | §8 |
 | 1.12 | ~~Decide what the feature is called~~ | done | **`Lagna Kundali`**, glossed `Ascendant chart`. Not `Gochara` — see below |
+
+### E1 defects found in use
+
+| | Finding | Status |
+|---|---|---|
+| i | **A sixth status item gets hidden.** macOS squeezes status items out when the frontmost app has a long menu bar. With Chrome frontmost the chart item - the leftmost of the six - disappears entirely; with Finder frontmost it returns. Observed, not inferred: the same menu bar photographed twice. | open |
+
+The chart is the item most likely to be lost, because it is created last and so
+sits furthest left. Options: create it first so a graha is sacrificed instead,
+ship it off by default, or accept it. Nothing in the app can stop macOS hiding
+an item, so this is a choice about which one goes.
 
 ### E1 decisions taken
 

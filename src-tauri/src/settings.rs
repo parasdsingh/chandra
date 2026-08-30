@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 7;
+pub const SCHEMA_VERSION: u32 = 8;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -102,6 +102,14 @@ pub struct ChartSetting {
     /// gets two.
     pub tray: bool,
     pub format: ChartFormat,
+    /// Whether a North Indian compartment carries the sign's number rather than
+    /// its name.
+    ///
+    /// Both Drik Panchang and Jagannatha Hora write a number. A number is a
+    /// lookup, though, and this app has spent a lot of effort on not making a
+    /// reader do one - so the name is the default and the number is the choice.
+    /// Drik Panchang offers the same switch the other way round.
+    pub numbered: bool,
 }
 
 /// The three chart formats in common use.
@@ -270,6 +278,7 @@ impl Default for Settings {
             chart: ChartSetting {
                 tray: true,
                 format: ChartFormat::North,
+                numbered: false,
             },
             tray: TraySetting {
                 // Only the moon, which is permanent and not listed here.
@@ -487,10 +496,32 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
             .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
             .insert(
                 "chart".into(),
-                serde_json::json!({ "tray": true, "format": "north" }),
+                serde_json::json!({ "tray": true, "format": "north", "numbered": false }),
             );
         value["schema_version"] = serde_json::Value::from(7u32);
         version = 7;
+    }
+
+    // 7 -> 8. The chart gained a choice of caption - the sign's name or its
+    // number - and every field on this struct is required.
+    //
+    // The field was first added *without* a version bump, on the reasoning that
+    // 6 -> 7 already wrote the chart block. It does, but only for a file that
+    // was at 6: anything already migrated to 7 by an earlier build had a chart
+    // block with two fields and no third, so it stopped deserialising and the
+    // app refused to start. A new required field always needs a new version,
+    // whatever the last one happened to write.
+    if version == 7 {
+        if let Some(chart) = value
+            .get_mut("chart")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            chart
+                .entry("numbered")
+                .or_insert(serde_json::Value::Bool(false));
+        }
+        value["schema_version"] = serde_json::Value::from(8u32);
+        version = 8;
     }
 
     match version {
@@ -623,6 +654,42 @@ mod tests {
             read.sidereal.node_type,
             NodeType::True,
             "the file named the true node and must keep it"
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// A field added to a schema version that already exists on disk.
+    ///
+    /// `numbered` was added to the chart block without bumping the version, on
+    /// the reasoning that the step which created that block already wrote it.
+    /// It did - but only for files that had not reached that version yet. Every
+    /// install already at 7 had a two-field chart block, and the app refused to
+    /// start with `missing field numbered`.
+    ///
+    /// This is the shape of that failure, so it cannot recur silently: a
+    /// document at the previous version, without the new field, has to migrate.
+    #[test]
+    fn a_document_at_the_previous_version_gains_a_newly_required_field() {
+        let dir = std::env::temp_dir().join("chandra-schema-7-test");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("dir");
+
+        let mut document = serde_json::to_value(Settings::default()).expect("serialise");
+        document["schema_version"] = serde_json::Value::from(7u32);
+        document["chart"] = serde_json::json!({ "tray": true, "format": "east" });
+        fs::write(dir.join("settings.json"), document.to_string()).expect("write");
+
+        let settings = Settings::load(&dir).expect("a version 7 document must migrate");
+        assert_eq!(settings.schema_version, SCHEMA_VERSION);
+        assert!(
+            !settings.chart.numbered,
+            "the default for a field nobody chose is the behaviour they already had"
+        );
+        assert_eq!(
+            settings.chart.format,
+            ChartFormat::East,
+            "and the choices they did make survive"
         );
 
         let _ = fs::remove_dir_all(&dir);

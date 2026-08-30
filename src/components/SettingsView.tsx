@@ -39,6 +39,9 @@ export type SettingsSection =
   | "calendar"
   | "panchanga"
   | "chart"
+  | "advanced"
+  | "ingress"
+  | "compartments"
   | "location"
   | "astrology"
   | "menubar"
@@ -50,6 +53,9 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   calendar: "Calendar",
   panchanga: "Panchanga",
   chart: "Lagna Kundali",
+  advanced: "Advanced",
+  ingress: "Ingress labels",
+  compartments: "Compartments",
   location: "Location",
   astrology: "Astrology",
   menubar: "Menu bar",
@@ -78,6 +84,15 @@ export function SettingsView(props: Props): JSX.Element {
       </Show>
       <Show when={props.section === "chart"}>
         <Chart boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "advanced"}>
+        <Advanced boot={props.boot} onOpen={props.onOpen} />
+      </Show>
+      <Show when={props.section === "ingress"}>
+        <Ingress boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "compartments"}>
+        <Compartments boot={props.boot} apply={props.apply} />
       </Show>
       <Show when={props.section === "location"}>
         <Location boot={props.boot} apply={props.apply} />
@@ -110,11 +125,6 @@ function Root(props: {
       (choice) => choice.key === settings().calendar.month_system,
     )?.label ?? "";
 
-  const ayanamsaLabel = () =>
-    props.boot.ayanamsas.find(
-      (choice) => choice.key === settings().sidereal.ayanamsa,
-    )?.label ?? "";
-
   const trayCount = () => settings().tray.subjects.length;
 
   const rows: { id: SettingsSection; value: () => string }[] = [
@@ -122,7 +132,7 @@ function Root(props: {
       id: "calendar",
       value: () => shortSystem(settings().calendar.month_system),
     },
-    { id: "panchanga", value: () => limbCount(settings()) },
+    { id: "location", value: () => props.boot.location.label },
     {
       id: "chart",
       value: () =>
@@ -130,13 +140,12 @@ function Root(props: {
           ? CHART_FORMATS.find((f) => f.key === settings().chart.format)!.label
           : "Off",
     },
-    { id: "location", value: () => props.boot.location.label },
-    { id: "astrology", value: () => ayanamsaLabel().split(" ")[0] ?? "" },
     {
       id: "menubar",
       value: () => (trayCount() === 0 ? "Moon only" : `Moon + ${trayCount()}`),
     },
     { id: "size", value: () => sizeLabel(settings().appearance.scale) },
+    { id: "advanced", value: () => "" },
     { id: "about", value: () => "" },
   ];
 
@@ -266,43 +275,18 @@ function Calendar(props: SectionProps): JSX.Element {
           )}
         </For>
       </ChoiceGroup>
-
-      {/* One or the other, never both: the label takes the glyph's place in a
-          40px cell, and there is one glyph. */}
-      <ChoiceGroup label="Ingress labels">
-        <For each={INGRESS_CHOICES}>
-          {(choice) => (
-            <Choice
-              label={choice.label}
-              selected={settings().calendar.ingress === choice.key}
-              onSelect={() =>
-                props.apply({
-                  ...settings(),
-                  calendar: { ...settings().calendar, ingress: choice.key },
-                })
-              }
-            />
-          )}
-        </For>
-      </ChoiceGroup>
-      <p class="settings__hint settings__hint--foot">
-        On the day a graha enters a sign or a nakshatra, its cell names what it
-        entered instead of drawing the glyph. Not on the Moon's calendar: it
-        enters a nakshatra every day, so every cell would be a label and none of
-        them would be a phase.
-      </p>
     </div>
   );
 }
 
-const INGRESS_CHOICES: { key: IngressMode; label: string }[] = [
-  { key: "off", label: "None" },
+const INGRESS_CHOICES: { key: IngressMode; label: string; short: string }[] = [
+  { key: "off", label: "None", short: "Off" },
   // Western three-letter forms, because the Sanskrit names cannot be
   // abbreviated and stay distinct - Vrishabha and Vrishchika are both `Vri`.
-  { key: "rashi", label: "Rashi — Ari, Tau, Gem" },
+  { key: "rashi", label: "Rashi — Ari, Tau, Gem", short: "Rashi" },
   // Two parts where the name has two: six nakshatras begin Purva or Uttara and
   // three of each share what follows.
-  { key: "nakshatra", label: "Nakshatra — Ashw, P.Ash" },
+  { key: "nakshatra", label: "Nakshatra — Ashw, P.Ash", short: "Nakshatra" },
 ];
 
 /** Quiet time after the last keystroke before a search is sent. */
@@ -702,6 +686,129 @@ const CHART_FORMATS: { key: ChartFormat; label: string }[] = [
   { key: "south", label: "South Indian" },
   { key: "east", label: "East Indian" },
 ];
+
+/**
+ * Everything that changes the model or the notation.
+ *
+ * The split is by who sets it, not by how obscure it is. General holds what a
+ * normal user picks - where they are, which calendar, how big the panel. This
+ * holds what changes *what is computed* (the ayanamsa, the node type, which
+ * panchanga limbs) or *how it is written* (ingress labels, chart compartments).
+ *
+ * Ayanamsa and node type are the strongest case: they move every figure in the
+ * app by up to a whole rashi, and they sat between "Menu bar" and "Size" as
+ * though they were a preference about the interface.
+ */
+function Advanced(props: {
+  boot: Bootstrap;
+  onOpen: (section: SettingsSection) => void;
+}): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  const ayanamsaLabel = () =>
+    props.boot.ayanamsas.find(
+      (choice) => choice.key === settings().sidereal.ayanamsa,
+    )?.label ?? "";
+
+  const rows: { id: SettingsSection; value: () => string }[] = [
+    { id: "astrology", value: () => ayanamsaLabel().split(" ")[0] ?? "" },
+    { id: "panchanga", value: () => limbCount(settings()) },
+    {
+      id: "ingress",
+      value: () =>
+        INGRESS_CHOICES.find((c) => c.key === settings().calendar.ingress)
+          ?.short ?? "",
+    },
+    {
+      id: "compartments",
+      value: () => (settings().chart.numbered ? "Numbers" : "Names"),
+    },
+  ];
+
+  return (
+    <nav class="settings__list">
+      <For each={rows}>
+        {(row) => (
+          <button class="settings__nav" onClick={() => props.onOpen(row.id)}>
+            <span class="settings__nav-title">{SECTION_TITLES[row.id]}</span>
+            <span class="settings__nav-value">{row.value()}</span>
+            <Chevron />
+          </button>
+        )}
+      </For>
+    </nav>
+  );
+}
+
+/** Which ingress the grid labels, if either. */
+function Ingress(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <ChoiceGroup label="Ingress labels">
+        <For each={INGRESS_CHOICES}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().calendar.ingress === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  calendar: { ...settings().calendar, ingress: choice.key },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
+      <p class="settings__hint settings__hint--foot">
+        On the day a graha enters a sign or a nakshatra, its cell names what it
+        entered instead of drawing the glyph. Not on the Moon's calendar: it
+        enters a nakshatra every day, so every cell would be a label and none of
+        them would be a phase.
+      </p>
+    </div>
+  );
+}
+
+/** What a North Indian compartment is captioned with. */
+function Compartments(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <ChoiceGroup label="North Indian compartments">
+        <Choice
+          label="Names"
+          selected={!settings().chart.numbered}
+          onSelect={() =>
+            props.apply({
+              ...settings(),
+              chart: { ...settings().chart, numbered: false },
+            })
+          }
+        />
+        <Choice
+          label="Numbers"
+          selected={settings().chart.numbered}
+          onSelect={() =>
+            props.apply({
+              ...settings(),
+              chart: { ...settings().chart, numbered: true },
+            })
+          }
+        />
+      </ChoiceGroup>
+      <p class="settings__hint settings__hint--foot">
+        Drik Panchang and Jagannatha Hora both write a number here. A number is
+        a lookup, so this app writes the name and offers the number. The South
+        and East Indian formats are unaffected: their compartments are the
+        signs, and both references name them.
+      </p>
+    </div>
+  );
+}
 
 function MenuBar(props: SectionProps): JSX.Element {
   const settings = () => props.boot.settings;

@@ -59,8 +59,11 @@ interface Point {
 /** One compartment: its shape, where its two kinds of text sit, and what it holds. */
 interface Compartment {
   points: Point[];
-  /** The compartment's own name - the rashi's short form, or its number. */
+  /** The compartment's caption - the rashi's short form, or its number. */
   label: Point;
+  /** How that caption is anchored. The wall triangles hug a side, so theirs
+   *  starts or ends at the wall rather than centring on a point. */
+  labelAnchor: "start" | "middle" | "end";
   /** The middle of the cluster of grahas. */
   body: Point;
   rashi: ChakraRashi;
@@ -126,27 +129,97 @@ const LABEL_DESCENT = 6;
 const LABEL_HALF = 15;
 
 /**
- * A compartment's label, anchored toward its outer corner and then pushed
- * wholly inside it.
+ * Where a North Indian compartment's caption goes, following Drik Panchang.
  *
- * Anchoring alone was not enough once the chart became a rectangle rather than a
- * square: the corner triangles are half as tall as they are wide, so a label
- * placed two fifths of the way in from the corner still had its ascenders above
- * the compartment's top edge, and the top and bottom rows were clipped by the
- * viewBox.
+ * The convention is not one rule but three, and which applies depends on the
+ * compartment's shape and where it sits:
  *
- * So the anchor is a starting point and the clamps are the rule. Vertically into
- * the shape's own bounds allowing for the type's ascent and descent; then
- * horizontally into whatever the shape is actually wide at the height it ended
- * up at, which for a wedge is not what it is wide at its middle.
+ * | Houses | Shape | Caption sits at |
+ * |---|---|---|
+ * | 1, 4, 7, 10 | diamond | the vertex farthest from the centre |
+ * | 2, 6, 8, 12 | corner triangle | the vertex farthest from the centre |
+ * | 3, 5, 9, 11 | wall triangle | the middle of the wall it touches |
+ *
+ * The last group is what a single "outermost vertex" rule gets wrong. Those four
+ * triangles have their long side against the chart's left or right wall, and
+ * their farthest vertex is a corner they share with a neighbour - so two
+ * captions ended up in the same corner. Against the wall, vertically centred,
+ * they sit in the part of the shape that is actually theirs.
+ *
+ * A number is placed differently again: nearest the centre, where the
+ * compartment is widest and a one or two character label does not need the room
+ * a name does.
  */
-function placeLabel(points: Point[], outer: Point, middle: Point): Point {
+function placeCaption(
+  points: Point[],
+  house: number,
+  centre: Point,
+  middle: Point,
+  numbered: boolean,
+): { at: Point; anchor: "start" | "middle" | "end" } {
+  const far = (a: Point, b: Point) =>
+    Math.hypot(a.x - centre.x, a.y - centre.y) >
+    Math.hypot(b.x - centre.x, b.y - centre.y)
+      ? a
+      : b;
+
+  if (numbered) {
+    // Nearest the centre of the chart.
+    const near = points.reduce((closest, point) =>
+      far(closest, point) === closest ? point : closest,
+    );
+    return {
+      at: clampInside(points, toward(near, middle, 0.3)),
+      anchor: "middle",
+    };
+  }
+
+  const wallHouse = house === 3 || house === 5 || house === 9 || house === 11;
+  if (wallHouse) {
+    // The one edge that lies on the chart's left or right wall, and its middle.
+    const wall = edges(points).find(
+      ([a, b]) => a.x === b.x && (a.x === INSET || a.x === WIDTH - INSET),
+    );
+    if (wall) {
+      const [a, b] = wall;
+      const onLeft = a.x === INSET;
+      return {
+        at: {
+          x: a.x + (onLeft ? LABEL_WALL : -LABEL_WALL),
+          y: (a.y + b.y) / 2 + LABEL_ASCENT / 3,
+        },
+        anchor: onLeft ? "start" : "end",
+      };
+    }
+  }
+
+  return {
+    at: clampInside(points, toward(points.reduce(far), middle, 0.4)),
+    anchor: "middle",
+  };
+}
+
+/** The polygon's edges, as pairs of consecutive points. */
+function edges(points: Point[]): [Point, Point][] {
+  return points.map((point, i) => [point, points[(i + 1) % points.length]!]);
+}
+
+/** Clearance a wall-hugging caption keeps from the wall itself. */
+const LABEL_WALL = 4;
+
+/**
+ * Pushes a caption wholly inside its compartment.
+ *
+ * Anchoring alone was not enough once the chart became a rectangle: the corner
+ * triangles are half as tall as they are wide, so a caption placed a fraction of
+ * the way in from the corner still had its ascenders above the shape's top edge
+ * and was clipped by the viewBox.
+ */
+function clampInside(points: Point[], start: Point): Point {
   const ys = points.map((point) => point.y);
   const top = Math.min(...ys) + LABEL_ASCENT;
   const bottom = Math.max(...ys) - LABEL_DESCENT;
-
-  const start = toward(outer, middle, 0.4);
-  const y = top <= bottom ? Math.min(Math.max(start.y, top), bottom) : middle.y;
+  const y = top <= bottom ? Math.min(Math.max(start.y, top), bottom) : start.y;
 
   const span = spanAt(points, y);
   const lowest = span.min + LABEL_HALF;
@@ -226,6 +299,7 @@ function cluster(points: Point[], centre: Point, count: number): Point[] {
 function northCompartments(
   rashis: ChakraRashi[],
   lagnaSign: number,
+  numbered: boolean,
 ): Compartment[] {
   // The construction is the same whatever the proportions: the corners, the
   // midpoints of the four sides, and the quarter points where the diamond's
@@ -276,20 +350,11 @@ function northCompartments(
     const sign = (lagnaSign + house) % 12;
     const middle = centroid(points);
 
-    // The sign number goes to the compartment's outermost corner and the grahas
-    // stay at its middle. Nudging the number outward from the centroid was not
-    // enough: in a corner triangle the centroid already sits near the corner, so
-    // the number landed on top of the grahas rather than clear of them.
-    const outer = points.reduce((farthest, point) =>
-      Math.hypot(point.x - C.x, point.y - C.y) >
-      Math.hypot(farthest.x - C.x, farthest.y - C.y)
-        ? point
-        : farthest,
-    );
-
+    const caption = placeCaption(points, house + 1, C, middle, numbered);
     return {
       points,
-      label: placeLabel(points, outer, middle),
+      label: caption.at,
+      labelAnchor: caption.anchor,
       body: middle,
       rashi: rashis[sign]!,
       sign,
@@ -354,6 +419,7 @@ function gridCompartments(
         { x: left, y: top + cellHeight },
       ],
       label: { x: left + 4, y: top + 11 },
+      labelAnchor: "start" as const,
       body: { x: left + cellWidth / 2, y: top + cellHeight / 2 + 3 },
       rashi,
       sign,
@@ -364,13 +430,19 @@ function gridCompartments(
 export function Chakra(props: {
   data: ChakraData;
   format: ChartFormat;
+  /** Whether the North Indian compartments carry the sign's number rather than
+   *  its name. Both reference applications write a number; the name is what a
+   *  reader can use without a lookup, so it is the default and this is the
+   *  setting. Ignored by the other two formats, whose compartments *are* the
+   *  signs and are labelled by name in both references. */
+  numbered: boolean;
 }): JSX.Element {
   const lagnaSign = () =>
     props.data.rashis.findIndex((rashi) => rashi.house === 1);
 
   const compartments = (): Compartment[] =>
     props.format === "north"
-      ? northCompartments(props.data.rashis, lagnaSign())
+      ? northCompartments(props.data.rashis, lagnaSign(), props.numbered)
       : gridCompartments(props.data.rashis, props.format);
 
   return (
@@ -401,9 +473,11 @@ export function Chakra(props: {
               class="chakra__label"
               x={compartment.label.x}
               y={compartment.label.y}
-              text-anchor={props.format === "north" ? "middle" : "start"}
+              text-anchor={compartment.labelAnchor}
             >
-              {compartment.rashi.short}
+              {props.format === "north" && props.numbered
+                ? compartment.sign + 1
+                : compartment.rashi.short}
               <title>
                 {compartment.rashi.name} · house {compartment.rashi.house}
               </title>

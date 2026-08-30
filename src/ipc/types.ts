@@ -477,6 +477,10 @@ export interface Settings {
   chart: {
     tray: boolean;
     format: ChartFormat;
+    /** Whether a North Indian compartment carries the sign's number rather than
+     *  its name. Both references write a number; a number is a lookup, so the
+     *  name is the default here and this is the choice. */
+    numbered: boolean;
   };
   tray: {
     subjects: GrahaKey[];

@@ -450,7 +450,10 @@ export function Panel(props: Props): JSX.Element {
   function back() {
     batch(() => {
       if (view() === "settings" && section() !== "root") {
-        setSection("root");
+        // Back to the section this one hangs from, not always to the top. The
+        // advanced panes are two levels down, and returning them to the root
+        // skipped the list they were opened from.
+        setSection(SETTINGS_PARENT[section()] ?? "root");
         return;
       }
       setView(view() === "settings" ? settingsFrom() : "calendar");
@@ -699,6 +702,10 @@ export function Panel(props: Props): JSX.Element {
           onSettings={() =>
             batch(() => {
               setJumping(false);
+              // Where to return to. Only the keyboard path recorded this, so
+              // opening settings from the chart with the gear and pressing back
+              // landed on the moon calendar.
+              setSettingsFrom(view());
               setView("settings");
               setSection("root");
             })
@@ -818,6 +825,7 @@ export function Panel(props: Props): JSX.Element {
                     <Chakra
                       data={data()}
                       format={props.boot.settings.chart.format}
+                      numbered={props.boot.settings.chart.numbered}
                     />
                   </>
                 )}
@@ -905,6 +913,14 @@ function caption(chart: ChakraData, timeZone: string): string {
  * Measured rather than assumed: the micro type is 10px and its tracking 0.6px,
  * so an average uppercase glyph runs about 7px and 288 holds about forty. */
 const CAPTION_LIMIT = 40;
+
+/** Which list a settings section is reached from. */
+const SETTINGS_PARENT: Partial<Record<SettingsSection, SettingsSection>> = {
+  astrology: "advanced",
+  panchanga: "advanced",
+  ingress: "advanced",
+  compartments: "advanced",
+};
 
 function toError(thrown: unknown): { code: string; message: string } {
   if (isAppError(thrown)) return { code: thrown.code, message: thrown.message };
