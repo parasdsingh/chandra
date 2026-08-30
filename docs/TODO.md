@@ -32,10 +32,10 @@ the rashi holding the lagna.
 
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 1.1 | **Sidereal ascendant in the engine** | ready | The blocker. `swe_houses_ex` with `SEFLG_SIDEREAL`, named-field request struct so the arguments cannot be transposed. §2.2 |
-| 1.1a | Test: independent closed-form ascendant agrees | in flight | The guard. §2.2.1–2.2.2. `atan2(cos RAMC, −(sin RAMC·cos ε + tan φ·sin ε))` from the engine's own sidereal time and obliquity. φ is in the formula, so a transposed argument cannot agree |
-| 1.1b | Settle the ayanamsa frame the lagna sits on | ready | If the guard closes at ~17″ rather than arcsecond, `swe_houses_ex` is using the library's ayanamsa and ours is the Sun-difference one. Put the lagna on the app's frame; do not widen the tolerance. §2.2.2 |
-| 1.2 | Obliquity, for the polar test | ready | §2.3 |
+| 1.1 | ~~**Sidereal ascendant in the engine**~~ | done | The blocker. `swe_houses_ex` with `SEFLG_SIDEREAL`, named-field request struct so the arguments cannot be transposed. §2.2 |
+| 1.1a | ~~Test: independent closed-form ascendant agrees~~ | done | The guard. §2.2.1–2.2.2. `atan2(cos RAMC, −(sin RAMC·cos ε + tan φ·sin ε))` from the engine's own sidereal time and obliquity. φ is in the formula, so a transposed argument cannot agree |
+| 1.1b | ~~Settle the ayanamsa frame the lagna sits on~~ | done | **No residual.** `swe_houses_ex` and `Engine::ayanamsa` agree to under an arcsecond, so the lagna is already on the same sidereal frame as every rashi the app prints. The 17″ worry did not materialise |
+| 1.2 | ~~Obliquity, for the polar test~~ | done | `Engine::obliquity` and `Engine::sidereal_time`, both used by the guard |
 | 1.3 | `Chakra` payload — 12 rashis of occupants, lagna rashi and degree | ready | Shared by all three formats |
 | 1.4 | North Indian renderer | ready | **Default.** 4 diamonds, 8 triangles, SVG polygons with a text anchor each. Cannot be drawn without a lagna |
 | 1.5 | South Indian renderer | ready | 4×4, centre removed, Meena top-left, clockwise. The fallback where there is no lagna |

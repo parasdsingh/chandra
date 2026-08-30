@@ -18,6 +18,18 @@ const SEFLG_MOSEPH: i32 = 4;
 const SEFLG_SPEED: i32 = 256;
 const SEFLG_SIDEREAL: i32 = 64 * 1024;
 
+/// House system letter. `W` is whole sign: the ascendant's own rashi is the
+/// first house and each house is one whole rashi.
+///
+/// The ascendant itself does not depend on this - Swiss Ephemeris fills
+/// `ascmc[0]` before it divides the houses - but a system must be named, and
+/// whole sign is the one jyotisha uses.
+const SE_HSYS_WHOLE_SIGN: i32 = b'W' as i32;
+
+/// Pseudo-body that makes `swe_calc_ut` return the obliquity and nutation
+/// instead of a position.
+const SE_ECL_NUT: i32 = -1;
+
 const SE_CALC_RISE: i32 = 1;
 const SE_CALC_SET: i32 = 2;
 
@@ -353,6 +365,69 @@ impl Engine {
         })
     }
 
+    /// Sidereal longitude of the ascendant - the lagna - in degrees.
+    ///
+    /// The point of the ecliptic rising on the eastern horizon, which is what a
+    /// Lagna Kundali is built around. It depends on the instant *and* on where
+    /// the observer stands, unlike every other figure this engine returns: two
+    /// people reading the same minute in different cities have different lagnas.
+    ///
+    /// Sidereal, on the configured ayanamsa. `swe_houses`, which the `swiss-eph`
+    /// crate's own safe wrapper calls, takes no flags and so answers tropically:
+    /// about 24 degrees out under Lahiri, and entirely plausible-looking. This
+    /// calls `swe_houses_ex` directly for the same reason `calc_raw` calls
+    /// `swe_calc_ut` directly, which is that the flag word is the whole point.
+    pub fn ascendant(&self, jd_ut: f64, observer: Observer) -> Result<Reading> {
+        let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        let sidereal = houses_raw(HouseRequest {
+            jd_ut,
+            latitude: observer.latitude,
+            longitude: observer.longitude,
+            sidereal: true,
+        })?;
+        Ok(Reading {
+            degrees: sidereal.ascendant,
+            // `swe_houses_ex` reports no flag word, so there is nothing to read
+            // a theory off. The ascendant is geometry over the sidereal time and
+            // the obliquity rather than a body's position, and neither of those
+            // comes from the data files - so it is exact wherever the clock is,
+            // and saying `Swieph` here states that rather than assuming it.
+            source: Source::Swieph,
+        })
+    }
+
+    /// The tropical ascendant, and the true obliquity, at an instant.
+    ///
+    /// Exposed for the test that checks [`Engine::ascendant`] against an
+    /// independent derivation, and for the polar test. Both are facts about the
+    /// sky rather than about a body, so neither is behind the sidereal
+    /// configuration.
+    pub fn ascendant_tropical(&self, jd_ut: f64, observer: Observer) -> Result<f64> {
+        let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        Ok(houses_raw(HouseRequest {
+            jd_ut,
+            latitude: observer.latitude,
+            longitude: observer.longitude,
+            sidereal: false,
+        })?
+        .ascendant)
+    }
+
+    /// True obliquity of the ecliptic in degrees, at an instant.
+    pub fn obliquity(&self, jd_ut: f64) -> Result<f64> {
+        let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        let (values, _) = calc_raw(jd_ut, SE_ECL_NUT, SEFLG_SWIEPH, "obliquity")?;
+        Ok(values[0])
+    }
+
+    /// Greenwich apparent sidereal time in hours, at an instant.
+    pub fn sidereal_time(&self, jd_ut: f64) -> Result<f64> {
+        let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
+        // SAFETY: called under the engine lock. `swe_sidtime` takes a scalar and
+        // returns one; it reads the same global state every other call does.
+        Ok(unsafe { se::swe_sidtime(jd_ut) })
+    }
+
     /// Ayanamsa in degrees at an instant, for display in settings.
     ///
     /// Computed as the difference between the tropical and sidereal longitude of
@@ -434,6 +509,80 @@ fn se_body_id(graha: Graha, node_type: NodeType) -> i32 {
 }
 
 /// One `swe_calc_ut` call. Caller must hold the engine lock.
+/// What a house calculation is asked for.
+///
+/// Named fields, not a positional pair of degrees. `swe_houses_ex` takes
+/// **latitude before longitude**, which is the reverse of
+/// [`Observer::as_se_geopos`] and of most of this codebase - and a transposed
+/// call does not fail. It returns a real ascendant for a real place: Bengaluru
+/// at 12.97N 77.59E transposes to 77.59N 12.97E, which is northern Norway, and
+/// nothing at runtime looks wrong.
+///
+/// So the order is not something a reader has to remember. It is carried by the
+/// field names, and `as_se_geopos` cannot be passed here because the types do
+/// not line up.
+struct HouseRequest {
+    jd_ut: f64,
+    latitude: f64,
+    longitude: f64,
+    /// Whether to apply the configured ayanamsa.
+    sidereal: bool,
+}
+
+struct Houses {
+    ascendant: f64,
+}
+
+/// The ascendant at an instant and a place.
+///
+/// `swe_houses_ex` rather than `swe_houses`: only the `_ex` form takes a flag
+/// word, and without `SEFLG_SIDEREAL` the answer is tropical.
+///
+/// The sidereal branch depends on `swe_set_sid_mode` having been called, which
+/// `Engine::construct` and `reconfigure` both do. If it had not been,
+/// `swehouse.c` substitutes Fagan-Bradley silently rather than failing - which
+/// is why the guard asserts the ayanamsa the answer actually carries rather than
+/// trusting the flag to have been honoured.
+fn houses_raw(request: HouseRequest) -> Result<Houses> {
+    let HouseRequest {
+        jd_ut,
+        latitude,
+        longitude,
+        sidereal,
+    } = request;
+
+    let mut cusps = [0.0f64; 13];
+    let mut ascmc = [0.0f64; 10];
+    let flags = if sidereal { SEFLG_SIDEREAL } else { 0 };
+
+    // SAFETY: called under the engine lock. `cusps` has the 13 elements the
+    // library writes for a 12 house system - it is 1-indexed and ignores [0] -
+    // and `ascmc` the 10 it always writes. Latitude precedes longitude, which is
+    // this function's whole reason for existing.
+    let returned = unsafe {
+        se::swe_houses_ex(
+            jd_ut,
+            flags,
+            latitude,
+            longitude,
+            SE_HSYS_WHOLE_SIGN,
+            cusps.as_mut_ptr(),
+            ascmc.as_mut_ptr(),
+        )
+    };
+
+    if returned < 0 {
+        return Err(Error::Calculation {
+            context: format!("ascendant at JD {jd_ut}"),
+            message: format!("house calculation failed at {latitude}, {longitude}"),
+        });
+    }
+
+    Ok(Houses {
+        ascendant: ascmc[0].rem_euclid(360.0),
+    })
+}
+
 fn calc_raw(jd_ut: f64, body: i32, flags: i32, context: &str) -> Result<([f64; 6], i32)> {
     let mut xx = [0.0f64; 6];
     let mut err = [0 as c_char; ERROR_BUFFER_LEN];
