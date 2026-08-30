@@ -614,7 +614,11 @@ impl Almanac {
     /// The observer is read from settings rather than passed, like every other
     /// method here: a chart drawn for one place while the calendar beside it is
     /// drawn for another would be two apps in one window.
-    pub fn chakra(&self, unix_ms: i64) -> Result<chakra::Chakra> {
+    ///
+    /// The place is passed rather than read here: this layer knows an observer
+    /// and a zone, not what the city is called. Only the layer that resolved it
+    /// knows that.
+    pub fn chakra(&self, unix_ms: i64, place: &str) -> Result<chakra::Chakra> {
         // A chart reads the nine positions and the ascendant in two calls, each
         // taking the engine lock on its own. A reconfigure landing between them
         // would give a lagna on one ayanamsa and grahas on another - a whole
@@ -633,7 +637,7 @@ impl Almanac {
         for _ in 0..3 {
             let generation = self.generation()?;
             let settings = self.settings_snapshot()?;
-            let built = chakra::at(&self.engine, unix_ms, settings.location.observer)?;
+            let built = chakra::at(&self.engine, unix_ms, settings.location.observer, place)?;
             if self.generation()? == generation {
                 return Ok(built);
             }

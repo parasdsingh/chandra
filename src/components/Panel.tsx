@@ -30,6 +30,7 @@ import type {
   GrahaKey,
   GrahaMonth,
   MoonMonth,
+  Chakra as ChakraData,
   Settings,
   Snapshot,
 } from "../ipc/types";
@@ -628,11 +629,15 @@ export function Panel(props: Props): JSX.Element {
 
   const headerTitle = () => {
     if (view() === "settings") return SECTION_TITLES[section()];
-    // The Sanskrit name, glossed in the line beneath it - the same shape the
-    // day view uses, where the header names the day and the line below places
-    // it. `Gochara` was considered and dropped: in common usage it means
-    // transits read against a natal chart, which this app does not have.
-    if (view() === "chart") return "Lagna Kundali";
+    // The reading, not the genre. Every other header in the panel names a value
+    // - `Chandra · August 2026`, `Shukla Ashtami`, the settings section - and
+    // this one named the feature, which is the one thing on the surface a second
+    // glance cannot recover from. The feature keeps its name in its settings
+    // section and its tray tooltip.
+    if (view() === "chart") {
+      const rising = chart()?.lagna.name;
+      return rising ? `${rising} Lagna` : "";
+    }
     // A lunar day is called by its tithi, so that is what the header says, and
     // the civil date it also has moves to the line below. In solar mode the
     // western date *is* the name, so the header is left empty and `Header`
@@ -796,25 +801,20 @@ export function Panel(props: Props): JSX.Element {
               >
                 {(data) => (
                   <>
-                    {/* One line, not two. The region is 264px and the chart
-                        needs 208 of it; a second caption would have pushed the
-                        chart into a scroll, and a chart you cannot see whole is
-                        not a chart. The English gloss, the instant and the
-                        lagna's degree all fit here. */}
-                    <p class="chakra__gloss">
-                      Ascendant chart &middot;{" "}
-                      {formatTime(
-                        { unix_ms: data().unix_ms, day_offset: 0 },
-                        { timeZone: timeZone() },
-                      )}{" "}
-                      &middot; {data().lagna.name}{" "}
-                      {data().lagna.degrees_in_rashi[0]}&deg;
-                      {String(data().lagna.degrees_in_rashi[1]).padStart(
-                        2,
-                        "0",
-                      )}
-                      &prime;
-                    </p>
+                    {/* One line, and it places the chart rather than
+                        translating its title. The degree first because it is
+                        the most volatile figure in the view - the lagna moves
+                        one degree every four minutes - then the instant, then
+                        the place, which is what makes the degree mean anything:
+                        a longitude 300km out moves the lagna about three
+                        degrees, and both reference applications print the place
+                        beside every chart.
+
+                        It drops right to left as the line narrows, except that
+                        the place is the last thing to go: if the place alone
+                        will not fit, the other two come back instead. */}
+                    <p class="chakra__gloss">{caption(data(), timeZone())}</p>
+
                     <Chakra
                       data={data()}
                       format={props.boot.settings.chart.format}
@@ -870,6 +870,41 @@ export function Panel(props: Props): JSX.Element {
     </div>
   );
 }
+
+/**
+ * The line under the chart's title.
+ *
+ * A ladder, like the header's. The degree is dropped first, then the instant;
+ * the place is dropped only if it is what will not fit, and then the other two
+ * come back rather than leaving the line nearly empty.
+ *
+ * Measured against the panel's own width rather than guessed at, so a long city
+ * name is handled by the same rule that handles a short one.
+ */
+function caption(chart: ChakraData, timeZone: string): string {
+  const [degrees, minutes] = chart.lagna.degrees_in_rashi;
+  const at = `${degrees}\u00b0${String(minutes).padStart(2, "0")}\u2032`;
+  const clock = formatTime(
+    { unix_ms: chart.unix_ms, day_offset: 0 },
+    { timeZone },
+  );
+  const place = chart.place.toUpperCase();
+
+  return (
+    [
+      `${at} \u00b7 ${clock} \u00b7 ${place}`,
+      `${clock} \u00b7 ${place}`,
+      place,
+      `${at} \u00b7 ${clock}`,
+    ].find((line) => line.length <= CAPTION_LIMIT) ?? at
+  );
+}
+
+/** Characters that fit the caption's 288px line at 10px uppercase.
+ *
+ * Measured rather than assumed: the micro type is 10px and its tracking 0.6px,
+ * so an average uppercase glyph runs about 7px and 288 holds about forty. */
+const CAPTION_LIMIT = 40;
 
 function toError(thrown: unknown): { code: string; message: string } {
   if (isAppError(thrown)) return { code: thrown.code, message: thrown.message };

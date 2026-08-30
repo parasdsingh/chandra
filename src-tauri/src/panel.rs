@@ -25,9 +25,19 @@ const PANEL_WIDTH: f64 = 320.0;
 /// Panel height, and therefore window height.
 ///
 /// Constant: 12 padding + 40 header + 4 + 264 region + 12 padding. Every view -
-/// calendar, day, settings - swaps inside that 264px region rather than growing
-/// the panel, so the window never resizes and the material behind it never has
-/// to be resized either.
+/// calendar, day, settings, chart - swaps inside that 264px region rather than
+/// growing the panel, so the window never resizes and the material behind it
+/// never has to be re-cut.
+///
+/// The chart was briefly given its own height of 414, so it could be a square at
+/// the panel's full width. That was wrong twice over: it made one view resize a
+/// window every other view leaves alone, and the resize dropped the window's key
+/// status, which the focus handler read as the user clicking away - opening
+/// settings from the chart made the whole panel vanish.
+///
+/// The chart is a rectangle instead. Drik Panchang draws its North Indian chart
+/// at 3:2 rather than square for the same reason: the construction does not need
+/// equal sides, and a page has more width than height to give.
 const PANEL_HEIGHT: f64 = 332.0;
 
 /// Corner radius of the panel, matched by the window material behind it.

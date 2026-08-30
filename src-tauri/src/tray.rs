@@ -267,7 +267,8 @@ fn moon_tooltip(snapshot: &Snapshot, system: MonthSystem) -> String {
 fn chart_tooltip(app: &AppHandle) -> String {
     let state = app.state::<AppState>();
     let now = jiff::Timestamp::now().as_millisecond();
-    match state.almanac.chakra(now) {
+    let place = state.location().label;
+    match state.almanac.chakra(now, &place) {
         Ok(chart) => {
             let (degrees, minutes, _) = chart.lagna.degrees_in_rashi;
             format!(

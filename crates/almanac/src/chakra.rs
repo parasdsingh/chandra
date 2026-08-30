@@ -15,12 +15,22 @@ use chandra_ephemeris::{Engine, Graha, Observer, Source};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::events::combustion_from;
+use crate::standing::{dignity_of, Dignity};
 use crate::zodiac::{degrees_in_rashi, Rashi};
 
 /// The whole chart at one instant.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chakra {
     pub unix_ms: i64,
+    /// Where the chart was cast for.
+    ///
+    /// Not decoration. The lagna moves a degree every four minutes, so a
+    /// longitude three hundred kilometres out moves it about three degrees - and
+    /// a chart computed for the wrong city looks exactly like one computed for
+    /// the right one. Both Drik Panchang and Jagannatha Hora print the place
+    /// beside every chart for this reason.
+    pub place: String,
     /// The rising point. Every format needs it: South and East Indian mark its
     /// cell, and North Indian is built on it - house 1 *is* the lagna's rashi,
     /// so without this there is no North Indian chart at all.
@@ -72,9 +82,18 @@ pub struct ChakraGraha {
     pub short: String,
     pub longitude: f64,
     pub degrees_in_rashi: (u32, u32, f64),
-    /// Marked on the chart. It is the one state the menu bar carries too
-    /// (D-022), and the only one a compartment has room for.
+    /// Marked on the chart by writing the name in brackets.
     pub retrograde: bool,
+    /// Inside the Sun's rays. Marked by the same warm wash the calendar cell
+    /// uses, so one state has one appearance wherever it appears.
+    pub combust: bool,
+    /// Exalted, debilitated, or in a sign it rules. `None` where the graha has
+    /// no relationship to the sign it stands in, and always for the nodes, which
+    /// have no agreed dignity table (D-026).
+    pub dignity: Option<Dignity>,
+    /// The full name, for the hover. An abbreviation is what the compartment has
+    /// room for; it is not what anyone should have to decode.
+    pub name: String,
 }
 
 /// Two-letter chart forms, the published convention.
@@ -101,7 +120,7 @@ const fn chart_short(graha: Graha) -> &'static str {
 /// The observer matters here in a way it does not for a position: two people
 /// reading the same minute in different cities have the same grahas in the same
 /// rashis and a different lagna.
-pub fn at(engine: &Engine, unix_ms: i64, observer: Observer) -> Result<Chakra> {
+pub fn at(engine: &Engine, unix_ms: i64, observer: Observer, place: &str) -> Result<Chakra> {
     let jd = chandra_ephemeris::unix_seconds_to_jd(unix_ms as f64 / 1000.0);
 
     // Positions first, then the ascendant, and the order matters less than the
@@ -128,14 +147,26 @@ pub fn at(engine: &Engine, unix_ms: i64, observer: Observer) -> Result<Chakra> {
         })
         .collect();
 
+    // The Sun's longitude, for combustion. Read from the same nine positions
+    // rather than asked for again, so every graha's separation is measured
+    // against the Sun at the instant its own position was taken.
+    let sun = positions[Graha::ALL
+        .iter()
+        .position(|&g| g == Graha::Surya)
+        .expect("Graha::ALL contains Surya")]
+    .longitude;
+
     for (graha, position) in Graha::ALL.into_iter().zip(positions.iter()) {
         let rashi = Rashi::from_longitude(position.longitude);
         rashis[rashi.index()].grahas.push(ChakraGraha {
             graha,
             short: chart_short(graha).to_string(),
+            name: graha.name().to_string(),
             longitude: position.longitude,
             degrees_in_rashi: degrees_in_rashi(position.longitude),
             retrograde: position.is_retrograde(),
+            combust: combustion_from(graha, position, sun).combust,
+            dignity: dignity_of(graha, rashi),
         });
     }
 
@@ -151,6 +182,7 @@ pub fn at(engine: &Engine, unix_ms: i64, observer: Observer) -> Result<Chakra> {
 
     Ok(Chakra {
         unix_ms,
+        place: place.to_string(),
         lagna: Lagna {
             rashi: lagna_rashi,
             name: lagna_rashi.name().to_string(),

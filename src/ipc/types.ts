@@ -387,6 +387,10 @@ export interface PlaceSetting {
  */
 export interface Chakra {
   unix_ms: number;
+  /** Where the chart was cast for. Not decoration: the lagna moves a degree
+   *  every four minutes, so a chart computed for the wrong city looks exactly
+   *  like one computed for the right one. */
+  place: string;
   lagna: Lagna;
   /** Twelve, always, in zodiacal order from Mesha. An empty rashi is present
    *  and empty: the chart draws twelve compartments whatever stands in them. */
@@ -418,9 +422,18 @@ export interface ChakraGraha {
   /** Two Latin letters — `Su`, `Mo`, `Ma`, `Me`, `Ju`, `Ve`, `Sa`, `Ra`, `Ke`.
    *  Sanskrit does not abbreviate to two: Shukra and Shani are both `Sh`. */
   short: string;
+  /** The full name, for the hover. An abbreviation is what a compartment has
+   *  room for; it is not what anyone should have to decode. */
+  name: string;
   longitude: number;
   degrees_in_rashi: [number, number, number];
+  /** Written as brackets around the name: `(Sa)`. */
   retrograde: boolean;
+  /** Inside the Sun's rays. Drawn as the warm wash the calendar cell uses. */
+  combust: boolean;
+  /** `null` where the graha has no relationship to the sign it stands in, and
+   *  always for the nodes, which have no agreed dignity table (D-026). */
+  dignity: Dignity | null;
 }
 
 /** The three chart formats in common use. */

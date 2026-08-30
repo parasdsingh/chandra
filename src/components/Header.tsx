@@ -115,7 +115,20 @@ export function Header(props: Props): JSX.Element {
         fallback={
           <Show
             when={!props.gated && props.view !== "chart"}
-            fallback={<span class="header__icon" />}
+            fallback={
+              <Show
+                when={props.view === "chart"}
+                fallback={<span class="header__icon" />}
+              >
+                {/* The chart's own mark, the same one its status item carries,
+                    so the header reads like every other view's: a glyph, a
+                    title, a gear. An empty slot left the title hanging where
+                    every other view has something. */}
+                <span class="header__glyph">
+                  <ChartMark />
+                </span>
+              </Show>
+            }
           >
             <button
               class="header__icon"
@@ -235,6 +248,30 @@ function qualifier(label: string): { before: string; after: string } | null {
     before: label.slice(0, at),
     after: label.slice(at + QUALIFIER.length),
   };
+}
+
+/** Two concentric squares, the outer one rotated: the North Indian chart's own
+ *  construction, and the same shape the status item is drawn with. */
+function ChartMark(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <rect
+        x="1.6"
+        y="1.6"
+        width="12.8"
+        height="12.8"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.2"
+      />
+      <path
+        d="M 8 1.6 L 14.4 8 L 8 14.4 L 1.6 8 Z"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.2"
+      />
+    </svg>
+  );
 }
 
 function Chevron(): JSX.Element {

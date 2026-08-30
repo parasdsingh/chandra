@@ -210,7 +210,13 @@ pub async fn day_detail(
 #[tauri::command]
 pub async fn chakra(app: AppHandle, unix_ms: i64) -> Result<Chakra> {
     blocking(app, move |state| {
-        state.almanac.chakra(unix_ms).map_err(AppError::from)
+        // The label comes from the resolution chain, which is the only layer
+        // that knows what the coordinates are called.
+        let place = state.location().label;
+        state
+            .almanac
+            .chakra(unix_ms, &place)
+            .map_err(AppError::from)
     })
     .await
 }

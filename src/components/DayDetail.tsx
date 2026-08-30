@@ -458,7 +458,7 @@ function PositionPane(props: {
                 {body().retrograde ? "Retrograde" : "Direct"}
                 <Show when={body().retrograde}>
                   <span class="chip" aria-hidden="true">
-                    ℞
+                    (r)
                   </span>
                 </Show>
               </>

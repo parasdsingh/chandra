@@ -18,17 +18,38 @@ import { For, Show } from "solid-js";
 
 import type {
   Chakra as ChakraData,
+  ChakraGraha,
   ChakraRashi,
   ChartFormat,
 } from "../ipc/types";
 
-/** The drawing box. Square, because all three formats are.
+/** The chart's coordinate system, not its pixels.
  *
- * 208 and not larger. The region is 264px tall and the caption above the chart
- * takes 14 with its gap, the padding 24 - so anything over 214 makes the chart
- * scroll, and a chart you cannot see whole is not a chart. At 208 the grid
- * formats get 52px cells. */
-const SIZE = 208;
+ * A rectangle, not a square. The panel is 320 wide and its region is 264 tall,
+ * and every view lives inside that - so a square at the full width would need
+ * the window to grow, which was tried and reverted. Drik Panchang draws its
+ * North Indian chart at 3:2 for the same reason: the construction needs a
+ * rectangle, not equal sides.
+ *
+ * 318 by 240 leaves the caption its line and the view its padding, and uses the
+ * whole width rather than leaving 35px of dead margin down each side.
+ *
+ * The half-pixel inset is the frame. The outer polygon's points sit *on* these
+ * bounds, and a 1px stroke centred on the boundary loses half its width to the
+ * viewBox edge - which is why the chart read as bleeding off the window rather
+ * than sitting in it. Half a pixel in, the whole stroke is inside. */
+const WIDTH = 318;
+const HEIGHT = 240;
+const INSET = 0.5;
+
+/** Row height and column width for the grahas clustered in one compartment.
+ *
+ * The row is taller than the 10px type, or consecutive lines touch. The column
+ * is wide enough for the longest label - a two-letter name with `(r)` after it. */
+const GRAHA_ROW = 12;
+const GRAHA_COLUMN = 30;
+/** Clearance kept between a cluster and the compartment's own edges. */
+const GRAHA_MARGIN = 8;
 
 interface Point {
   x: number;
@@ -40,7 +61,7 @@ interface Compartment {
   points: Point[];
   /** The compartment's own name - the rashi's short form, or its number. */
   label: Point;
-  /** Where the grahas stack. */
+  /** The middle of the cluster of grahas. */
   body: Point;
   rashi: ChakraRashi;
   /** Zero-based sign index, for the number the North Indian chart writes. */
@@ -58,15 +79,135 @@ function polygon(points: Point[]): string {
   return points.map((p) => `${p.x},${p.y}`).join(" ");
 }
 
-/** Move `point` directly away from `from` by `distance`. */
-function nudge(point: Point, from: Point, distance: number): Point {
-  const dx = point.x - from.x;
-  const dy = point.y - from.y;
-  const length = Math.hypot(dx, dy) || 1;
+/** A point `fraction` of the way from `from` to `to`. */
+function toward(from: Point, to: Point, fraction: number): Point {
   return {
-    x: point.x + (dx / length) * distance,
-    y: point.y + (dy / length) * distance,
+    x: from.x + (to.x - from.x) * fraction,
+    y: from.y + (to.y - from.y) * fraction,
   };
+}
+
+/**
+ * How wide the compartment is at a given height.
+ *
+ * The horizontal slice of the polygon at `y`, found by intersecting its edges
+ * with that line. A bounding box will not do: a corner triangle's box is as wide
+ * as the whole quadrant while the shape at the height the text sits at is a
+ * fraction of that, which is how `Su` came to be written outside its own
+ * compartment and off the edge of the panel.
+ */
+function spanAt(points: Point[], y: number): { min: number; max: number } {
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i]!;
+    const b = points[(i + 1) % points.length]!;
+    // Only edges that straddle this height can cross it.
+    if (a.y === b.y || y < Math.min(a.y, b.y) || y > Math.max(a.y, b.y))
+      continue;
+    const x = a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x);
+    min = Math.min(min, x);
+    max = Math.max(max, x);
+  }
+
+  return min <= max ? { min, max } : { min: 0, max: 0 };
+}
+
+/** How far a 10px label's glyphs reach above and below its baseline, plus the
+ *  clearance it keeps from the compartment's own edge.
+ *
+ *  The clearance is the point: at 8 and 3 the labels were technically inside
+ *  their compartments and visually sitting on the frame, which reads as a
+ *  clipped label rather than a placed one. */
+const LABEL_ASCENT = 12;
+const LABEL_DESCENT = 6;
+/** Half the width of a three-letter label at 10px, plus the same clearance. */
+const LABEL_HALF = 15;
+
+/**
+ * A compartment's label, anchored toward its outer corner and then pushed
+ * wholly inside it.
+ *
+ * Anchoring alone was not enough once the chart became a rectangle rather than a
+ * square: the corner triangles are half as tall as they are wide, so a label
+ * placed two fifths of the way in from the corner still had its ascenders above
+ * the compartment's top edge, and the top and bottom rows were clipped by the
+ * viewBox.
+ *
+ * So the anchor is a starting point and the clamps are the rule. Vertically into
+ * the shape's own bounds allowing for the type's ascent and descent; then
+ * horizontally into whatever the shape is actually wide at the height it ended
+ * up at, which for a wedge is not what it is wide at its middle.
+ */
+function placeLabel(points: Point[], outer: Point, middle: Point): Point {
+  const ys = points.map((point) => point.y);
+  const top = Math.min(...ys) + LABEL_ASCENT;
+  const bottom = Math.max(...ys) - LABEL_DESCENT;
+
+  const start = toward(outer, middle, 0.4);
+  const y = top <= bottom ? Math.min(Math.max(start.y, top), bottom) : middle.y;
+
+  const span = spanAt(points, y);
+  const lowest = span.min + LABEL_HALF;
+  const highest = span.max - LABEL_HALF;
+  const x =
+    lowest <= highest
+      ? Math.min(Math.max(start.x, lowest), highest)
+      : (span.min + span.max) / 2;
+
+  return { x, y };
+}
+
+/**
+ * Where each graha sits, as an absolute point inside its compartment.
+ *
+ * Not a single column. Four bodies as one tall stack spill out of a corner
+ * triangle and read as a list rather than as a group - and a published chart
+ * writes them as a cluster, because that is what "these are together in this
+ * sign" looks like.
+ *
+ * So they flow into rows, and the number of columns is what the compartment can
+ * actually hold at the height the row sits at rather than a constant. Rows are
+ * centred on each other, short rows are centred on their own width, and each row
+ * is finally pushed inside the compartment's edges - a wedge is narrow at one
+ * end, and the row nearest the point is the one that would otherwise escape.
+ */
+function cluster(points: Point[], centre: Point, count: number): Point[] {
+  const desired = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+  const here = spanAt(points, centre.y);
+  const columns = Math.max(
+    1,
+    Math.min(
+      desired,
+      Math.floor((here.max - here.min - GRAHA_MARGIN) / GRAHA_COLUMN),
+    ),
+  );
+  const rows = Math.ceil(count / columns);
+
+  return Array.from({ length: count }, (_, index) => {
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const inThisRow = Math.min(columns, count - row * columns);
+
+    const y = centre.y + (row - (rows - 1) / 2) * GRAHA_ROW;
+    const x = centre.x + (column - (inThisRow - 1) / 2) * GRAHA_COLUMN;
+
+    // Whatever the row's width, it has to sit inside the shape at its own
+    // height. Half a column either side, because `x` is a text midpoint.
+    const span = spanAt(points, y);
+    const half = GRAHA_COLUMN / 2;
+    const lowest = span.min + half + GRAHA_MARGIN / 2;
+    const highest = span.max - half - GRAHA_MARGIN / 2;
+
+    return {
+      x:
+        lowest <= highest
+          ? Math.min(Math.max(x, lowest), highest)
+          : (span.min + span.max) / 2,
+      y,
+    };
+  });
 }
 
 /**
@@ -86,27 +227,35 @@ function northCompartments(
   rashis: ChakraRashi[],
   lagnaSign: number,
 ): Compartment[] {
-  const s = SIZE;
-  const half = s / 2;
-  const quarter = s / 4;
-  const three = (3 * s) / 4;
+  // The construction is the same whatever the proportions: the corners, the
+  // midpoints of the four sides, and the quarter points where the diamond's
+  // edges cross the diagonals. Width and height are simply carried separately.
+  const left = INSET;
+  const top = INSET;
+  const right = WIDTH - INSET;
+  const bottom = HEIGHT - INSET;
+  const midX = (left + right) / 2;
+  const midY = (top + bottom) / 2;
+  const quarterX = left + (right - left) / 4;
+  const threeX = left + (3 * (right - left)) / 4;
+  const quarterY = top + (bottom - top) / 4;
+  const threeY = top + (3 * (bottom - top)) / 4;
 
-  const N = { x: half, y: 0 };
-  const E = { x: s, y: half };
-  const S = { x: half, y: s };
-  const W = { x: 0, y: half };
-  const C = { x: half, y: half };
+  const N = { x: midX, y: top };
+  const E = { x: right, y: midY };
+  const S = { x: midX, y: bottom };
+  const W = { x: left, y: midY };
+  const C = { x: midX, y: midY };
 
-  // Where each diamond edge crosses a diagonal.
-  const NE = { x: three, y: quarter };
-  const SE = { x: three, y: three };
-  const SW = { x: quarter, y: three };
-  const NW = { x: quarter, y: quarter };
+  const NE = { x: threeX, y: quarterY };
+  const SE = { x: threeX, y: threeY };
+  const SW = { x: quarterX, y: threeY };
+  const NW = { x: quarterX, y: quarterY };
 
-  const TL = { x: 0, y: 0 };
-  const TR = { x: s, y: 0 };
-  const BR = { x: s, y: s };
-  const BL = { x: 0, y: s };
+  const TL = { x: left, y: top };
+  const TR = { x: right, y: top };
+  const BR = { x: right, y: bottom };
+  const BL = { x: left, y: bottom };
 
   const shapes: Point[][] = [
     [N, NE, C, NW], //  1  top kite
@@ -126,14 +275,22 @@ function northCompartments(
   return shapes.map((points, house) => {
     const sign = (lagnaSign + house) % 12;
     const middle = centroid(points);
+
+    // The sign number goes to the compartment's outermost corner and the grahas
+    // stay at its middle. Nudging the number outward from the centroid was not
+    // enough: in a corner triangle the centroid already sits near the corner, so
+    // the number landed on top of the grahas rather than clear of them.
+    const outer = points.reduce((farthest, point) =>
+      Math.hypot(point.x - C.x, point.y - C.y) >
+      Math.hypot(farthest.x - C.x, farthest.y - C.y)
+        ? point
+        : farthest,
+    );
+
     return {
       points,
-      // The sign number sits toward the compartment's outer edge and the grahas
-      // toward the middle, so a crowded compartment does not run the two
-      // together. "Outer" differs per compartment, so it is taken as the
-      // direction away from the centre of the chart.
-      label: nudge(middle, C, 11),
-      body: nudge(middle, C, -3),
+      label: placeLabel(points, outer, middle),
+      body: middle,
       rashi: rashis[sign]!,
       sign,
     };
@@ -162,7 +319,8 @@ function gridCompartments(
   rashis: ChakraRashi[],
   format: "south" | "east",
 ): Compartment[] {
-  const cell = SIZE / 4;
+  const cellWidth = (WIDTH - INSET * 2) / 4;
+  const cellHeight = (HEIGHT - INSET * 2) / 4;
 
   // The twelve cells of the ring, clockwise from the top-left corner.
   const ring: [number, number][] = [
@@ -186,17 +344,17 @@ function gridCompartments(
   return rashis.map((rashi, sign) => {
     const at = (meshaAt + step * sign + 144) % 12;
     const [column, row] = ring[at]!;
-    const left = column * cell;
-    const top = row * cell;
+    const left = INSET + column * cellWidth;
+    const top = INSET + row * cellHeight;
     return {
       points: [
         { x: left, y: top },
-        { x: left + cell, y: top },
-        { x: left + cell, y: top + cell },
-        { x: left, y: top + cell },
+        { x: left + cellWidth, y: top },
+        { x: left + cellWidth, y: top + cellHeight },
+        { x: left, y: top + cellHeight },
       ],
       label: { x: left + 4, y: top + 11 },
-      body: { x: left + cell / 2, y: top + cell / 2 + 3 },
+      body: { x: left + cellWidth / 2, y: top + cellHeight / 2 + 3 },
       rashi,
       sign,
     };
@@ -218,9 +376,9 @@ export function Chakra(props: {
   return (
     <svg
       class="chakra"
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
-      width={SIZE}
-      height={SIZE}
+      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      width={WIDTH}
+      height={HEIGHT}
       role="img"
       aria-label={spoken(props.data, props.format)}
     >
@@ -233,19 +391,22 @@ export function Chakra(props: {
               points={polygon(compartment.points)}
             />
 
-            {/* North Indian writes the sign's number, because its compartments
-                are houses and the sign is what moves through them. South and
-                East write the sign's name, because their compartments are the
-                signs and it is the houses that move. */}
+            {/* The sign's name, in all three formats. North Indian conventionally
+                writes a number here because its compartments are houses and the
+                sign is what moves through them - but a number is a lookup, and
+                the three letters cost the same room. The label is set in its own
+                colour so it stays the compartment's caption rather than
+                competing with the bodies standing in it. */}
             <text
               class="chakra__label"
               x={compartment.label.x}
               y={compartment.label.y}
               text-anchor={props.format === "north" ? "middle" : "start"}
             >
-              {props.format === "north"
-                ? compartment.sign + 1
-                : compartment.rashi.short}
+              {compartment.rashi.short}
+              <title>
+                {compartment.rashi.name} · house {compartment.rashi.house}
+              </title>
             </text>
 
             {/* South and East mark the rising sign, because nothing else in
@@ -263,23 +424,45 @@ export function Chakra(props: {
               />
             </Show>
 
-            <For each={compartment.rashi.grahas}>
-              {(graha, at) => (
-                <text
-                  class="chakra__graha"
-                  x={compartment.body.x}
-                  y={
-                    compartment.body.y +
-                    (at() - (compartment.rashi.grahas.length - 1) / 2) * 11
-                  }
-                  text-anchor="middle"
-                >
-                  {graha.short}
-                  {/* The same mark the grid and the menu bar use, so retrograde
-                      looks like one thing wherever it appears (D-022). */}
-                  {graha.retrograde ? "℞" : ""}
-                </text>
+            <For
+              each={cluster(
+                compartment.points,
+                compartment.body,
+                compartment.rashi.grahas.length,
               )}
+            >
+              {(at_, at) => {
+                const graha = () => compartment.rashi.grahas[at()]!;
+                return (
+                  <>
+                    <text
+                      class="chakra__graha"
+                      classList={{
+                        "is-exalted": graha().dignity === "exalted",
+                        "is-debilitated": graha().dignity === "debilitated",
+                        "is-combust": graha().combust,
+                      }}
+                      x={at_.x}
+                      y={at_.y}
+                      text-anchor="middle"
+                    >
+                      {/* Brackets are the retrograde mark. `Sa(r)` put a second
+                          token beside the name and made the cluster read as
+                          five things rather than four; `(Sa)` marks the name
+                          itself and costs no width the compartment has to find.
+                          The bracket is also what a printed chart uses. */}
+                      {graha().retrograde
+                        ? `(${graha().short})`
+                        : graha().short}
+                      {/* The hover says everything the abbreviation cannot: the
+                          full name, where it stands, and what it is doing
+                          there. A native SVG title, so it needs no positioning
+                          and cannot be clipped by the panel's own edges. */}
+                      <title>{describe(graha(), compartment.rashi.name)}</title>
+                    </text>
+                  </>
+                );
+              }}
             </For>
           </>
         )}
@@ -302,11 +485,18 @@ export function Chakra(props: {
 function spoken(data: ChakraData, format: ChartFormat): string {
   const byHouse = [...data.rashis].sort((a, b) => a.house - b.house);
   const houses = byHouse.map((rashi) => {
+    // Every state the compartment draws, said in words. The bracket, the weight,
+    // the underline and the wash are all silent otherwise, and a reader using
+    // the spoken form would be told less than one looking at the chart.
     const bodies = rashi.grahas
-      .map(
-        (graha) =>
-          `${GRAHA_NAMES[graha.graha]}${graha.retrograde ? " retrograde" : ""}`,
-      )
+      .map((graha) => {
+        const states = [
+          graha.retrograde ? "retrograde" : null,
+          graha.combust ? "combust" : null,
+          graha.dignity ? DIGNITY_WORDS[graha.dignity] : null,
+        ].filter((state): state is string => state !== null);
+        return `${graha.name}${states.length > 0 ? ` ${states.join(" ")}` : ""}`;
+      })
       .join(", ");
     return `house ${rashi.house}, ${rashi.name}${bodies ? `, ${bodies}` : ", empty"}`;
   });
@@ -319,20 +509,35 @@ function spoken(data: ChakraData, format: ChartFormat): string {
   );
 }
 
+/**
+ * What the hover says about one graha.
+ *
+ * Everything the two letters in the compartment cannot: the full name, where it
+ * stands to the arcminute, and every state it is in. The abbreviation is what
+ * the chart has room for; this is what it means.
+ */
+function describe(graha: ChakraGraha, rashi: string): string {
+  const [degrees, minutes] = graha.degrees_in_rashi;
+  const states = [
+    graha.retrograde ? "retrograde" : null,
+    graha.combust ? "combust" : null,
+    graha.dignity ? DIGNITY_WORDS[graha.dignity] : null,
+  ].filter((state): state is string => state !== null);
+
+  return (
+    `${graha.name} — ${rashi} ${degrees}°${String(minutes).padStart(2, "0")}′` +
+    (states.length > 0 ? ` · ${states.join(", ")}` : "")
+  );
+}
+
+const DIGNITY_WORDS: Record<string, string> = {
+  exalted: "exalted",
+  debilitated: "debilitated",
+  own_sign: "own sign",
+};
+
 const FORMAT_NAMES: Record<ChartFormat, string> = {
   north: "North Indian",
   south: "South Indian",
   east: "East Indian",
-};
-
-const GRAHA_NAMES: Record<string, string> = {
-  surya: "Surya",
-  chandra: "Chandra",
-  mangala: "Mangala",
-  budha: "Budha",
-  guru: "Guru",
-  shukra: "Shukra",
-  shani: "Shani",
-  rahu: "Rahu",
-  ketu: "Ketu",
 };

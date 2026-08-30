@@ -897,21 +897,26 @@
 
 /* ---------- the Lagna Kundali ---------- */
 
+/* Edge to edge. The chart is the one thing in the app that is worth the whole
+   width, and every pixel of side padding costs two pixels of chart - it is
+   square, so width lost is height lost as well. `.panel` has no horizontal
+   padding of its own, so the region already reaches the window's edges. */
 .chakra-view {
   height: 100%;
-  overflow-y: auto;
-  scrollbar-width: none;
-  padding: var(--s-3) var(--s-5) var(--s-5);
+  overflow: hidden;
+  padding: 0 0 var(--s-4);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--s-3);
+  align-items: stretch;
+  gap: var(--s-1);
 }
 
+/* Sized by its container rather than by a pixel count, so it reaches both
+   window edges whatever the panel scale is. The viewBox is the coordinate
+   system; these are the pixels. */
 .chakra {
   display: block;
-  /* The chart is square and the region is not, so it is the width that binds. */
-  max-width: 100%;
+  width: 100%;
   height: auto;
 }
 
@@ -924,7 +929,8 @@
 /* The rising sign. A ground rather than the accent: gold means today and
    nothing else (D-023), and a chart is entirely today. */
 .chakra__cell.is-lagna {
-  fill: var(--surface-hover);
+  fill: var(--surface-selected);
+  fill-opacity: 0.55;
 }
 
 /* The diagonal that marks the lagna in the South and East Indian charts, which
@@ -935,17 +941,60 @@
   stroke-width: 1;
 }
 
-/* The compartment's own name, set quieter than its contents: it is the fixed
-   part of the chart and the grahas are what changed. */
+/* The compartment's own name.
+   A third hue was tried for it and removed: at 9px it measured about 4.0:1 on
+   the worst-case composited ground, which is the same test that retired
+   --text-tertiary from carrying text, and D-023's "exactly two hues in the
+   entire app" is worth more than the separation it bought. */
 .chakra__label {
-  font: 400 9px / 1 var(--font-stack);
-  letter-spacing: 0.2px;
+  /* The scale's smallest size, but at ordinary weight. `--type-micro` is 600,
+     which is right for a row of small capitals in a settings pane and wrong
+     here: it made the compartment's caption louder than the bodies standing in
+     it, which is the wrong way round. */
+  font: var(--type-micro);
+  font-weight: 400;
+  letter-spacing: var(--track-micro);
   fill: var(--text-secondary);
 }
 
+/* A body standing in a sign. The caption size from the type scale, at ordinary
+   weight so the two states that change it have somewhere to go. */
 .chakra__graha {
-  font: 600 11px / 1 var(--font-stack);
+  font: var(--type-caption);
+  letter-spacing: var(--track-caption);
   fill: var(--text-primary);
+}
+
+/* Exalted: heavier. Debilitated: dimmer. Weight and presence, not hue, so the
+   pair reads as a scale rather than as two unrelated colours - and so it still
+   reads for anyone the colour would not reach. */
+.chakra__graha.is-exalted {
+  font-weight: 700;
+}
+
+.chakra__graha.is-debilitated {
+  fill: var(--text-secondary);
+}
+
+/* Own sign is deliberately not drawn. It was, with an underline, and D-024 is
+   titled "No underlines" - its body says "no underlines anywhere". Nothing else
+   legible is left at this size once weight and dimming are taken by exaltation
+   and debilitation, and both reference applications ship dignity off the chart
+   face by default; Jagannatha Hora describes its optional highlight as an aid
+   for beginners rather than something a practitioner reads. It is on the hover
+   and in the spoken form, which is where the qualifiers live. */
+
+/* Combustion, in the name itself rather than on a plate behind it.
+   A gradient rectangle under the text drew a second object into a compartment
+   that already holds two kinds of writing, and at this size it read as a
+   highlighter mark rather than as glare. The colour is the same `--glare` the
+   calendar cell uses, so the state still looks like one thing wherever it
+   appears - it has simply moved from behind the name into it.
+   Still depicting rather than encoding, which is what D-023 asks: a body lost in
+   the Sun's light is drawn the colour of that light. It is never the only
+   carrier - the hover and the spoken form both say `combust`. */
+.chakra__graha.is-combust {
+  fill: var(--glare);
 }
 
 .chakra__lagna-line {
@@ -955,10 +1004,20 @@
   text-align: center;
 }
 
+/* The same treatment the day view gives its date line, and in the same place -
+   small capitals under the title, left-aligned to it. It read as a centred
+   subtitle before, which matched neither the calendar nor the day view, and made
+   the chart look like a different app.
+
+   The padding puts it under the header's text rather than under the window's
+   edge: the chart below is full bleed and this is not. */
 .chakra__gloss {
-  font: var(--type-caption);
-  letter-spacing: var(--track-caption);
+  font: var(--type-micro);
+  letter-spacing: var(--track-micro);
   color: var(--text-secondary);
-  margin: 0;
-  text-align: center;
+  text-transform: uppercase;
+  height: 14px;
+  margin: 0 0 var(--s-2);
+  padding: 0 var(--s-5);
 }
+
