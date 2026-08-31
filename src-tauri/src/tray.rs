@@ -16,13 +16,14 @@ use crate::error::{AppError, Result};
 use crate::panel;
 use crate::state::AppState;
 
-/// Identifier of the permanent moon item.
+/// Identifier of Chandra's own item.
 ///
-/// The moon item *is* Chandra's item; enabling Chandra in settings does not add
-/// a second one (`docs/DECISIONS.md` D-009).
+/// Named for the moon rather than for the graha because it draws the phase
+/// rather than a glyph. It is a toggleable calendar like any other since D-030;
+/// it is simply the one that is on by default.
 pub const MOON_ID: &str = "chandra.moon";
 
-/// The Lagna Kundali's own status item.
+/// The Lagna Kundali's item, which is the permanent one (D-030).
 pub const CHART_ID: &str = "chandra.chart";
 
 /// Backing scale for tray icons. Rendering at 2x and letting macOS map the
@@ -31,6 +32,11 @@ pub const CHART_ID: &str = "chandra.chart";
 const ICON_SCALE: u32 = 2;
 
 fn tray_id(graha: Graha) -> String {
+    // The moon keeps the id it has always had. Its item is the one that draws a
+    // phase instead of a glyph, and `refresh_icons` finds it by this name.
+    if graha == Graha::Chandra {
+        return MOON_ID.to_string();
+    }
     format!("chandra.{}", graha.key())
 }
 
@@ -41,22 +47,16 @@ pub fn build(app: &AppHandle) -> Result<()> {
     // Built back to front. macOS puts each new status item to the *left* of the
     // ones already there, so creating in canonical order would lay the row out
     // backwards. Reversed here, the row reads Surya first and Ketu last from
-    // left to right, in the same order the settings list offers them - and the
-    // moon, created first, sits at the right-hand end where it stays put
-    // whatever else is switched on.
-    build_item(
-        app,
-        MOON_ID.to_string(),
-        panel::Subject::Graha(Graha::Chandra),
-    )?;
+    // left to right, in the same order the settings list offers them.
+    //
+    // The chart is created *first*, which puts it at the right-hand end. That
+    // end is the one that survives: when the frontmost app has a long menu bar
+    // macOS squeezes status items out from the left, and the chart - created
+    // last, so drawn leftmost - was the item that disappeared. It is the one
+    // item with no switch, so it is the one that has to be there.
+    build_item(app, CHART_ID.to_string(), panel::Subject::Chart)?;
     for graha in subjects.into_iter().rev() {
         build_item(app, tray_id(graha), panel::Subject::Graha(graha))?;
-    }
-    // Last, so it sits at the left-hand end of the row: it is the one item that
-    // is not a subject in the calendar's sense, and putting it among the grahas
-    // would read as a tenth one.
-    if app.state::<AppState>().settings().chart.tray {
-        build_item(app, CHART_ID.to_string(), panel::Subject::Chart)?;
     }
 
     refresh_icons(app)
@@ -175,6 +175,12 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
     }
 
     for graha in subjects {
+        // The moon's item is drawn above, as a phase rather than as a glyph. It
+        // is in `subjects` now, so without this it would be drawn twice and the
+        // glyph would win.
+        if graha == Graha::Chandra {
+            continue;
+        }
         let Some(item) = app.tray_by_id(&tray_id(graha)) else {
             continue;
         };

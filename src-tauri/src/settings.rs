@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 8;
+pub const SCHEMA_VERSION: u32 = 9;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -98,9 +98,8 @@ impl AppearanceSetting {
 /// The Lagna Kundali: whether it has a menu bar item, and which format it draws.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChartSetting {
-    /// Its own status item. On by default, which is the first time a new install
-    /// gets two.
-    pub tray: bool,
+    /// No `tray` field. The chart is the one status item that is always there
+    /// (D-030), so there is nothing to switch.
     pub format: ChartFormat,
     /// Whether a North Indian compartment carries the sign's number rather than
     /// its name.
@@ -232,7 +231,11 @@ impl From<SiderealSetting> for SiderealConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TraySetting {
-    /// Grahas with their own menu bar item, besides the permanent moon.
+    /// Calendars with their own menu bar item.
+    ///
+    /// Chandra is in here like any other since D-030. It used to be excluded and
+    /// permanent, which is why a file written before schema 9 never names it and
+    /// the migration has to put it back.
     pub subjects: Vec<Graha>,
     /// Draw tray icons in a fixed colour instead of as template images. Off by
     /// default: a fixed colour is invisible in one of the two menu bar
@@ -276,13 +279,14 @@ impl Default for Settings {
             },
             panchanga: PanchangaSetting::default(),
             chart: ChartSetting {
-                tray: true,
                 format: ChartFormat::North,
                 numbered: false,
             },
             tray: TraySetting {
-                // Only the moon, which is permanent and not listed here.
-                subjects: Vec::new(),
+                // The moon, which is now listed here like any other calendar and
+                // is the only one on by default. The chart is not in this list:
+                // it is always there and has no switch.
+                subjects: vec![Graha::Chandra],
                 colour_mode: false,
             },
             appearance: AppearanceSetting { scale: 1.0 },
@@ -524,6 +528,32 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         version = 8;
     }
 
+    // 8 -> 9. The chart became the permanent status item and every calendar
+    // became toggleable, the moon included (D-030).
+    //
+    // Two things move. The moon was permanent and so was never written to
+    // `subjects`; every existing install has been showing it, so it goes in at
+    // the front rather than silently switching off on upgrade. And `chart.tray`
+    // is gone - serde ignores a field that is no longer declared, so it needs no
+    // clause here, but its meaning does: an install that had deliberately turned
+    // the chart off gets it back, because there is no longer a switch for it.
+    // That is the point of the change rather than a side effect of it.
+    if version == 8 {
+        let subjects = value
+            .get_mut("tray")
+            .and_then(serde_json::Value::as_object_mut)
+            .and_then(|tray| tray.get_mut("subjects"))
+            .and_then(serde_json::Value::as_array_mut)
+            .ok_or_else(|| AppError::Settings("settings schema 8 has no tray subjects".into()))?;
+
+        let moon = serde_json::Value::from(Graha::Chandra.key());
+        if !subjects.contains(&moon) {
+            subjects.insert(0, moon);
+        }
+        value["schema_version"] = serde_json::Value::from(9u32);
+        version = 9;
+    }
+
     match version {
         SCHEMA_VERSION => Ok(value),
         newer if newer > SCHEMA_VERSION => Err(AppError::Settings(format!(
@@ -556,7 +586,9 @@ mod tests {
         // The mean node, which is what a panchanga uses. Why is in
         // `a_new_install_uses_the_node_a_panchanga_uses`.
         assert_eq!(settings.sidereal.node_type, NodeType::Mean);
-        assert!(settings.tray.subjects.is_empty());
+        // The moon alone, and it is in the list rather than beside it: every
+        // calendar is toggleable since D-030, and this is the one switched on.
+        assert_eq!(settings.tray.subjects, vec![Graha::Chandra]);
         assert!(!settings.tray.colour_mode);
     }
 
@@ -659,6 +691,49 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// The moon survives becoming toggleable.
+    ///
+    /// Before schema 9 the moon was permanent and so was never written to
+    /// `tray.subjects`; a file at 8 names only the grahas beside it. Making every
+    /// calendar toggleable turned "absent from the list" from "permanent" into
+    /// "switched off", so an upgrade that did nothing would have taken the moon
+    /// out of the menu bar of every existing install.
+    ///
+    /// Checked against the old code: without the 8 -> 9 step this document
+    /// migrates to an empty subject list and the assertion fails.
+    #[test]
+    fn the_moon_stays_in_the_menu_bar_across_schema_nine() {
+        let dir = temp_dir("schema-nine");
+
+        // A schema 8 document: the moon is not named because it could not be,
+        // and the chart carries the switch it used to have.
+        let document = serde_json::json!({
+            "schema_version": 8,
+            "location": { "mode": "automatic", "place": null, "elevation": null },
+            "sidereal": { "ayanamsa": "lahiri", "node_type": "mean" },
+            "calendar": { "month_system": "amanta", "ingress": "off" },
+            "panchanga": { "yogas": false, "karanas": false, "muhurtas": false },
+            "chart": { "tray": false, "format": "north", "numbered": false },
+            "tray": { "subjects": ["shani"], "colour_mode": false },
+            "appearance": { "scale": 1.0 }
+        });
+        fs::write(
+            dir.join("settings.json"),
+            serde_json::to_string(&document).expect("json"),
+        )
+        .expect("write");
+
+        let settings = Settings::load(&dir).expect("load");
+        assert_eq!(settings.schema_version, SCHEMA_VERSION);
+        assert_eq!(
+            settings.tray.subjects,
+            vec![Graha::Chandra, Graha::Shani],
+            "the moon was permanent, so it was on; it must stay on"
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// A field added to a schema version that already exists on disk.
     ///
     /// `numbered` was added to the chart block without bumping the version, on
@@ -740,7 +815,11 @@ mod tests {
         );
         assert_eq!(settings.sidereal.ayanamsa, Ayanamsa::Raman);
         assert_eq!(settings.sidereal.node_type, NodeType::Mean);
-        assert_eq!(settings.tray.subjects, vec![Graha::Mangala]);
+        // Mangala is what the file named. The moon is in front of it because
+        // schema 8 and earlier could not name the moon - it was permanent - and
+        // an upgrade that dropped it would switch off an item the user has been
+        // looking at for as long as they have had the app.
+        assert_eq!(settings.tray.subjects, vec![Graha::Chandra, Graha::Mangala]);
         assert!(settings.tray.colour_mode);
 
         // Saved back at the current version, and stable from there.

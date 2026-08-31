@@ -11,9 +11,9 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-004](#d-004) | Geocentric for panchanga, topocentric for rise/set | accepted |
 | [D-005](#d-005) | Engine is a `Mutex`-guarded singleton on a blocking pool | accepted |
 | [D-006](#d-006) | Ephemeris provenance is reported per result, never silent | accepted |
-| [D-007](#d-007) | Location resolves through an ordered fallback chain | accepted |
+| [D-007](#d-007) | Location resolves through an ordered fallback chain | accepted, amended by D-029 |
 | [D-008](#d-008) | Tray icons rendered as macOS template images by default | accepted |
-| [D-009](#d-009) | Moon permanent in menu bar; each graha its own toggleable item | accepted |
+| [D-009](#d-009) | Moon permanent in menu bar; each graha its own toggleable item | accepted, amended by D-030 |
 | [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted, amended by D-019, D-025 |
 | [D-011](#d-011) | Translucent panel using the system popover material | accepted, revised |
 | [D-012](#d-012) | Private repo, unsigned local build, ad-hoc codesign | accepted |
@@ -30,6 +30,8 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-023](#d-023) | Colour may depict, never encode; `--text-tertiary` carries no text | accepted |
 | [D-024](#d-024) | One mark vocabulary for both calendars: no underlines, a combustion wash, a retrograde bracket | accepted |
 | [D-025](#d-025) | The day view is one field stack for all nine subjects | accepted |
+| [D-029](#d-029) | A location is required before the app will draw anything | accepted, amends D-007 |
+| [D-030](#d-030) | The chart is the permanent status item; every calendar is toggleable | accepted, amends D-009 |
 
 ---
 
@@ -106,6 +108,11 @@ blocking pool.**
   be fully correct without it. Step 3 guarantees a sane default with zero permissions and
   zero network.
 - Timezone always comes from the resolved location, never from the system clock's zone.
+
+**Amended by D-029.** Step 3 still runs, but it no longer resolves the app into a working state:
+a timezone centroid is not an answer to where the observer is, and the panel does not draw on
+one. The bundled dataset named above has also never existed — what ships is `zone.tab`, 418
+places at arcminute precision. That is tracked as **E5**, not as part of this record.
 
 ### D-008
 **Tray glyphs are macOS template images by default.**
@@ -529,3 +536,68 @@ tithi turns over, and that difference is the difference between "today is" and "
 **Not polling.** Each wake is two clock reads costing microseconds, and the redraw happens only
 when the displayed hour has actually rolled over. The thread compares clocks rather than trusting
 that it woke when it meant to, because a sleep does not advance while the machine is suspended.
+
+
+---
+
+## D-029 — A location is required before the app will draw anything
+
+**The panel opens on a location gate until a location has actually been set, and there is no way
+past it.** "Set" means the provenance is not `time_zone`.
+
+Chandra worked from first launch with no location, falling through D-007's chain to the
+representative city of the system timezone. That was defensible while the app showed phases. It
+is not defensible now, and it was never as harmless as it looked:
+
+- **Everything below the gate is computed from where the observer stands.** Sunrise, moonrise,
+  the tithi a day is *named after*, every muhurta, and now the lagna. A centroid a thousand
+  kilometres east gives a sunrise about forty minutes wrong, which moves the tithi at sunrise
+  near a boundary. This has been true since the first release and nothing on screen said so.
+- **The lagna makes it unmissable.** One degree of longitude is four minutes is about one degree
+  of ascendant, so a centroid used from the wrong end of a large country names the wrong rashi
+  roughly a quarter of the time. The North Indian chart *is* the lagna, so a wrong lagna is a
+  wrong chart rather than a wrong detail.
+
+Manual selection and CoreLocation are both answers; the centroid is a fallback. The distinction
+the gate enforces is between a location someone chose and one nobody did.
+
+**Refusing to draw, rather than drawing and marking every figure provisional.** A provisional
+mark on every figure in the app is a mark on nothing: it would appear beside sunrise, beside the
+tithi, beside every muhurta and every degree, and a warning that is always present is furniture.
+The gate is one obstacle once, instead of a caveat forever.
+
+This record was cited by `Panel.tsx`, `SettingsView.tsx` and two design documents for several
+commits before it was written. That was the gap, not the decision.
+
+---
+
+## D-030 — The chart is the permanent status item; every calendar is toggleable
+
+**The Lagna Kundali is always in the menu bar and has no switch. Every calendar, Chandra
+included, is toggleable. Chandra is the one on by default.** Amends D-009, under which the moon
+was permanent and the chart was a toggle that defaulted on.
+
+The driver is a macOS behaviour the app cannot prevent. When the frontmost application has a long
+menu bar, macOS squeezes status items out **from the left**. Observed rather than inferred: with
+Chrome frontmost the chart item disappeared entirely; with Finder frontmost it came back.
+
+`tray.rs` builds back to front, because macOS puts each new item to the left of the ones already
+there. The chart was built last precisely so it would sit apart from the grahas — which put it at
+the left-hand end, which is the end that gets eaten. The item most likely to be lost was the one
+feature that had just been built.
+
+So the build order inverts: the chart is created **first** and sits at the right-hand end, which
+is the end that survives. It is the item with no switch, so it is the one that has to be there;
+everything else can be turned off deliberately, which is a different thing from being taken away.
+
+**Why the moon stops being special.** Once the chart holds the permanent slot, the moon being
+permanent as well is a second exception with no reason behind it — and D-009's own rationale
+("the menu bar stays clean until the user opts in") argues for fewer fixed items rather than two.
+Chandra stays on by default because it is what the app is named for.
+
+**Migration.** Schema 9. Before it, the moon was permanent and therefore never written to
+`tray.subjects`; after it, absent from that list means switched off. An upgrade that did nothing
+would have silently removed the moon from every existing install, so the step inserts it. A test
+pins this and fails against the old code. `chart.tray` is dropped and needs no clause — serde
+ignores a field that is no longer declared — but its meaning does: an install that had turned the
+chart off gets it back, which is the change rather than a side effect of it.

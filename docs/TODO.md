@@ -85,14 +85,15 @@ form, which is where every other qualifier in this app lives.
 
 | | Finding | Status |
 |---|---|---|
-| i | **A sixth status item gets hidden.** macOS squeezes status items out when the frontmost app has a long menu bar. With Chrome frontmost the chart item - the leftmost of the six - disappears entirely; with Finder frontmost it returns. Observed, not inferred: the same menu bar photographed twice. | open |
+| i | **A sixth status item gets hidden.** macOS squeezes status items out when the frontmost app has a long menu bar. With Chrome frontmost the chart item - the leftmost of the six - disappears entirely; with Finder frontmost it returns. Observed, not inferred: the same menu bar photographed twice. | fixed, **D-030** |
 | ii | **A graha label left its compartment, and then collided with its neighbour.** Clamped to the span at its baseline, `(Ke)` had its top corner three units through a diagonal wall; clamping each label separately then closed the pitch and overlapped `Su`. Both fixed — rows move as units and the column count is searched. Found by the harness, not by eye | fixed |
 | iii | **Tooltip timing varies by graha.** Retrograde labels are 34% wider so they are hit sooner, and a combust graha is by definition beside the Sun, so its tooltip is the second one shown and macOS shows that instantly. No app code is involved; accepted as native behaviour | closed |
 
-The chart is the item most likely to be lost, because it is created last and so
-sits furthest left. Options: create it first so a graha is sacrificed instead,
-ship it off by default, or accept it. Nothing in the app can stop macOS hiding
-an item, so this is a choice about which one goes.
+Resolved by **D-030**: the chart is created first and sits at the right-hand
+end, which is the end that survives, and it is the item with no switch. Every
+calendar including Chandra became toggleable in the same step; Chandra is the
+one on by default. Schema 9, with a migration that keeps the moon in the menu
+bar of every existing install and a test that fails without it.
 
 ### E1 decisions taken
 
@@ -116,7 +117,7 @@ gives the gloss.
 
 ### E1 decisions still open
 
-Only defect (i): which status item is allowed to be the one macOS hides.
+None.
 
 ---
 
@@ -195,7 +196,7 @@ was defensible while the app showed phases and tithis. It is not defensible now:
 | 4.1 | ~~Decide the shape~~ | done | A gate, `ce07664`. There is no way past it |
 | 4.2 | ~~Ask for CoreLocation, and fall through to city search on refusal~~ | done | The city search is extracted from the settings pane rather than copied |
 | 4.3 | ~~What the app shows before a location exists~~ | done | Refuses to draw. A reading from a centroid nobody chose is a guess dressed as a reading |
-| 4.4 | Amend D-007 | **ready** | Still says the chain ends at a timezone centroid, with nothing to say that last step is no longer allowed to stand. The one piece of E4 left |
+| 4.4 | ~~Amend D-007~~ | done | **D-029**, which was cited by three source files and two design documents for several commits before it was written. D-007 now says its third step no longer resolves the app into a working state, and that the GeoNames dataset it promised has never existed |
 | 4.5 | ~~Migration for existing installs still on a centroid~~ | done | The gate keys on provenance, so an existing install on a centroid meets it too |
 
 ---

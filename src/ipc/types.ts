@@ -473,9 +473,9 @@ export interface Settings {
     karanas: boolean;
     muhurtas: boolean;
   };
-  /** The Lagna Kundali: its own menu bar item, and which format it draws. */
+  /** The Lagna Kundali: which format it draws. It has no menu bar switch - it
+   *  is the one item that is always there (D-030). */
   chart: {
-    tray: boolean;
     format: ChartFormat;
     /** Whether a North Indian compartment carries the sign's number rather than
      *  its name. Both references write a number; a number is a lookup, so the
@@ -483,6 +483,8 @@ export interface Settings {
     numbered: boolean;
   };
   tray: {
+    /** Calendars with their own menu bar item. Chandra is one of these since
+     *  D-030; it is simply the one on by default. */
     subjects: GrahaKey[];
     colour_mode: boolean;
   };

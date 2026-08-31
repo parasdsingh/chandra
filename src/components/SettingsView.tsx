@@ -136,13 +136,12 @@ function Root(props: {
     {
       id: "chart",
       value: () =>
-        settings().chart.tray
-          ? CHART_FORMATS.find((f) => f.key === settings().chart.format)!.label
-          : "Off",
+        CHART_FORMATS.find((f) => f.key === settings().chart.format)!.label,
     },
     {
       id: "menubar",
-      value: () => (trayCount() === 0 ? "Moon only" : `Moon + ${trayCount()}`),
+      value: () =>
+        trayCount() === 0 ? "Chart only" : `${trayCount()} calendar${trayCount() === 1 ? "" : "s"}`,
     },
     { id: "size", value: () => sizeLabel(settings().appearance.scale) },
     { id: "advanced", value: () => "" },
@@ -639,20 +638,9 @@ function Chart(props: SectionProps): JSX.Element {
 
   return (
     <div class="settings__section">
-      <Toggle
-        label="Menu bar item"
-        on={settings().chart.tray}
-        onToggle={() =>
-          props.apply({
-            ...settings(),
-            chart: { ...settings().chart, tray: !settings().chart.tray },
-          })
-        }
-      />
-
       <p class="settings__hint settings__hint--foot">
-        Its own item, at the left of the row. The chart it opens is where the
-        nine grahas stand now, not a birth chart.
+        Always in the menu bar, at the right of the row. The chart it opens is
+        where the nine grahas stand now, not a birth chart.
       </p>
 
       <ChoiceGroup label="Format">
@@ -827,14 +815,11 @@ function MenuBar(props: SectionProps): JSX.Element {
     <div class="settings__section">
       <For each={props.boot.grahas}>
         {(graha) => {
-          const permanent = graha.key === "chandra";
-          const on = () =>
-            permanent || settings().tray.subjects.includes(graha.key);
+          const on = () => settings().tray.subjects.includes(graha.key);
           return (
             <button
               class="settings__toggle"
-              classList={{ "is-on": on(), "is-locked": permanent }}
-              disabled={permanent}
+              classList={{ "is-on": on() }}
               aria-pressed={on()}
               onClick={() => toggle(graha.key, !on())}
             >

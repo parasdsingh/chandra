@@ -413,8 +413,7 @@
     },
     "chart": {
       "format": "string",
-      "numbered": "boolean",
-      "tray": "boolean"
+      "numbered": "boolean"
     },
     "location": {
       "elevation": "number",
