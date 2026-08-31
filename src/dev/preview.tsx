@@ -12,6 +12,7 @@ import { createSignal, For } from "solid-js";
 
 import fixture from "./fixture.json";
 import { DayDetail } from "../components/DayDetail";
+import { ChartView } from "../components/ChartView";
 import { Header } from "../components/Header";
 import { MonthCells, WeekdayRow } from "../components/MonthGrid";
 import { PhaseGlyph } from "../components/PhaseGlyph";
@@ -23,6 +24,8 @@ import {
 } from "../components/SettingsView";
 import type {
   Bootstrap,
+  Chakra,
+  ChartFormat,
   DayDetail as Detail,
   GrahaInfo,
   GrahaMonth,
@@ -43,6 +46,9 @@ const data = fixture as unknown as {
   grahaDay: Detail;
   moshierDay: Detail;
   snapshot: Snapshot;
+  chakra: Chakra;
+  chakraCrowded: Chakra;
+  chakraMoshier: Chakra;
 };
 
 const context: FormatContext = { timeZone: data.timeZone };
@@ -100,6 +106,51 @@ const boot: Bootstrap = {
   ],
   grahas: data.grahas,
 };
+
+/**
+ * One chart, in the panel it is drawn in.
+ *
+ * The header comes with it rather than the chart alone: the title is built from
+ * the reading - the rising sign, not the feature's name - so a chart whose
+ * header says the wrong thing is only visible when both are on screen together.
+ */
+function ChartCase(props: {
+  title: string;
+  chart: Chakra | undefined;
+  format: ChartFormat;
+  numbered: boolean;
+  error?: { code: string; message: string };
+}): JSX.Element {
+  return (
+    <Case title={props.title}>
+      <Header
+        subject="chandra"
+        subjectName="Chandra"
+        info={data.grahas.find((graha) => graha.key === "chandra")}
+        snapshot={data.snapshot}
+        southern={false}
+        title={props.chart ? `${props.chart.lagna.name} Lagna` : ""}
+        adhika={false}
+        selected={null}
+        view="chart"
+        onBack={() => {}}
+        onSettings={() => {}}
+        jumping={false}
+        onJump={() => {}}
+        gated={false}
+      />
+      <div class="region">
+        <ChartView
+          chart={props.chart}
+          error={props.error}
+          format={props.format}
+          numbered={props.numbered}
+          timeZone={data.timeZone}
+        />
+      </div>
+    </Case>
+  );
+}
 
 function Case(props: { title: string; children: JSX.Element }): JSX.Element {
   return (
@@ -357,6 +408,68 @@ export function Preview(): JSX.Element {
           </Case>
         )}
       </For>
+
+      {/* Every chart format, drawn from one reading. What differs between them
+          is where a rashi is put on screen and what is written in the
+          compartment; none of them differs in what is true, so a bug that
+          shows in only one of the three is a drawing bug and belongs here. */}
+      <For
+        each={
+          [
+            ["North Indian", "north", false],
+            ["North Indian · numbered", "north", true],
+            ["South Indian", "south", false],
+            ["East Indian", "east", false],
+          ] as const
+        }
+      >
+        {([title, format, numbered]) => (
+          <ChartCase
+            title={`Chart · ${title}`}
+            chart={data.chakra}
+            format={format}
+            numbered={numbered}
+          />
+        )}
+      </For>
+
+      {/* Five grahas in one sign, found by scanning the year rather than picked
+          by hand. This is the only case that reaches `cluster`'s branch for a
+          row that will not fit its compartment at any width. */}
+      <ChartCase
+        title="Chart · the year's densest conjunction"
+        chart={data.chakraCrowded}
+        format="north"
+        numbered={false}
+      />
+
+      {/* The same crowding in the two formats whose compartments are a fixed
+          grid rather than a set of kites and triangles, so the row that has to
+          be squeezed is a different shape. */}
+      <ChartCase
+        title="Chart · densest conjunction, South Indian"
+        chart={data.chakraCrowded}
+        format="south"
+        numbered={false}
+      />
+
+      <ChartCase
+        title="Chart · reduced precision (1650)"
+        chart={data.chakraMoshier}
+        format="north"
+        numbered={false}
+      />
+
+      <ChartCase
+        title="Chart · error state"
+        chart={undefined}
+        format="north"
+        numbered={false}
+        error={{
+          code: "ENGINE",
+          message: "the ephemeris could not be read",
+        }}
+      />
 
       <section class="preview__case preview__case--wide">
         <h2 class="preview__title">Phase sequence · 14px</h2>

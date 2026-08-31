@@ -30,17 +30,16 @@ import type {
   GrahaKey,
   GrahaMonth,
   MoonMonth,
-  Chakra as ChakraData,
   Settings,
   Snapshot,
 } from "../ipc/types";
 import { isAppError } from "../ipc/types";
 import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
-import { formatTime, localeFirstWeekday } from "../lib/format";
+import { localeFirstWeekday } from "../lib/format";
 import { CalendarScroller } from "./CalendarScroller";
 import { MonthJump } from "./MonthJump";
 import { LocationGate, locationIsSet } from "./LocationGate";
-import { Chakra } from "./Chakra";
+import { ChartView } from "./ChartView";
 import { DayDetail, ErrorBlock } from "./DayDetail";
 import { Header } from "./Header";
 import {
@@ -794,59 +793,19 @@ export function Panel(props: Props): JSX.Element {
           </Show>
 
           <Show when={locationIsSet(props.boot) && view() === "chart"}>
-            <div class="chakra-view">
-              {/* `chart.latest`, not `chart()`. A Solid resource drops to
-                  undefined while it refetches, so the sixty-second refresh
-                  blanked the whole chart for a frame and put the error fallback
-                  in its place. The previous reading stays on screen until the
-                  next one lands, which is the same reason the month strip holds
-                  its months by identity. */}
-              <Show
-                when={chart.latest}
-                fallback={
-                  <Show when={chart.error}>
-                    <ErrorBlock
-                      code={toError(chart.error).code}
-                      message={toError(chart.error).message}
-                    />
-                  </Show>
-                }
-              >
-                {(data) => (
-                  <>
-                    {/* One line, and it places the chart rather than
-                        translating its title. The degree first because it is
-                        the most volatile figure in the view - the lagna moves
-                        one degree every four minutes - then the instant, then
-                        the place, which is what makes the degree mean anything:
-                        a longitude 300km out moves the lagna about three
-                        degrees, and both reference applications print the place
-                        beside every chart.
-
-                        It drops right to left as the line narrows, except that
-                        the place is the last thing to go: if the place alone
-                        will not fit, the other two come back instead. */}
-                    <p class="chakra__gloss">{caption(data(), timeZone())}</p>
-
-                    <Chakra
-                      data={data()}
-                      format={props.boot.settings.chart.format}
-                      numbered={props.boot.settings.chart.numbered}
-                    />
-
-                    {/* The chart is as exact as the ephemeris behind it, and
-                        outside 1800-2399 that is the analytic fallback. Every
-                        other view says so; this one did not, which made it the
-                        one surface that could print a degree it had not earned. */}
-                    <Show when={data().source === "moshier"}>
-                      <p class="detail__provenance">
-                        Outside 1800–2399. Positions here are approximate.
-                      </p>
-                    </Show>
-                  </>
-                )}
-              </Show>
-            </div>
+            {/* `chart.latest`, not `chart()`. A Solid resource drops to
+                undefined while it refetches, so the sixty-second refresh
+                blanked the whole chart for a frame and put the error fallback
+                in its place. The previous reading stays on screen until the
+                next one lands, which is the same reason the month strip holds
+                its months by identity. */}
+            <ChartView
+              chart={chart.latest}
+              error={chart.error ? toError(chart.error) : undefined}
+              format={props.boot.settings.chart.format}
+              numbered={props.boot.settings.chart.numbered}
+              timeZone={timeZone()}
+            />
           </Show>
 
           <Show when={locationIsSet(props.boot) && view() === "settings"}>
@@ -894,41 +853,6 @@ export function Panel(props: Props): JSX.Element {
     </div>
   );
 }
-
-/**
- * The line under the chart's title.
- *
- * A ladder, like the header's. The degree is dropped first, then the instant;
- * the place is dropped only if it is what will not fit, and then the other two
- * come back rather than leaving the line nearly empty.
- *
- * Measured against the panel's own width rather than guessed at, so a long city
- * name is handled by the same rule that handles a short one.
- */
-function caption(chart: ChakraData, timeZone: string): string {
-  const [degrees, minutes] = chart.lagna.degrees_in_rashi;
-  const at = `${degrees}\u00b0${String(minutes).padStart(2, "0")}\u2032`;
-  const clock = formatTime(
-    { unix_ms: chart.unix_ms, day_offset: 0 },
-    { timeZone },
-  );
-  const place = chart.place.toUpperCase();
-
-  return (
-    [
-      `${at} \u00b7 ${clock} \u00b7 ${place}`,
-      `${clock} \u00b7 ${place}`,
-      place,
-      `${at} \u00b7 ${clock}`,
-    ].find((line) => line.length <= CAPTION_LIMIT) ?? at
-  );
-}
-
-/** Characters that fit the caption's 288px line at 10px uppercase.
- *
- * Measured rather than assumed: the micro type is 10px and its tracking 0.6px,
- * so an average uppercase glyph runs about 7px and 288 holds about forty. */
-const CAPTION_LIMIT = 40;
 
 /** Which list a settings section is reached from. */
 const SETTINGS_PARENT: Partial<Record<SettingsSection, SettingsSection>> = {

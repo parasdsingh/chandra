@@ -27,6 +27,45 @@ fn limbs() -> DayOptions {
     }
 }
 
+/// The place every chart in the harness is cast for, matching the observer the
+/// almanac above is configured with. A chart drawn for one place and captioned
+/// with another would be the exact defect the caption exists to prevent.
+const PLACE: &str = "Bengaluru";
+
+/// A local-clock instant as the milliseconds the front end is served.
+fn instant(year: i32, month: u32, day: u32, day_fraction: f64) -> i64 {
+    (chandra_ephemeris::jd_to_unix_seconds(chandra_ephemeris::julian_day(
+        year,
+        month,
+        day,
+        day_fraction,
+    )) * 1000.0) as i64
+}
+
+/// The most crowded compartment of 2026.
+///
+/// Found rather than hardcoded, for the same reason the moonless day is: a date
+/// picked once by hand stops being the densest conjunction as soon as anything
+/// about the ephemeris changes, and then the harness quietly draws an easy case
+/// while claiming to draw the hard one.
+fn crowded(almanac: &Almanac) -> chandra_almanac::chakra::Chakra {
+    (1..=365)
+        .map(|day| {
+            almanac
+                .chakra(instant(2026, 1, 1, 0.5) + day * 86_400_000, PLACE)
+                .expect("crowded scan")
+        })
+        .max_by_key(|chart| {
+            chart
+                .rashis
+                .iter()
+                .map(|rashi| rashi.grahas.len())
+                .max()
+                .unwrap_or(0)
+        })
+        .expect("a chart in the scan")
+}
+
 fn main() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/ephe");
     let almanac = Almanac::new(
@@ -114,6 +153,22 @@ fn main() {
         "snapshot": almanac
             .now(1_755_000_000_000, &[Graha::Mangala])
             .expect("snapshot"),
+        // An ordinary chart. Every format draws this same reading, because the
+        // three formats differ in where a rashi is put on screen and not in
+        // what is true.
+        "chakra": almanac
+            .chakra(instant(2026, 8, 20, 0.72), PLACE)
+            .expect("chakra"),
+        // The layout's worst case, searched for rather than chosen: `cluster`
+        // has a branch for a row that will not fit its compartment at any width,
+        // and a chart with the grahas spread evenly never reaches it. Whatever
+        // the densest conjunction of the year is, the harness draws it.
+        "chakraCrowded": crowded(&almanac),
+        // Before 1800, where the ephemeris falls back to the analytic model and
+        // the pane has to say so.
+        "chakraMoshier": almanac
+            .chakra(instant(1650, 8, 20, 0.72), PLACE)
+            .expect("moshier chakra"),
     });
 
     println!("{}", serde_json::to_string_pretty(&document).expect("json"));

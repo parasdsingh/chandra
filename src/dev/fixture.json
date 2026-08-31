@@ -1,4 +1,704 @@
 {
+  "chakra": {
+    "lagna": {
+      "degrees_in_rashi": [
+        17,
+        42,
+        0.8206057855861104
+      ],
+      "longitude": 17.70022794605155,
+      "name": "Mesha",
+      "rashi": "mesha"
+    },
+    "place": "Bengaluru",
+    "rashis": [
+      {
+        "grahas": [],
+        "house": 1,
+        "name": "Mesha",
+        "rashi": "mesha",
+        "short": "Ari"
+      },
+      {
+        "grahas": [],
+        "house": 2,
+        "name": "Vrishabha",
+        "rashi": "vrishabha",
+        "short": "Tau"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              11,
+              55,
+              2.11923299426644
+            ],
+            "dignity": null,
+            "graha": "mangala",
+            "longitude": 71.91725534249841,
+            "name": "Mangala",
+            "retrograde": false,
+            "short": "Ma"
+          }
+        ],
+        "house": 3,
+        "name": "Mithuna",
+        "rashi": "mithuna",
+        "short": "Gem"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              17,
+              3,
+              37.0898908162485
+            ],
+            "dignity": "exalted",
+            "graha": "guru",
+            "longitude": 107.06030274744896,
+            "name": "Guru",
+            "retrograde": false,
+            "short": "Ju"
+          },
+          {
+            "combust": true,
+            "degrees_in_rashi": [
+              26,
+              14,
+              47.693342250270234
+            ],
+            "dignity": null,
+            "graha": "budha",
+            "longitude": 116.24658148395841,
+            "name": "Budha",
+            "retrograde": false,
+            "short": "Me"
+          }
+        ],
+        "house": 4,
+        "name": "Karka",
+        "rashi": "karka",
+        "short": "Can"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              3,
+              28,
+              46.54937791990619
+            ],
+            "dignity": "own_sign",
+            "graha": "surya",
+            "longitude": 123.4795970494222,
+            "name": "Surya",
+            "retrograde": false,
+            "short": "Su"
+          },
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              5,
+              35,
+              58.46110360068906
+            ],
+            "dignity": null,
+            "graha": "ketu",
+            "longitude": 125.59957252877797,
+            "name": "Ketu",
+            "retrograde": true,
+            "short": "Ke"
+          }
+        ],
+        "house": 5,
+        "name": "Simha",
+        "rashi": "simha",
+        "short": "Leo"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              19,
+              13,
+              33.63621642776707
+            ],
+            "dignity": "debilitated",
+            "graha": "shukra",
+            "longitude": 169.22601006011882,
+            "name": "Shukra",
+            "retrograde": false,
+            "short": "Ve"
+          }
+        ],
+        "house": 6,
+        "name": "Kanya",
+        "rashi": "kanya",
+        "short": "Vir"
+      },
+      {
+        "grahas": [],
+        "house": 7,
+        "name": "Tula",
+        "rashi": "tula",
+        "short": "Lib"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              10,
+              9,
+              3.656385486065119
+            ],
+            "dignity": "debilitated",
+            "graha": "chandra",
+            "longitude": 220.15101566263502,
+            "name": "Chandra",
+            "retrograde": false,
+            "short": "Mo"
+          }
+        ],
+        "house": 8,
+        "name": "Vrishchika",
+        "rashi": "vrishchika",
+        "short": "Sco"
+      },
+      {
+        "grahas": [],
+        "house": 9,
+        "name": "Dhanu",
+        "rashi": "dhanu",
+        "short": "Sag"
+      },
+      {
+        "grahas": [],
+        "house": 10,
+        "name": "Makara",
+        "rashi": "makara",
+        "short": "Cap"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              5,
+              35,
+              58.46110360068906
+            ],
+            "dignity": null,
+            "graha": "rahu",
+            "longitude": 305.59957252877797,
+            "name": "Rahu",
+            "retrograde": true,
+            "short": "Ra"
+          }
+        ],
+        "house": 11,
+        "name": "Kumbha",
+        "rashi": "kumbha",
+        "short": "Aqu"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              19,
+              59,
+              56.47103206423253
+            ],
+            "dignity": null,
+            "graha": "shani",
+            "longitude": 349.99901973112895,
+            "name": "Shani",
+            "retrograde": true,
+            "short": "Sa"
+          }
+        ],
+        "house": 12,
+        "name": "Meena",
+        "rashi": "meena",
+        "short": "Pis"
+      }
+    ],
+    "source": "swieph",
+    "unix_ms": 1787246208000
+  },
+  "chakraCrowded": {
+    "lagna": {
+      "degrees_in_rashi": [
+        3,
+        22,
+        10.461035881660337
+      ],
+      "longitude": 123.36957250996713,
+      "name": "Simha",
+      "rashi": "simha"
+    },
+    "place": "Bengaluru",
+    "rashis": [
+      {
+        "grahas": [],
+        "house": 9,
+        "name": "Mesha",
+        "rashi": "mesha",
+        "short": "Ari"
+      },
+      {
+        "grahas": [],
+        "house": 10,
+        "name": "Vrishabha",
+        "rashi": "vrishabha",
+        "short": "Tau"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              21,
+              0,
+              53.315885724833834
+            ],
+            "dignity": null,
+            "graha": "guru",
+            "longitude": 81.0148099682569,
+            "name": "Guru",
+            "retrograde": true,
+            "short": "Ju"
+          }
+        ],
+        "house": 11,
+        "name": "Mithuna",
+        "rashi": "mithuna",
+        "short": "Gem"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              21,
+              47,
+              59.53528376680197
+            ],
+            "dignity": "own_sign",
+            "graha": "chandra",
+            "longitude": 111.79987091215744,
+            "name": "Chandra",
+            "retrograde": false,
+            "short": "Mo"
+          }
+        ],
+        "house": 12,
+        "name": "Karka",
+        "rashi": "karka",
+        "short": "Can"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              14,
+              45,
+              24.771980571426866
+            ],
+            "dignity": null,
+            "graha": "ketu",
+            "longitude": 134.75688110571429,
+            "name": "Ketu",
+            "retrograde": false,
+            "short": "Ke"
+          }
+        ],
+        "house": 1,
+        "name": "Simha",
+        "rashi": "simha",
+        "short": "Leo"
+      },
+      {
+        "grahas": [],
+        "house": 2,
+        "name": "Kanya",
+        "rashi": "kanya",
+        "short": "Vir"
+      },
+      {
+        "grahas": [],
+        "house": 3,
+        "name": "Tula",
+        "rashi": "tula",
+        "short": "Lib"
+      },
+      {
+        "grahas": [],
+        "house": 4,
+        "name": "Vrishchika",
+        "rashi": "vrishchika",
+        "short": "Sco"
+      },
+      {
+        "grahas": [],
+        "house": 5,
+        "name": "Dhanu",
+        "rashi": "dhanu",
+        "short": "Sag"
+      },
+      {
+        "grahas": [],
+        "house": 6,
+        "name": "Makara",
+        "rashi": "makara",
+        "short": "Cap"
+      },
+      {
+        "grahas": [
+          {
+            "combust": true,
+            "degrees_in_rashi": [
+              4,
+              54,
+              47.249250423883495
+            ],
+            "dignity": null,
+            "graha": "mangala",
+            "longitude": 304.9131247917844,
+            "name": "Mangala",
+            "retrograde": false,
+            "short": "Ma"
+          },
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              14,
+              45,
+              24.771980571426866
+            ],
+            "dignity": null,
+            "graha": "rahu",
+            "longitude": 314.7568811057143,
+            "name": "Rahu",
+            "retrograde": false,
+            "short": "Ra"
+          },
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              16,
+              40,
+              59.38834283040251
+            ],
+            "dignity": null,
+            "graha": "surya",
+            "longitude": 316.683163428564,
+            "name": "Surya",
+            "retrograde": false,
+            "short": "Su"
+          },
+          {
+            "combust": true,
+            "degrees_in_rashi": [
+              27,
+              30,
+              59.58932700264086
+            ],
+            "dignity": null,
+            "graha": "budha",
+            "longitude": 327.51655259083407,
+            "name": "Budha",
+            "retrograde": true,
+            "short": "Me"
+          },
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              29,
+              36,
+              47.03876526217755
+            ],
+            "dignity": null,
+            "graha": "shukra",
+            "longitude": 329.61306632368394,
+            "name": "Shukra",
+            "retrograde": false,
+            "short": "Ve"
+          }
+        ],
+        "house": 7,
+        "name": "Kumbha",
+        "rashi": "kumbha",
+        "short": "Aqu"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              7,
+              33,
+              32.89168571779555
+            ],
+            "dignity": null,
+            "graha": "shani",
+            "longitude": 337.55913657936605,
+            "name": "Shani",
+            "retrograde": false,
+            "short": "Sa"
+          }
+        ],
+        "house": 8,
+        "name": "Meena",
+        "rashi": "meena",
+        "short": "Pis"
+      }
+    ],
+    "source": "swieph",
+    "unix_ms": 1772366400000
+  },
+  "chakraMoshier": {
+    "lagna": {
+      "degrees_in_rashi": [
+        23,
+        2,
+        29.387115850953478
+      ],
+      "longitude": 23.04149642106971,
+      "name": "Mesha",
+      "rashi": "mesha"
+    },
+    "place": "Bengaluru",
+    "rashis": [
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              22,
+              48,
+              2.275173752695707
+            ],
+            "dignity": null,
+            "graha": "rahu",
+            "longitude": 22.800631992709082,
+            "name": "Rahu",
+            "retrograde": true,
+            "short": "Ra"
+          }
+        ],
+        "house": 1,
+        "name": "Mesha",
+        "rashi": "mesha",
+        "short": "Ari"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              26,
+              31,
+              57.692893970291834
+            ],
+            "dignity": "exalted",
+            "graha": "chandra",
+            "longitude": 56.5326924705473,
+            "name": "Chandra",
+            "retrograde": false,
+            "short": "Mo"
+          }
+        ],
+        "house": 2,
+        "name": "Vrishabha",
+        "rashi": "vrishabha",
+        "short": "Tau"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              21,
+              45,
+              51.098593036766715
+            ],
+            "dignity": null,
+            "graha": "shani",
+            "longitude": 81.76419405362132,
+            "name": "Shani",
+            "retrograde": false,
+            "short": "Sa"
+          }
+        ],
+        "house": 3,
+        "name": "Mithuna",
+        "rashi": "mithuna",
+        "short": "Gem"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              4,
+              2,
+              0.48690812282529805
+            ],
+            "dignity": "debilitated",
+            "graha": "mangala",
+            "longitude": 94.03346858558967,
+            "name": "Mangala",
+            "retrograde": false,
+            "short": "Ma"
+          },
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              20,
+              34,
+              51.206316947670985
+            ],
+            "dignity": null,
+            "graha": "budha",
+            "longitude": 110.58089064359658,
+            "name": "Budha",
+            "retrograde": false,
+            "short": "Me"
+          }
+        ],
+        "house": 4,
+        "name": "Karka",
+        "rashi": "karka",
+        "short": "Can"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              8,
+              37,
+              41.05101016653407
+            ],
+            "dignity": "own_sign",
+            "graha": "surya",
+            "longitude": 128.62806972504626,
+            "name": "Surya",
+            "retrograde": false,
+            "short": "Su"
+          }
+        ],
+        "house": 5,
+        "name": "Simha",
+        "rashi": "simha",
+        "short": "Leo"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              8,
+              31,
+              9.406221167002968
+            ],
+            "dignity": "debilitated",
+            "graha": "shukra",
+            "longitude": 158.51927950587972,
+            "name": "Shukra",
+            "retrograde": false,
+            "short": "Ve"
+          }
+        ],
+        "house": 6,
+        "name": "Kanya",
+        "rashi": "kanya",
+        "short": "Vir"
+      },
+      {
+        "grahas": [
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              14,
+              51,
+              50.256829903335074
+            ],
+            "dignity": null,
+            "graha": "guru",
+            "longitude": 194.8639602305287,
+            "name": "Guru",
+            "retrograde": false,
+            "short": "Ju"
+          },
+          {
+            "combust": false,
+            "degrees_in_rashi": [
+              22,
+              48,
+              2.275173752657338
+            ],
+            "dignity": null,
+            "graha": "ketu",
+            "longitude": 202.80063199270907,
+            "name": "Ketu",
+            "retrograde": true,
+            "short": "Ke"
+          }
+        ],
+        "house": 7,
+        "name": "Tula",
+        "rashi": "tula",
+        "short": "Lib"
+      },
+      {
+        "grahas": [],
+        "house": 8,
+        "name": "Vrishchika",
+        "rashi": "vrishchika",
+        "short": "Sco"
+      },
+      {
+        "grahas": [],
+        "house": 9,
+        "name": "Dhanu",
+        "rashi": "dhanu",
+        "short": "Sag"
+      },
+      {
+        "grahas": [],
+        "house": 10,
+        "name": "Makara",
+        "rashi": "makara",
+        "short": "Cap"
+      },
+      {
+        "grahas": [],
+        "house": 11,
+        "name": "Kumbha",
+        "rashi": "kumbha",
+        "short": "Aqu"
+      },
+      {
+        "grahas": [],
+        "house": 12,
+        "name": "Meena",
+        "rashi": "meena",
+        "short": "Pis"
+      }
+    ],
+    "source": "moshier",
+    "unix_ms": -10078152191999
+  },
   "grahaDay": {
     "combustion": {
       "combust": false,
