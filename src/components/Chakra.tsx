@@ -206,6 +206,9 @@ function edges(points: Point[]): [Point, Point][] {
 
 /** Clearance a wall-hugging caption keeps from the wall itself. */
 const LABEL_WALL = 4;
+/** How much room a wall-hugging caption takes, and so how far the grahas in that
+ *  compartment step away from the wall to clear it. */
+const CAPTION_WIDTH = 22;
 
 /**
  * Pushes a caption wholly inside its compartment.
@@ -351,11 +354,27 @@ function northCompartments(
     const middle = centroid(points);
 
     const caption = placeCaption(points, house + 1, C, middle, numbered);
+
+    // In a wall triangle the caption hugs the side and the centroid is only a
+    // little further in, so the two overlapped - `Can` ran into `Ju`. The
+    // cluster steps away from the wall by the caption's own width. The other
+    // eight compartments put their caption at a far vertex, which the cluster is
+    // nowhere near.
+    const againstWall = caption.anchor !== "middle";
+    const body = againstWall
+      ? {
+          x:
+            middle.x +
+            (caption.anchor === "start" ? CAPTION_WIDTH : -CAPTION_WIDTH),
+          y: middle.y,
+        }
+      : middle;
+
     return {
       points,
       label: caption.at,
       labelAnchor: caption.anchor,
-      body: middle,
+      body,
       rashi: rashis[sign]!,
       sign,
     };
@@ -512,8 +531,6 @@ export function Chakra(props: {
                     <text
                       class="chakra__graha"
                       classList={{
-                        "is-exalted": graha().dignity === "exalted",
-                        "is-debilitated": graha().dignity === "debilitated",
                         "is-combust": graha().combust,
                       }}
                       x={at_.x}
@@ -528,6 +545,20 @@ export function Chakra(props: {
                       {graha().retrograde
                         ? `(${graha().short})`
                         : graha().short}
+                      {/* Exalted rises, debilitated falls. An arrow rather than
+                          weight or light: 700 against 400 at 11px is a
+                          difference you have to look for, a white glow around
+                          already-white text on a near-black ground adds almost
+                          nothing, and italic did not read at a glance either.
+                          A shape does, and this one carries its own meaning -
+                          the strongest and the weakest place a graha can stand,
+                          drawn as up and down. It composes with the retrograde
+                          bracket: `(Ju)↑`. */}
+                      {graha().dignity === "exalted"
+                        ? "\u2191"
+                        : graha().dignity === "debilitated"
+                          ? "\u2193"
+                          : ""}
                       {/* The hover says everything the abbreviation cannot: the
                           full name, where it stands, and what it is doing
                           there. A native SVG title, so it needs no positioning

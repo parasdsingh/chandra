@@ -974,41 +974,23 @@
   fill: var(--text-primary);
 }
 
-/* Exalted and debilitated, as light rather than as weight.
+/* Exalted and debilitated are drawn as an arrow after the name, not as a
+   property of the type.
 
-   Weight was tried first and failed on its own terms: at 11px on a translucent
-   ground, 700 against 400 is a difference you have to look for, and the whole
-   point is that you should not have to. Dimming failed worse - it put the graha
-   at the same value as the compartment's own caption, so a debilitated body read
-   as a label.
+   Three treatments were tried and each failed for its own reason. Weight: 700
+   against 400 at 11px on a translucent ground is a difference you have to look
+   for. A white glow: the text is already near-white on a near-black ground, so
+   light around it adds almost nothing - and the symmetric answer for
+   debilitation, a dark halo, is invisible for the same reason inverted. Italic:
+   legible, but not at a glance.
 
-   So the pair is drawn as luminance. Exalted glows; debilitated is the same
-   colour as every other graha but sits behind a soft dark halo, which reads as
-   set back rather than as faded. Both keep --text-primary, so neither can be
-   mistaken for the caption, and both keep the weight difference as a second
-   carrier for anyone the glow does not reach.
+   An arrow is a shape, and shape survives at 11px where weight and luminance do
+   not. It also carries its own meaning rather than needing to be learnt: the
+   strongest and the weakest place a graha can stand, drawn as up and down.
 
-   Not a hue: D-023 allows colour to depict and forbids it encoding, and
-   "exalted" is a value, not a thing that looks a particular colour. Light and
-   shadow are the depiction - a graha at its strongest and one at its weakest. */
-.chakra__graha.is-exalted {
-  font-weight: 700;
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85));
-}
-
-/* Debilitated is italic, not dark.
-   A dark halo was the symmetric answer to the glow and it is invisible: the
-   panel's ground is already near black, so shadow has nothing to darken. Dimming
-   was tried before that and put the graha at the same value as the compartment's
-   caption, so it read as a label rather than as a body.
-   Italic is legible at 11px, is used nowhere else in the app, and cannot be
-   mistaken for either. The slight fade reinforces it without reaching the
-   caption's value. */
-.chakra__graha.is-debilitated {
-  font-style: italic;
-  fill: var(--text-primary);
-  opacity: 0.78;
-}
+   Nothing else changes, so a marked graha is still the same colour and weight as
+   an unmarked one and cannot be mistaken for the compartment's caption - which
+   is what dimming got wrong. */
 
 /* Own sign is deliberately not drawn. It was, with an underline, and D-024 is
    titled "No underlines" - its body says "no underlines anywhere". Nothing else
