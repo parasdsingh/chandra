@@ -104,11 +104,17 @@
   transform: translateY(1px);
 }
 
+/* Centred, in every view.
+   The header's grid is `24px 1fr 24px`, so the middle column is already centred
+   in the panel whether or not the two flanking slots hold anything - the gear is
+   absent on settings and behind the gate, and the column still holds its 24px.
+   That makes centring the text the same axis the caption under the chart is
+   centred on, so a title and its subtitle finally share one. */
 .header__label {
   font: var(--type-title);
   letter-spacing: var(--track-title);
   color: var(--text-primary);
-  text-align: left;
+  text-align: center;
   line-height: 28px;
   white-space: nowrap;
   overflow: hidden;
