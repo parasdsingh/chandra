@@ -19,7 +19,7 @@ use crate::state::AppState;
 /// Identifier of the permanent moon item.
 ///
 /// The moon item *is* Chandra's item; enabling Chandra in settings does not add
-/// a second one (`docs/DECISIONS.md` D-019).
+/// a second one (`docs/DECISIONS.md` D-009).
 pub const MOON_ID: &str = "chandra.moon";
 
 /// The Lagna Kundali's own status item.

@@ -545,20 +545,6 @@ export function Chakra(props: {
                       {graha().retrograde
                         ? `(${graha().short})`
                         : graha().short}
-                      {/* Exalted rises, debilitated falls. An arrow rather than
-                          weight or light: 700 against 400 at 11px is a
-                          difference you have to look for, a white glow around
-                          already-white text on a near-black ground adds almost
-                          nothing, and italic did not read at a glance either.
-                          A shape does, and this one carries its own meaning -
-                          the strongest and the weakest place a graha can stand,
-                          drawn as up and down. It composes with the retrograde
-                          bracket: `(Ju)↑`. */}
-                      {graha().dignity === "exalted"
-                        ? "\u2191"
-                        : graha().dignity === "debilitated"
-                          ? "\u2193"
-                          : ""}
                       {/* The hover says everything the abbreviation cannot: the
                           full name, where it stands, and what it is doing
                           there. A native SVG title, so it needs no positioning

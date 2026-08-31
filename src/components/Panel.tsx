@@ -795,8 +795,14 @@ export function Panel(props: Props): JSX.Element {
 
           <Show when={locationIsSet(props.boot) && view() === "chart"}>
             <div class="chakra-view">
+              {/* `chart.latest`, not `chart()`. A Solid resource drops to
+                  undefined while it refetches, so the sixty-second refresh
+                  blanked the whole chart for a frame and put the error fallback
+                  in its place. The previous reading stays on screen until the
+                  next one lands, which is the same reason the month strip holds
+                  its months by identity. */}
               <Show
-                when={chart()}
+                when={chart.latest}
                 fallback={
                   <Show when={chart.error}>
                     <ErrorBlock
@@ -827,6 +833,16 @@ export function Panel(props: Props): JSX.Element {
                       format={props.boot.settings.chart.format}
                       numbered={props.boot.settings.chart.numbered}
                     />
+
+                    {/* The chart is as exact as the ephemeris behind it, and
+                        outside 1800-2399 that is the analytic fallback. Every
+                        other view says so; this one did not, which made it the
+                        one surface that could print a degree it had not earned. */}
+                    <Show when={data().source === "moshier"}>
+                      <p class="detail__provenance">
+                        Outside 1800–2399. Positions here are approximate.
+                      </p>
+                    </Show>
                   </>
                 )}
               </Show>

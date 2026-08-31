@@ -73,7 +73,7 @@ impl AppState {
     ///
     /// Chandra is never included: the permanent moon item is Chandra's item, so
     /// listing it here would put two moons in the menu bar
-    /// (`docs/DECISIONS.md` D-019).
+    /// (`docs/DECISIONS.md` D-009).
     pub fn tray_subjects(&self) -> Vec<Graha> {
         let chosen = self.settings().tray.subjects;
 

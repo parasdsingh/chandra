@@ -44,9 +44,41 @@ the rashi holding the lagna.
 | 1.7 | Chart format setting, and the schema migration | ready | §6. Schema 7 |
 | 1.8 | Panel view and the header title | ready | §5.1–5.3 |
 | 1.9 | ~~Tray item, **on by default**, live lagna in the tooltip~~ | done | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
-| 1.10 | Spoken form of the chart | ready | §7. A list, not a grid |
-| 1.11 | Degraded states: no lagna, outside the range, polar | ready | §8 |
+| 1.10 | ~~Spoken form of the chart~~ | done | §7. A list, not a grid |
+| 1.11 | Degraded states: no lagna, outside the range, polar | part done | The precision note reaches the chart now. The no-lagna and polar cases are untested | §8 |
 | 1.12 | ~~Decide what the feature is called~~ | done | **`Lagna Kundali`**, glossed `Ascendant chart`. Not `Gochara` — see below |
+
+### E1 parked
+
+**Graha placement inside a compartment.** They currently sit on fixed rows
+offset from the compartment's centre, so across the chart they land on the same
+few horizontal bands and the whole drawing reads as gridded. Placing each graha
+by its own degree within the sign would break that up *and* mean something -
+position in the compartment showing position in the sign - and it is the same
+mapping the animation needs, since a graha's degree is what moves. So it belongs
+with that work rather than being solved twice.
+
+
+
+**Dignity on the chart face.** Four treatments were tried and rejected, and the
+reasons are structural rather than matters of taste - which is why the next
+attempt should start somewhere else rather than tune one of these:
+
+| Treatment | Why it failed |
+|---|---|
+| Weight, 700 against 400 | At 11px on a translucent ground it is a difference you have to look for |
+| A white glow | The text is already near-white on a near-black ground, so light around it adds almost nothing |
+| A dark halo, the symmetric answer | Invisible for the same reason inverted: the ground has nothing left to darken |
+| Italic | Legible, but not at a glance |
+| An arrow after the name | Read as punctuation rather than as a mark |
+
+An underline would break D-024, which is titled "No underlines". Both reference
+applications ship dignity off the chart face by default and Jagannatha Hora
+calls its optional highlight an aid for beginners, so a face without it is the
+normal case rather than a gap.
+
+Exaltation, debilitation and own sign are all on the hover and in the spoken
+form, which is where every other qualifier in this app lives.
 
 ### E1 defects found in use
 
