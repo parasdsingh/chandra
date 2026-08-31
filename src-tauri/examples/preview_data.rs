@@ -53,24 +53,9 @@ fn main() {
         first_weekday: 0,
     };
 
-    let grahas: Vec<_> = Graha::ALL
-        .into_iter()
-        .map(|graha| {
-            let (path, ink) = chandra_glyph::glyphs::glyph(graha);
-            json!({
-                "key": graha.key(),
-                "name": graha.name(),
-                "english": graha.english(),
-                "path": path,
-                "filled": ink == chandra_glyph::glyphs::Ink::Fill,
-                "stroke_width": chandra_glyph::glyphs::STROKE_WIDTH,
-            })
-        })
-        .collect();
-
     let document = json!({
         "timeZone": "Asia/Kolkata",
-        "grahas": grahas,
+        "grahas": chandra_lib::graha_info(),
         "moonMonth": almanac
             .moon_month(cursor(2026, 8, MonthSystem::Solar))
             .expect("moon month"),

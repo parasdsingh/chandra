@@ -108,23 +108,36 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
                 label: s.label(),
             })
             .collect(),
-        grahas: Graha::ALL
-            .into_iter()
-            .map(|g| {
-                let (path, ink) = chandra_glyph::glyphs::glyph(g);
-                let (x, y, width, height) = chandra_glyph::glyphs::view_box(g);
-                GrahaInfo {
-                    key: g.key(),
-                    name: g.name(),
-                    english: g.english(),
-                    path,
-                    filled: ink == chandra_glyph::glyphs::Ink::Fill,
-                    stroke_width: chandra_glyph::glyphs::STROKE_WIDTH,
-                    view_box: [x, y, width, height],
-                }
-            })
-            .collect(),
+        grahas: graha_info(),
     })
+}
+
+/// Every graha's symbol, as the panel receives it.
+///
+/// Its own function because the visual harness needs the same list and cannot
+/// call `bootstrap`, which wants an `AppHandle` and a `State`. Building it there
+/// instead - as an untyped `json!` literal, which is what it was - meant the
+/// harness silently stopped matching `GrahaInfo` the moment a field was added:
+/// `view_box` arrived, the fixture kept the old six keys, and every glyph in the
+/// harness threw on a `view_box` that was not there. One typed source cannot
+/// drift, because the compiler will not let it.
+pub fn graha_info() -> Vec<GrahaInfo> {
+    Graha::ALL
+        .into_iter()
+        .map(|g| {
+            let (path, ink) = chandra_glyph::glyphs::glyph(g);
+            let (x, y, width, height) = chandra_glyph::glyphs::view_box(g);
+            GrahaInfo {
+                key: g.key(),
+                name: g.name(),
+                english: g.english(),
+                path,
+                filled: ink == chandra_glyph::glyphs::Ink::Fill,
+                stroke_width: chandra_glyph::glyphs::STROKE_WIDTH,
+                view_box: [x, y, width, height],
+            }
+        })
+        .collect()
 }
 
 #[tauri::command]
