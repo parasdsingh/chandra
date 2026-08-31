@@ -25,7 +25,7 @@ birth chart — there is no birth time and no birth place, and calling it one
 would be a lie about what it computes.
 
 **All three common formats are supported**, chosen in settings, defaulting to
-South Indian. They share one data model: which rashi each graha occupies, plus
+North Indian. They share one data model: which rashi each graha occupies, plus
 the rashi holding the lagna.
 
 ### E1 tasks
@@ -36,17 +36,18 @@ the rashi holding the lagna.
 | 1.1a | ~~Test: independent closed-form ascendant agrees~~ | done | The guard. §2.2.1–2.2.2. `atan2(cos RAMC, −(sin RAMC·cos ε + tan φ·sin ε))` from the engine's own sidereal time and obliquity. φ is in the formula, so a transposed argument cannot agree |
 | 1.1b | ~~Settle the ayanamsa frame the lagna sits on~~ | done | **No residual.** `swe_houses_ex` and `Engine::ayanamsa` agree to under an arcsecond, so the lagna is already on the same sidereal frame as every rashi the app prints. The 17″ worry did not materialise |
 | 1.2 | ~~Obliquity, for the polar test~~ | done | `Engine::obliquity` and `Engine::sidereal_time`, both used by the guard |
-| 1.3 | `Chakra` payload — 12 rashis of occupants, lagna rashi and degree | ready | Shared by all three formats |
-| 1.4 | North Indian renderer | ready | **Default.** 4 diamonds, 8 triangles, SVG polygons with a text anchor each. Cannot be drawn without a lagna |
-| 1.5 | South Indian renderer | ready | 4×4, centre removed, Meena top-left, clockwise. The fallback where there is no lagna |
-| 1.6 | East Indian renderer | ready | Same geometry as 1.5, different origin and direction |
+| 1.3 | ~~`Chakra` payload — 12 rashis of occupants, lagna rashi and degree~~ | done | Shared by all three formats |
+| 1.4 | ~~North Indian renderer~~ | done | **Default.** 4 diamonds, 8 triangles, SVG polygons with a text anchor each. Cannot be drawn without a lagna |
+| 1.5 | ~~South Indian renderer~~ | done | 4×4, centre removed, Meena top-left, clockwise |
+| 1.6 | ~~East Indian renderer~~ | done | Same geometry as 1.5, different origin and direction |
 | 1.6a | ~~Location quality gate~~ | superseded | Answered by **E4**: a location becomes mandatory, so there is no centroid case to gate |
-| 1.7 | Chart format setting, and the schema migration | ready | §6. Schema 7 |
-| 1.8 | Panel view and the header title | ready | §5.1–5.3 |
+| 1.7 | ~~Chart format setting, and the schema migration~~ | done | §6. Schema **8** — 7 was published without a bump for `numbered` and refused to start on installs already at 7 |
+| 1.8 | ~~Panel view and the header title~~ | done | §5.1–5.3. The pane is `ChartView`, shared with the visual harness |
 | 1.9 | ~~Tray item, **on by default**, live lagna in the tooltip~~ | done | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
 | 1.10 | ~~Spoken form of the chart~~ | done | §7. A list, not a grid |
-| 1.11 | Degraded states: no lagna, outside the range, polar | part done | The precision note reaches the chart now. The no-lagna and polar cases are untested | §8 |
+| 1.11 | Degraded states: outside the range, polar | part done | The precision note reaches the chart and the harness draws a 1650 chart. **There is no no-lagna case** — the ascendant is the ecliptic's crossing of the horizon and always exists, so §8's third state was never real. The polar case is still untested |
 | 1.12 | ~~Decide what the feature is called~~ | done | **`Lagna Kundali`**, glossed `Ascendant chart`. Not `Gochara` — see below |
+| 1.13 | ~~The chart in the visual harness~~ | done | Eight cases: three formats, numbered, the year's densest conjunction in two formats, 1650, and the error state |
 
 ### E1 parked
 
@@ -85,6 +86,8 @@ form, which is where every other qualifier in this app lives.
 | | Finding | Status |
 |---|---|---|
 | i | **A sixth status item gets hidden.** macOS squeezes status items out when the frontmost app has a long menu bar. With Chrome frontmost the chart item - the leftmost of the six - disappears entirely; with Finder frontmost it returns. Observed, not inferred: the same menu bar photographed twice. | open |
+| ii | **A graha label left its compartment, and then collided with its neighbour.** Clamped to the span at its baseline, `(Ke)` had its top corner three units through a diagonal wall; clamping each label separately then closed the pitch and overlapped `Su`. Both fixed — rows move as units and the column count is searched. Found by the harness, not by eye | fixed |
+| iii | **Tooltip timing varies by graha.** Retrograde labels are 34% wider so they are hit sooner, and a combust graha is by definition beside the Sun, so its tooltip is the second one shown and macOS shows that instantly. No app code is involved; accepted as native behaviour | closed |
 
 The chart is the item most likely to be lost, because it is created last and so
 sits furthest left. Options: create it first so a graha is sacrificed instead,
@@ -113,7 +116,7 @@ gives the gloss.
 
 ### E1 decisions still open
 
-None. E1 is unblocked once E4 lands.
+Only defect (i): which status item is allowed to be the one macOS hides.
 
 ---
 
@@ -162,7 +165,7 @@ tithi, and whether the `Daylight` row stays.
 | # | Task | Status | Notes |
 |---|---|---|---|
 | 3.1 | ~~A solar day is named by its date again~~ | done | Commit `40c479c`. The second of the two wrong cases |
-| 3.2 | `state.rs:76` and `tray.rs:22` cite D-019 where they mean D-009 | ready | Found in passing |
+| 3.2 | ~~`state.rs:76` and `tray.rs:22` cite D-019 where they mean D-009~~ | done | `month.rs:318` also cites D-019 and is correct: that one really is combustion at local noon |
 
 ---
 
@@ -189,11 +192,11 @@ was defensible while the app showed phases and tithis. It is not defensible now:
 
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 4.1 | Decide the shape: a first-run gate, or a persistent banner until set | queued | Affects onboarding, which the app has never had |
-| 4.2 | Ask for CoreLocation, and fall through to city search on refusal | queued | Both already built; what is missing is the requirement |
-| 4.3 | What the app shows before a location exists | queued | Refuse to draw, or draw and mark every figure as provisional |
-| 4.4 | Amend D-007 | queued | The fallback chain stops being silent |
-| 4.5 | Migration for existing installs still on a centroid | queued | They have been running on a guess; say so once |
+| 4.1 | ~~Decide the shape~~ | done | A gate, `ce07664`. There is no way past it |
+| 4.2 | ~~Ask for CoreLocation, and fall through to city search on refusal~~ | done | The city search is extracted from the settings pane rather than copied |
+| 4.3 | ~~What the app shows before a location exists~~ | done | Refuses to draw. A reading from a centroid nobody chose is a guess dressed as a reading |
+| 4.4 | Amend D-007 | **ready** | Still says the chain ends at a timezone centroid, with nothing to say that last step is no longer allowed to stand. The one piece of E4 left |
+| 4.5 | ~~Migration for existing installs still on a centroid~~ | done | The gate keys on provenance, so an existing install on a centroid meets it too |
 
 ---
 
