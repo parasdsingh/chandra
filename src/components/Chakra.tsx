@@ -123,6 +123,63 @@ function spanAt(points: Point[], y: number): { min: number; max: number } {
  *  The clearance is the point: at 8 and 3 the labels were technically inside
  *  their compartments and visually sitting on the frame, which reads as a
  *  clipped label rather than a placed one. */
+/**
+ * The narrowest the shape gets over a band of heights.
+ *
+ * `spanAt` answers for a single scanline, and a label is not a scanline. A
+ * polygon's span is piecewise linear in y, so the narrowest point over an
+ * interval is at one of its ends or at a vertex between them; those are the
+ * only heights worth testing, and testing them is exact rather than a sample.
+ *
+ * The band is clamped into the shape's own range first. A label whose box
+ * reaches past the tip of a triangle would otherwise ask `spanAt` about a height
+ * the shape does not occupy, and get the empty span back as though the shape
+ * were zero-width there.
+ */
+function spanOver(
+  points: Point[],
+  top: number,
+  bottom: number,
+): { min: number; max: number } {
+  const ys = points.map((point) => point.y);
+  const lowest = Math.min(...ys);
+  const highest = Math.max(...ys);
+  const from = Math.min(Math.max(top, lowest), highest);
+  const to = Math.min(Math.max(bottom, lowest), highest);
+
+  const heights = [from, to];
+  for (const y of ys) if (y > from && y < to) heights.push(y);
+
+  let min = -Infinity;
+  let max = Infinity;
+  for (const y of heights) {
+    const span = spanAt(points, y);
+    min = Math.max(min, span.min);
+    max = Math.min(max, span.max);
+  }
+  return { min, max };
+}
+
+/** A graha label's box, measured from its baseline at the caption size.
+ *
+ * From the rendered text rather than derived from the font size: at 11px the box
+ * runs 10.53 above the baseline and 2.11 below it. Rounded outwards, because the
+ * point of them is to keep the label off the wall. */
+const GRAHA_ABOVE = 11;
+const GRAHA_BELOW = 3;
+
+/** Half the widest graha label.
+ *
+ * `(Ke)` measures 25.0 against a plain `Mo`'s 16.4 - the retrograde brackets are
+ * what makes the widest case, and they are on the name rather than beside it so
+ * that this stays as small as it is. The widest is what every label is clamped
+ * by: `cluster` places positions and never sees the text.
+ *
+ * Not `GRAHA_COLUMN / 2`, which is what it used to be. The column is the pitch
+ * between two labels; this is how much room one label needs. They were the same
+ * number by coincidence and neither was measured. */
+const GRAHA_HALF = 13;
+
 const LABEL_ASCENT = 12;
 const LABEL_DESCENT = 6;
 /** Half the width of a three-letter label at 10px, plus the same clearance. */
@@ -251,39 +308,76 @@ function clampInside(points: Point[], start: Point): Point {
  */
 function cluster(points: Point[], centre: Point, count: number): Point[] {
   const desired = count <= 1 ? 1 : count <= 4 ? 2 : 3;
-  const here = spanAt(points, centre.y);
-  const columns = Math.max(
-    1,
-    Math.min(
-      desired,
-      Math.floor((here.max - here.min - GRAHA_MARGIN) / GRAHA_COLUMN),
-    ),
+
+  // Every shape the count can be laid out in, best first. More columns is a
+  // shorter, wider block and fewer is a taller, narrower one, so which of them
+  // fits depends on the compartment: a corner triangle runs out of width, and a
+  // tall kite runs out of height. Neither direction is always the right one to
+  // try, so both are tried and the one nearest the preferred shape wins.
+  //
+  // At most nine bodies, so this is at most nine attempts at nine positions.
+  const shapes = Array.from({ length: count }, (_, index) => index + 1).sort(
+    (a, b) => Math.abs(a - desired) - Math.abs(b - desired) || a - b,
   );
-  const rows = Math.ceil(count / columns);
 
+  for (const columns of shapes) {
+    const laid = rows(points, centre, count, columns);
+    if (laid) return laid;
+  }
+
+  // Nothing fits, at any shape. One column down the compartment's middle, which
+  // is the arrangement whose unavoidable overhang is smallest.
   return Array.from({ length: count }, (_, index) => {
-    const row = Math.floor(index / columns);
-    const column = index % columns;
-    const inThisRow = Math.min(columns, count - row * columns);
-
-    const y = centre.y + (row - (rows - 1) / 2) * GRAHA_ROW;
-    const x = centre.x + (column - (inThisRow - 1) / 2) * GRAHA_COLUMN;
-
-    // Whatever the row's width, it has to sit inside the shape at its own
-    // height. Half a column either side, because `x` is a text midpoint.
+    const y = centre.y + (index - (count - 1) / 2) * GRAHA_ROW;
     const span = spanAt(points, y);
-    const half = GRAHA_COLUMN / 2;
+    return { x: (span.min + span.max) / 2, y };
+  });
+}
+
+/**
+ * One arrangement, or nothing if it does not fit.
+ *
+ * A row is moved as a whole rather than each label being clamped on its own.
+ * Clamping them separately was tried and is wrong twice over: it silently closes
+ * the gap the pitch exists to hold - two labels pushed off opposite walls meet
+ * in the middle and overlap - and it hides the real problem, which is that the
+ * row is too wide for the compartment at that height. Moving the row keeps the
+ * spacing and lets the row that genuinely will not fit say so.
+ */
+function rows(
+  points: Point[],
+  centre: Point,
+  count: number,
+  columns: number,
+): Point[] | null {
+  const lines = Math.ceil(count / columns);
+  const placed: Point[] = [];
+
+  for (let index = 0; index < count; index++) {
+    const line = Math.floor(index / columns);
+    const column = index % columns;
+    const inThisRow = Math.min(columns, count - line * columns);
+
+    const y = centre.y + (line - (lines - 1) / 2) * GRAHA_ROW;
+
+    // The narrowest the compartment gets over the label's own box, not over the
+    // scanline its baseline sits on. Where a compartment has a diagonal wall the
+    // top of that box is the tight point, so a baseline that measured as inside
+    // still put the top corner through the wall.
+    const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
+    const half = ((inThisRow - 1) * GRAHA_COLUMN) / 2 + GRAHA_HALF;
     const lowest = span.min + half + GRAHA_MARGIN / 2;
     const highest = span.max - half - GRAHA_MARGIN / 2;
+    if (lowest > highest) return null;
 
-    return {
-      x:
-        lowest <= highest
-          ? Math.min(Math.max(x, lowest), highest)
-          : (span.min + span.max) / 2,
+    const middle = Math.min(Math.max(centre.x, lowest), highest);
+    placed.push({
+      x: middle + (column - (inThisRow - 1) / 2) * GRAHA_COLUMN,
       y,
-    };
-  });
+    });
+  }
+
+  return placed;
 }
 
 /**
