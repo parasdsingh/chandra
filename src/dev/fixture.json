@@ -4792,6 +4792,248 @@
       "war": null
     }
   },
+  "polarDay": {
+    "combustion": {
+      "combust": false,
+      "orb": 12.0,
+      "separation": 143.36502653626167
+    },
+    "date": {
+      "day": 21,
+      "month": 12,
+      "year": 2026
+    },
+    "illumination": 0.9000800771822691,
+    "is_waxing": true,
+    "kind": "moon",
+    "moonrise": null,
+    "moonset": null,
+    "nakshatras": [
+      {
+        "entry": {
+          "day_offset": -1,
+          "unix_ms": 1797758758756
+        },
+        "exit": {
+          "day_offset": 0,
+          "unix_ms": 1797838742164
+        },
+        "lord": "shukra",
+        "nakshatra": "bharani",
+        "name": "Bharani",
+        "pada": 1,
+        "prevailing": false
+      },
+      {
+        "entry": {
+          "day_offset": 0,
+          "unix_ms": 1797838742164
+        },
+        "exit": {
+          "day_offset": 1,
+          "unix_ms": 1797916549576
+        },
+        "lord": "surya",
+        "nakshatra": "krittika",
+        "name": "Krittika",
+        "pada": 1,
+        "prevailing": true
+      }
+    ],
+    "panchanga": {
+      "karanas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1797777905252
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1797816653598
+          },
+          "fixed": false,
+          "index": 23,
+          "name": "Bava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1797816653598
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1797854812509
+          },
+          "fixed": false,
+          "index": 24,
+          "name": "Balava",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1797854812509
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1797892453384
+          },
+          "fixed": false,
+          "index": 25,
+          "name": "Kaulava",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1797892453384
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1797929653172
+          },
+          "fixed": false,
+          "index": 26,
+          "name": "Taitila",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ],
+      "muhurtas": [],
+      "reference": "local_noon",
+      "sunrise": null,
+      "sunset": null,
+      "tithis": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1797777905252
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1797854812509
+          },
+          "index": 12,
+          "name": "Dvadashi",
+          "number": 12,
+          "paksha": "shukla",
+          "prevailing": true,
+          "source": "swieph",
+          "sunrises": null
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1797854812509
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1797929653172
+          },
+          "index": 13,
+          "name": "Trayodashi",
+          "number": 13,
+          "paksha": "shukla",
+          "prevailing": false,
+          "source": "swieph",
+          "sunrises": null
+        }
+      ],
+      "vara_name": "Somavara",
+      "yogas": [
+        {
+          "entry": {
+            "day_offset": -1,
+            "unix_ms": 1797734413048
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1797809847698
+          },
+          "index": 20,
+          "name": "Shiva",
+          "prevailing": false,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1797809847698
+          },
+          "exit": {
+            "day_offset": 0,
+            "unix_ms": 1797883342904
+          },
+          "index": 21,
+          "name": "Siddha",
+          "prevailing": true,
+          "source": "swieph"
+        },
+        {
+          "entry": {
+            "day_offset": 0,
+            "unix_ms": 1797883342904
+          },
+          "exit": {
+            "day_offset": 1,
+            "unix_ms": 1797955337134
+          },
+          "index": 22,
+          "name": "Sadhya",
+          "prevailing": false,
+          "source": "swieph"
+        }
+      ]
+    },
+    "phase": "waxing_gibbous",
+    "rashis": [
+      {
+        "entry": {
+          "day_offset": -2,
+          "unix_ms": 1797676094383
+        },
+        "exit": {
+          "day_offset": 0,
+          "unix_ms": 1797858375226
+        },
+        "name": "Mesha",
+        "prevailing": true,
+        "rashi": "mesha",
+        "western": "Aries"
+      },
+      {
+        "entry": {
+          "day_offset": 0,
+          "unix_ms": 1797858375226
+        },
+        "exit": {
+          "day_offset": 2,
+          "unix_ms": 1798030564964
+        },
+        "name": "Vrishabha",
+        "prevailing": false,
+        "rashi": "vrishabha",
+        "western": "Taurus"
+      }
+    ],
+    "source": "swieph",
+    "standing": {
+      "aspected_by": [
+        "guru",
+        "shukra"
+      ],
+      "aspects": [
+        "shukra"
+      ],
+      "dignity": null,
+      "nakshatra_lord": "surya",
+      "war": null
+    }
+  },
   "snapshot": {
     "grahas": [
       {

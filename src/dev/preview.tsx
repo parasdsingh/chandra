@@ -42,6 +42,7 @@ const data = fixture as unknown as {
   moonDay: Detail;
   lunarDay: Detail;
   moonDayNoRise: Detail;
+  polarDay: Detail;
   grahaMonth: GrahaMonth;
   grahaDay: Detail;
   moshierDay: Detail;
@@ -279,6 +280,23 @@ export function Preview(): JSX.Element {
             detail={data.moonDayNoRise}
             events={[]}
             context={context}
+            isToday={false}
+            lunar={true}
+            error={undefined}
+          />
+        </div>
+      </Case>
+
+      {/* Longyearbyen in December: the Sun does not rise, so the day cannot be
+          named after the tithi at sunrise and local noon is used instead. The
+          payload has carried that distinction since the rule was written and
+          nothing drew it, which is what this case exists to keep true. */}
+      <Case title="Moon · polar night, named for local noon">
+        <div class="region">
+          <DayDetail
+            detail={data.polarDay}
+            events={[]}
+            context={{ timeZone: "Arctic/Longyearbyen" }}
             isToday={false}
             lunar={true}
             error={undefined}

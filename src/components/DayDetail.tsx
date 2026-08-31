@@ -206,6 +206,25 @@ function Body(props: Props): JSX.Element {
               <DayPane detail={detail()} context={props.context} />
             </Show>
 
+            {/* The rule a day is named by, when it is not the usual one.
+                A panchanga names the day after the tithi prevailing at sunrise.
+                Inside a polar day or night the Sun does not rise, so local noon
+                is used instead - it keeps the reference inside the day and keeps
+                the calendar usable where the traditional rule has nothing to
+                point at.
+
+                The payload has carried this distinction since the rule was
+                written and nothing read it, so at Longyearbyen in December the
+                day was named by a different rule than the one every other day
+                uses and the surface said nothing. That is the same failure the
+                precision note exists to prevent, one rule down. */}
+            <Show when={detail().panchanga.reference === "local_noon"}>
+              <p class="detail__provenance">
+                The Sun does not rise today. This day is named for local noon,
+                not sunrise.
+              </p>
+            </Show>
+
             <Show when={detail().source === "moshier"}>
               {/* Named for what it means, not for the theory that produced it:
                   "Moshier ephemeris" is the name of a piece of arithmetic and

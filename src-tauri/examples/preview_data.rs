@@ -92,6 +92,34 @@ fn main() {
         first_weekday: 0,
     };
 
+    // Polar night at Longyearbyen, where the Sun does not rise at all and a day
+    // cannot be named after the tithi at sunrise.
+    //
+    // The observer is moved and moved back rather than a second `Almanac` being
+    // built: Swiss Ephemeris is a process-global, so there is only ever one, and
+    // asking for another returns `AlreadyConstructed`. Everything else in this
+    // file is cast for Bengaluru and is computed after the move is undone.
+    let polar_day = {
+        let home = almanac.location().expect("home location");
+        almanac
+            .set_location(Location {
+                observer: Observer::new(78.0, 16.0, 0.0),
+                zone_name: "Arctic/Longyearbyen".into(),
+            })
+            .expect("move to the arctic");
+
+        let day = almanac
+            .day_detail(
+                Graha::Chandra,
+                chandra_almanac::time::DateKey::new(2026, 12, 21).expect("date"),
+                limbs(),
+            )
+            .expect("polar day");
+
+        almanac.set_location(home).expect("move home");
+        day
+    };
+
     let document = json!({
         "timeZone": "Asia/Kolkata",
         "grahas": chandra_lib::graha_info(),
@@ -142,6 +170,11 @@ fn main() {
         "lunarGrahaDay": almanac
             .day_detail(Graha::Shani, date(21), limbs())
             .expect("lunar graha day"),
+        // Polar night at Longyearbyen, where the Sun does not rise at all and the
+        // day cannot be named after the tithi at sunrise. Its own almanac
+        // because the observer is what decides this, and everything else in the
+        // harness is cast for Bengaluru.
+        "polarDay": polar_day,
         // Before 1800, to exercise the reduced-precision note.
         "moshierDay": almanac
             .day_detail(

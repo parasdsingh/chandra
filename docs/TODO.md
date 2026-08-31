@@ -45,7 +45,7 @@ the rashi holding the lagna.
 | 1.8 | ~~Panel view and the header title~~ | done | §5.1–5.3. The pane is `ChartView`, shared with the visual harness |
 | 1.9 | ~~Tray item, **on by default**, live lagna in the tooltip~~ | done | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
 | 1.10 | ~~Spoken form of the chart~~ | done | §7. A list, not a grid |
-| 1.11 | Degraded states: outside the range, polar | part done | The precision note reaches the chart and the harness draws a 1650 chart. **There is no no-lagna case** — the ascendant is the ecliptic's crossing of the horizon and always exists, so §8's third state was never real. The polar case is still untested |
+| 1.11 | ~~Degraded states: outside the range, polar~~ | done | **There is no no-lagna case** — the ascendant is the ecliptic's crossing of the horizon and always exists, so §8's third state was never real. Tested at Longyearbyen (78°N) and Vostok (78.4°S) on both solstices and an equinox: the chart is drawn at every one. What degrades is the *day*, and it found a defect — see below |
 | 1.12 | ~~Decide what the feature is called~~ | done | **`Lagna Kundali`**, glossed `Ascendant chart`. Not `Gochara` — see below |
 | 1.13 | ~~The chart in the visual harness~~ | done | Eight cases: three formats, numbered, the year's densest conjunction in two formats, 1650, and the error state |
 
@@ -87,6 +87,7 @@ form, which is where every other qualifier in this app lives.
 |---|---|---|
 | i | **A sixth status item gets hidden.** macOS squeezes status items out when the frontmost app has a long menu bar. With Chrome frontmost the chart item - the leftmost of the six - disappears entirely; with Finder frontmost it returns. Observed, not inferred: the same menu bar photographed twice. | fixed, **D-030** |
 | ii | **A graha label left its compartment, and then collided with its neighbour.** Clamped to the span at its baseline, `(Ke)` had its top corner three units through a diagonal wall; clamping each label separately then closed the pitch and overlapped `Su`. Both fixed — rows move as units and the column count is searched. Found by the harness, not by eye | fixed |
+| iv | **A polar day was named by a different rule and said nothing.** A panchanga names a day after the tithi at sunrise; inside a polar night there is no sunrise and the almanac falls back to local noon. The payload has carried `reference: sunrise \| local_noon` since the rule was written and the day view never read it, so at Longyearbyen in December the day was named by one rule while every other day used another, with nothing on screen to say so. Now printed, with a harness case | fixed |
 | iii | **Tooltip timing varies by graha.** Retrograde labels are 34% wider so they are hit sooner, and a combust graha is by definition beside the Sun, so its tooltip is the second one shown and macOS shows that instantly. No app code is involved; accepted as native behaviour | closed |
 
 Resolved by **D-030**: the chart is created first and sits at the right-hand
