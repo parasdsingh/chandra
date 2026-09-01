@@ -18,14 +18,24 @@ cited, not remembered.** This document is written to it:
 
 | Rule | What it means here |
 |---|---|
-| Every rule carries a source | Chapter and verse of BPHS where one exists, and the translation named |
-| Two independent sources | A BPHS translation, plus published software behaviour or a second author |
+| Every rule carries a source | Chapter and verse where one exists, and the translation named |
+| Two independent sources | In practice five classical texts were read in full — BPHS, Brihat Jataka, Phaladeepika, Jataka Parijata, Saravali — plus two modern authors and four software implementations |
 | Disagreements are printed, not resolved | The app already refuses to name a winner in a planetary war and gives the nodes no dignity (D-026). Printing one reading of a disputed rule would be the app asserting an interpretation |
 | "Unverified" is a valid entry | §9 lists what could not be sourced. Gaps are not filled with plausible reconstruction |
 
-Two errors found while writing this are recorded rather than quietly corrected:
-one in a reference text (§7.12), one a self-contradiction inside a single
-translation (§7.12). Both are in D-27.
+Five errors and self-contradictions found while writing this are recorded rather
+than quietly corrected — an arithmetic slip in a reference text's own worked
+example (§7.12), a translation whose verse and whose note say different things
+(§7.12), a footnote that attributes a rule to *Saravali* which *Saravali* does
+not contain (§7.12), a software feature page that contradicts its own release
+notes (§8), and an open-source implementation whose D-4 computes a D-2 (§7.4).
+They are listed in §8, because a citation that is not checked is not much better
+than a memory.
+
+Two things this document deliberately does not do. It does not choose between
+schemes where authorities differ — §8 lists ten such places. And it does not
+treat a rule as sourced because software implements it: §10 grades each
+implementation by how far its behaviour can be trusted as evidence.
 
 ---
 
@@ -53,28 +63,49 @@ Three conventions, each of which is an off-by-one waiting to happen:
 Formulas below are written as `(a·s + b + p) mod 12`, which is the form the
 implementation should take: no counting loops, no tables.
 
+`p` itself has a classical statement, and it is the same arithmetic:
+
+> "To know any kind of Varga (Hora, Navansa, Drekkana etc.) adopt the following
+> method. Convert the longitude into minutes of arc and multiply by the Varga
+> figure concerned. Divide the product by 1800. The resultant figure will reveal
+> the required Varga."
+> — Saravali ch. 3 v. 18, Santhanam translation
+
+1800 arcminutes is 30°, so that is `floor(d · n / 30)` in integer arcminutes —
+exactly §6.6's recommendation to multiply before dividing, arrived at a thousand
+years before floating point made it necessary.
+
 ---
 
 ## 2. The sixteen, in summary
 
-| Varga | Name | `n` | Segment | Equal? | Rule | Signs it can occupy | Disputed |
+| Varga | Name | `n` | Segment | Equal? | Rule | Signs it can occupy | Variants in the wild |
 |---|---|---|---|---|---|---|---|
-| D1 | Rashi | 1 | 30° | yes | `s` | 12 | no |
-| D2 | Hora | 2 | 15° | yes | odd sign: Simha then Karka; even sign: reversed | **2** | **yes** — six schemes in JHora |
-| D3 | Drekkana | 3 | 10° | yes | `(s + 4p) mod 12` | 12 | **yes** — four schemes in JHora |
-| D4 | Chaturthamsa | 4 | 7°30′ | yes | `(s + 3p) mod 12` | 12 | **yes** — two schemes in JHora |
-| D7 | Saptamsa | 7 | 4°17′08.57″ | yes | `(7s + p) mod 12` | 12 | no |
-| D9 | Navamsa | 9 | 3°20′ | yes | `(9s + p) mod 12` | 12 | **yes** — three schemes in JHora |
-| D10 | Dasamsa | 10 | 3° | yes | `(s + 8·(s mod 2) + p) mod 12` | 12 | no |
-| D12 | Dwadasamsa | 12 | 2°30′ | yes | `(s + p) mod 12` | 12 | no |
-| D16 | Shodasamsa | 16 | 1°52′30″ | yes | `(4s + p) mod 12` | 12 | no |
-| D20 | Vimsamsa | 20 | 1°30′ | yes | `(8s + p) mod 12` | 12 | no |
-| D24 | Chaturvimsamsa | 24 | 1°15′ | yes | `(4 − (s mod 2) + p) mod 12` | 12 | no |
-| D27 | Bhamsa | 27 | 1°06′40″ | yes | `(3s + p) mod 12` | 12 | **yes** — Saravali differs |
-| D30 | Trimsamsa | 5 | **unequal**, 5/5/8/7/5 | **no** | table, §7.13 | **10** | **yes** — three schemes in JHora |
-| D40 | Khavedamsa | 40 | 45′ | yes | `(6·(s mod 2) + p) mod 12` | 12 | no |
-| D45 | Akshavedamsa | 45 | 40′ | yes | `(4·(s mod 3) + p) mod 12` | 12 | no |
-| D60 | Shashtiamsa | 60 | 30′ | yes | `(s + p) mod 12` | 12 | no |
+| D1 | Rashi | 1 | 30° | yes | `s` | 12 | — |
+| D2 | Hora | 2 | 15° | yes | odd sign: Simha then Karka; even sign: reversed | **2** | **6 modern + the Yavana hora**; no classic names the signs |
+| D3 | Drekkana | 3 | 10° | yes | `(s + 4p) mod 12` | 12 | **5**, four of them named and sourced |
+| D4 | Chaturthamsa | 4 | 7°30′ | yes | `(s + 3p) mod 12` | 12 | 2–4, all generic axes |
+| D7 | Saptamsa | 7 | 4°17′08.57″ | yes | `(7s + p) mod 12` | 12 | 3–6, all generic axes |
+| D9 | Navamsa | 9 | 3°20′ | yes | `(9s + p) mod 12` | 12 | **3 or 4** — JHora's own docs disagree |
+| D10 | Dasamsa | 10 | 3° | yes | `(s + 8·(s mod 2) + p) mod 12` | 12 | 4–6, all generic axes |
+| D12 | Dwadasamsa | 12 | 2°30′ | yes | `(s + p) mod 12` | 12 | 2–5, all generic axes |
+| D16 | Shodasamsa | 16 | 1°52′30″ | yes | `(4s + p) mod 12` | 12 | **a named classical split**, plus 2–4 generic |
+| D20 | Vimsamsa | 20 | 1°30′ | yes | `(8s + p) mod 12` | 12 | 2–4, all generic axes |
+| D24 | Chaturvimsamsa | 24 | 1°15′ | yes | `(4 − (s mod 2) + p) mod 12` | 12 | 3, all generic axes |
+| D27 | Bhamsa | 27 | 1°06′40″ | yes | `(3s + p) mod 12` | 12 | one repudiated rule (§7.12), plus 2–3 generic |
+| D30 | Trimsamsa | 5 | **unequal**, 5/5/8/7/5 | **no** | table, §7.13 | **10** | **equal-vs-unequal is a live argument**, plus 3–5 schemes |
+| D40 | Khavedamsa | 40 | 45′ | yes | `(6·(s mod 2) + p) mod 12` | 12 | 4, all generic axes |
+| D45 | Akshavedamsa | 45 | 40′ | yes | `(4·(s mod 3) + p) mod 12` | 12 | 4, all generic axes |
+| D60 | Shashtiamsa | 60 | 30′ | yes | `(s + p) mod 12` | 12 | 4, all generic axes |
+
+The "variants" column counts computation schemes shipped by Jagannatha Hora
+and/or enumerated by its Python reimplementation, with classical disagreements
+called out in bold. A range is given where JHora's feature page and its own
+release notes disagree. **"All generic axes" means every alternative is one of
+the three transformations in §4.4 rather than a different tradition** — a
+distinction that matters, because the first are one flag on one function and the
+second are separate rules needing separate citations. Every rule stated in §7 is
+the Parashari one.
 
 D30 is the only unequal division in the Parashari scheme, and the only one whose
 name does not give the number of parts. A trimsamsa is a thirtieth of a rashi,
@@ -120,9 +151,25 @@ Used by D9, D16, D20, D45.
 > and Pisces are dual or common."
 > — BPHS ch. 4 v. 5–5½, Santhanam translation
 
-Corroborated by P.V.R. Narasimha Rao, who uses "movable, fixed or dual" as the
-selector for D-8, D-16, D-20 and D-45 without redefining it, and by the fact
-that both sources' D-16 and D-20 tables agree row for row.
+**Note where the enumeration comes from.** The *verse* defines the classes by
+alternation from Mesha and names no signs; the four-sign lists are the
+translator's note. The same is true of the two other classical statements:
+
+> "The signs (from Mesa) are alternately malefic and benefic; male and female —
+> moveable, fixed and common."
+> — Brihat Jataka I.11, Vijnananda translation (the enumeration is again in his note)
+
+> "From Aries onwards alternatively the Rasis are known as malefic and benefic on
+> the one hand and male and female on the other hand. These are also classified
+> as Chara (Movable), Sthira (Fixed, Immovable) and DvisvaBhava (Ubhaya, Dual,
+> Common) Rasis."
+> — Saravali ch. 3 v. 20–21, Santhanam translation
+
+Arithmetically the two forms are identical — `s mod 3` *is* the alternation. Two
+modern sources enumerate in the body text rather than in a note: Narasimha Rao
+(§2.2.4, "Ar, Cn, Li and Cp are known as chara rasis […] Ta, Le, Sc and Aq […]
+Ge, Vi, Sg and Pi"), and deFouw & Svoboda, *Light on Life* ch. 5, with the same
+three groups. **Four independent sources, no disagreement.**
 
 ### 3.2 Odd and even (oja, yugma)
 
@@ -141,6 +188,16 @@ which are the same partition:
 
 The ch. 6 varga verses then say "odd sign" and "even sign" throughout, so the
 identification male = odd is BPHS's own and not an inference across texts.
+Vijnananda's gloss on Brihat Jataka I.11 gives the Sanskrit directly — *ayuji*,
+"in the odd signs"; *samabhe*, "in the even signs" — with the same two lists.
+Narasimha Rao gives every synonym: "Ar, Ge, Le, Li, Sg and Aq are called odd
+rasis or vishama rasis or oja rasis. They are also known as male rasis."
+
+**A trap.** Rao (his §2.2.3) defines a second, different pairing one paragraph later:
+"Ar, Ta, Ge, Li, Sc and Sg are called **odd-footed** rasis or vishamapada rasis
+or **ojapada** rasis." *Oja-pada* is not *oja*. It is used by some dasas and by
+**no varga rule in this document**. The two share a Sanskrit stem and differ in
+six of twelve signs.
 
 ### 3.3 The four elements
 
@@ -155,7 +212,12 @@ Used by D27, and by the element statement of D9 (§7.6).
 
 `element = s mod 4`, with `0` fiery, `1` earthy, `2` airy, `3` watery.
 
-BPHS states this twice, in two vocabularies. Per sign, in the descriptions:
+**BPHS ch. 4 gives no element table.** It labels individual signs, and it groups
+the same four sets under a different vocabulary. The element *names* used by the
+D9 and D27 rules come from elsewhere in the tradition — so cite Rao or *Light on
+Life* for the grouping, not BPHS.
+
+Per sign, in the descriptions:
 
 > "**ARIES DESCRIBED:** […] and is fiery, its ruler is Mars."
 > "**TAURUS DESCRIBED:** […] An earthy sign, Taurus rises with its back."
@@ -171,8 +233,29 @@ And by trines, in the temperament verse:
 > — BPHS ch. 4 v. 5–5½ notes, Santhanam translation
 
 "Trines" here means the 1st, 5th and 9th, so the two statements give the same
-four groups. Corroborated independently by Narasimha Rao, who states the D-27
-rule directly as "fiery, earthy, airy or watery".
+four groups. Brihat Jataka I.11 groups the same four trines again, under a third
+vocabulary — direction: "Mesa, Simha, and Dhanu represent east; Vrisa, Kanya and
+Makara represent south; Mithuna, Tula, and Kumbha represent west and Karka,
+Vrischika and Mina represent north."
+
+The element names themselves are stated by two modern sources:
+
+> "(1) Ar, Le and Sg are called agni rasis or fiery rasis. (2) Ta, Vi and Cp are
+> called bhoo rasis or earthy rasis. (3) Ge, Li and Aq are called vaayu rasis or
+> airy rasis. (4) Cn, Sc and Pi are called jala rasis or watery rasis."
+> — Narasimha Rao, his §2.2.5
+
+> "ARIES, LEO and SAGITTARIUS are Fiery / TAURUS, VIRGO and CAPRICORN are Earthy
+> / GEMINI, LIBRA and AQUARIUS are Airy / CANCER, SCORPIO and PISCES are Watery"
+> — deFouw & Svoboda, *Light on Life*, ch. 5
+
+Four vocabularies — temperament, direction, element, and the bare trine — one
+partition. No disagreement anywhere.
+
+**The asymmetry that will be mistyped.** D9 starts from **Mesha, Makara,
+Tula, Karka** for fiery / earthy / airy / watery. D27 starts from **Mesha,
+Karka, Tula, Makara**. The earthy and watery starts are swapped between the two.
+Both are independently attested (§7.6, §7.12); neither is a typo.
 
 ### 3.4 Day-strong and night-strong
 
@@ -199,10 +282,12 @@ needed here.
 
 ---
 
-## 4. Three structural facts
+## 4. Four structural facts
 
-These are derived from the rules in §7, not asserted. Each is a property the
-implementation can be tested against.
+The first three are derived from the rules in §7, not asserted, and each is a
+property the implementation can be tested against. The fourth is a way of
+organising the disagreements so they stop looking like sixteen separate
+arguments.
 
 ### 4.1 Six of the sixteen are pure cyclic divisions
 
@@ -257,6 +342,25 @@ gives the nodes a special division rule, and Narasimha Rao's chapter says the
 rules apply to "a physical or a mathematical point in the zodiac that has a
 longitude associated with it". So: **the nodes divide like any other body.**
 
+Corroborated negatively, which is the only way a silence can be: three
+independent implementations were read for a node branch inside a varga
+function, and none has one — Jagannatha Hora's Python reimplementation,
+Maitreya, and VedAstro, whose varga tables are keyed by sign and degree alone so
+that the identity of the body cannot reach the result. The reverse-reckoning
+options that do exist in JHora are about *even signs* (all bodies) or about
+*dasas*, not about vargas and not about nodes.
+
+One exception, and it is only cosmetic: Maitreya reverses the *displayed degree*
+within the varga sign for Rahu and Ketu — `30 − degree` — hardwired, with no
+setting and no documentation. The varga **sign** is unaffected. Since the D1
+chart does not print degrees in a compartment (`kundali.md` §1.3), this does not
+arise for us; it is recorded so that a future comparison against Maitreya is not
+misread as a disagreement about placement.
+
+Whether any *tradition* places the nodes by a different rule remains
+**unverified** (§9). The silence across four independent software
+implementations and every text consulted is weak evidence that it does not.
+
 The consequence is arithmetic, not interpretation, and it is a drawing
 constraint. With Ketu exactly opposite Rahu, the separation between them *in the
 varga* is fixed per varga:
@@ -296,8 +400,20 @@ guaranteed to be mostly empty: ten empty compartments in D2, two in D30. Both
 are structural, not a data problem, and both need saying on the surface if those
 charts are ever drawn.
 
-BPHS states the D30 restriction itself, in the course of explaining why the Sun
-and Moon are a special case there:
+**The D30 restriction is a property of the drawing convention, not of the
+classical scheme.** What the texts say is that the Sun and Moon own no
+trimsamsa — Santhanam on Saravali 3.15, "The Sun and the Moon have no lordship
+over Trimsamsa division"; Rath, "the Sun and Moon are not the Lords of any
+trimsamsa and the Nodes (Rahu & Ketu) also do not own any trimsamsa." Karka and
+Simha then become unreachable only once the lord is turned into a *sign*, which
+is what drawing a D30 chart requires and what Varahamihira never did (§7.13).
+Once that step is taken the restriction follows by construction, and it was
+verified here by enumeration; but only one consulted source states it in words,
+and that source is a calculator rather than an authority: "every D30 chart ever
+drawn uses only ten of the twelve signs."
+
+BPHS comes closest, in the course of explaining why the Sun and Moon are a
+special case:
 
 > "Nextly, a brief clarification is required about the Sun and Moon not having
 > own Trimsamsas. The Sun can occupy Aries in Trimsamsas and the Moon can be in
@@ -325,13 +441,13 @@ Two consequences for the implementation:
 
 - The first three axes are **flags on one function**, not separate functions. If
   variants are ever offered, that is the shape to build.
-- The fourth is not, and each member of it needs its own rule and its own
-  citation. Only the Jagannatha drekkana and the Kashinatha hora are sourced
-  well enough here to implement.
+- The fourth is not. Each member needs its own rule and its own citation. Of the
+  five named, only the **Jagannatha drekkana** is stated here precisely enough
+  to implement without further research; the Kashinatha and Raman horas each
+  have an undefined case (§7.2), and the two Krishna Mishra / Kalachakra
+  navamsas have no stated rule at all (§9).
 
 **First pass takes none of them.** Parashari only, named on the surface.
-
----
 
 ---
 
@@ -341,7 +457,7 @@ Two consequences for the implementation:
 assumed, because it was the one point where the obvious answer could have been
 wrong.
 
-Four statements, from three sources:
+Five statements, from four sources, plus four classical texts that assume it:
 
 1. Narasimha Rao defines the input to every division as "planets, upagrahas,
    lagna or special lagnas — basically a physical or a mathematical point in the
@@ -357,11 +473,44 @@ Four statements, from three sources:
    and, on the varga-strength names, "the planet **or the ascendant, as the case
    may be**, has obtained 12 good Vargas in the Shodasa Varga".
 4. Rath again, on D-30: "The positions of the planets **and the Lagna** in the
-   Rasi chart are used to determine the Trimsamsa occupied by them." Same rule,
-   a different varga, so it is not a property of the drekkana alone.
+   Rasi chart are used to determine the Trimsamsa occupied by them. […] In this
+   manner, the trimsamsa of all the planets and Lagna is determined and the
+   resultant chart is called the Trimsamsa or D-30 Chart." Same rule, a
+   different varga, so it is not a property of the drekkana alone.
+5. deFouw & Svoboda give the whole procedure, and put the lagna first: "To draw
+   up the navamsha you begin by fixing its ascendant. If, for example, a
+   horoscope's ascendant is 15° of Sagittarius, that ascendant point will fall in
+   the fifth navamsha of Sagittarius, which happens to be Leo. […] The navamsha
+   chart for this horoscope will therefore have Leo as its first house. Then,
+   each graha's navamsha is determined, and they are placed in the navamsha chart
+   accordingly." Checked: Dhanu is `s = 8`, 15° is `p = 4`,
+   `(9·8 + 4) mod 12 = 4` = Simha. Reproduces.
+
+The classics assume it rather than state it, which is the next best thing —
+Jataka Parijata I.31, "the owners of the Sapthamamsas or the 7th portions **of
+Lagna and other houses**"; Jataka Parijata I.36, "**when the Lagna is an even
+sign**, the lords of the Shodasamsas are to be counted in the inverse order";
+Saravali 3.13, "should the natal **Lagna** be in such Vargothama Navansa";
+Phaladeepika 3:11, "if the lord of the **Navamsa of the Ascendant** be strong".
+A lagna that has a navamsa, a saptamsa and a shodasamsa, and whose odd/even
+parity is read off its rashi, is being divided by the ordinary rule.
 
 No source found states a different rule for the ascendant, in any varga. There
 is no separate "varga lagna formula".
+
+Corroborated in code: JHora's reimplementation puts the ascendant at index 0 of
+the same position list every graha goes through, with no special case, and
+Maitreya routes its ascendant object through the same `calcVarga` call as a
+planet.
+
+**One implementation disagrees, and it is worth knowing about.** VedAstro does
+not derive a varga lagna at all. It maps each of the twelve *houses* through the
+varga table using the **house's midpoint longitude** — its own doc-comments say
+"Get Navamsa D9 sign of house mid point". Two consequences: its divisional
+"lagna" is the varga of the first house cusp's midpoint rather than of the exact
+ascendant, and the twelve resulting divisional house-signs are not guaranteed to
+be twelve consecutive distinct signs. That is a different model, not a different
+formula, and this document does not adopt it.
 
 The consequence for us: `Chakra::lagna.longitude` is already carried on the
 payload, so a varga chart needs no new engine call — only the same division
@@ -377,6 +526,14 @@ from the varga lagna's rashi exactly as `chakra.rs` counts from the D1 lagna.
 The lagna moves about **0.25° per minute of clock time** — a degree every four
 minutes (`chakra.rs`, `kundali.md` §1.2). That is **15′ of longitude per minute
 of time**, or **1′ per 4 seconds**.
+
+The same figures, from a jyotisha source rather than from our own code —
+Narasimha Rao, *Impact of Birthtime Error*: "**Lagna moves by 1° in 4 min. Lagna
+moves by 10′ in 2/3 min (or 40 seconds). Lagna moves by 1′ in 4 sec. Lagna moves
+by 10″ in 2/3 sec.**" And, on what that costs: "We can see that lagna changes
+rasi in **D-10 in 12 min**. It changes rasi in **D-24 in 5 min**" — both of
+which the table below reproduces exactly. His conclusion is the one that matters
+for us: "**Lagna changes rasi in divisional charts much faster than planets.**"
 
 | Varga | Segment (°) | Segment (arcmin) | Lagna crosses it in | 1′ of error, as % of a segment |
 |---|---|---|---|---|
@@ -506,7 +663,22 @@ This is not a defect. It is the reason **D-003** makes the ayanamsa an explicit,
 named default rather than an implementation detail, and the reason a varga chart
 must be as clear about its ayanamsa as `chakra.rs` is about its place.
 
-### 6.5 Two implementation notes on `p`
+### 6.5 Swiss Ephemeris does none of this
+
+Checked, because it would be worth knowing if it did: **Swiss Ephemeris computes
+no vargas.** The programmer's documentation, the user documentation and
+`swetest -h` between them contain no occurrence of *varga*, *navamsa*,
+*drekkana*, *amsa* (outside the word *ayanamsa*) or *divisional*; every `hora`
+hit is `SEFLG_JPLHORA`, meaning JPL Horizons. What it supplies is the sidereal
+frame — `swe_set_sid_mode`, `swe_get_ayanamsa_ex_ut`, `SEFLG_SIDEREAL`,
+`swe_houses_ex` — which is exactly what the app already uses.
+
+So every rule in §7 is ours to implement, and every one of them is arithmetic on
+a longitude the engine already returns. There is no library call to defer to and
+no library behaviour to match. That is the argument for the test vectors in §7
+being numerous rather than representative.
+
+### 6.6 Two implementation notes on `p`
 
 - Compute `p = floor(d * n / 30)`, multiplying before dividing. **Four vargas
   have boundaries that are not representable in binary floating point** — D7
@@ -578,11 +750,28 @@ Nothing to implement. It is the identity case of the same function.
 > Aries and repeat twice (at the rate of 12) in the whole of the zodiac."
 > — BPHS ch. 6 v. 5–6
 
-**The verse names lords, not signs.** The step from "the Sun's hora" to "Simha"
-is not in the verse; it is universal in practice and stated explicitly by
-Narasimha Rao: "Sun's hora means Leo in hora chart and Moon's hora means Cancer
-in hora chart," producing "a hora chart that has all the planets in two signs —
-Cancer and Leo."
+**The verse names lords, not signs — and so does every other classical text.**
+Four independent statements, all of them assigning the two halves to the Sun and
+the Moon as *lords*, none of them naming Simha or Karka:
+
+| Source | Words |
+|---|---|
+| Phaladeepika 3:4 | "Hora is half of a Rasi. In an odd sign, the halves belong to the Sun and the Moon and to the Moon and the Sun when the sign is an even one." |
+| Jataka Parijata I.30 | "Hora means the half of a Rasi; in an odd sign, the halves belong respectively to the Sun and the Moon, and in an even one to the Moon and the Sun." |
+| Saravali 3.14 | "The first Hora of an odd Rasi belongs to the Sun, while the second one is ruled by the Moon. In the case of an even Rasi the first Hora is ruled by the Moon and the second by the Sun." |
+| Brihat Jataka I.11 | "The Sun and Moon are respectively the rulers of the two halves of any odd sign; and the Moon and the Sun become the rulers of the horas of any even sign." |
+
+The step from "the Sun's hora" to "Simha" is **a drawing convention, not a
+classical rule**. It is what every modern implementation does, and it is stated
+plainly by Narasimha Rao — "Sun's hora means Leo in hora chart and Moon's hora
+means Cancer in hora chart", producing "a hora chart that has all the planets in
+two signs — Cancer and Leo" — but no text consulted says it. Rao then adds, of
+his own statement of the rule: "**Though absolutely correct, the above is not
+quite complete.** Proper use of hora chart is beyond the scope of this book. So
+we will ignore and not use hora chart in this book."
+
+That is the deepest reason D2 has six variants: the classics under-specify it,
+and everything past lordship is somebody's completion of the text.
 
 **Rule (Parashari, standard):**
 
@@ -615,6 +804,23 @@ written two articles arguing about which reading of BPHS ch. 6 v. 5–6 is right
 | **Uma-Shambhu** | the 24 horas are taken in the order "the first half of Aries, the second half of Aries, the second half of Taurus, the first half of Taurus (reversed for Taurus as it is an even sign), the first half of Gemini, the second half of Gemini […] then mapped to 2 cycles of the Zodiac" — a cyclic hora with the two halves of an even sign swapped | 12 | Narasimha Rao, derived from Krishna Mishra's navamsa reversal. **The default in the PyJHora reimplementation** |
 | **Raman (1st/11th, day/night)** | "The first half of an odd sign is ruled by the lord of that sign and the planets go to the Day sign of this planet. The second half of an odd sign is ruled by the lord of the 11th from that sign and the planet belongs to the Night sign of this planet." Even signs reversed. Explicit exception: "For Moon, both day and night signs are Cancer and for Sun, both day and night signs are Leo" | up to 12 | B.V. Raman's *Suprajarama* tradition |
 | **Somanatha parivritti alternate** | odd signs run forward from Mesha, even signs run backward from Meena: Mesha → (Mesha, Vrishabha); Vrishabha → (Meena, Kumbha); Mithuna → (Mithuna, Karka); Karka → (Makara, Dhanu) … | 12 | The same "alternate" family as the Somanatha drekkana (§7.3) |
+
+**A classical dissent, too.** The Yavana school gave the horas to all seven
+grahas rather than to the Sun and Moon alone. Jataka Parijata I.30's notes name
+the disagreement and its resolution:
+
+> "According to the Yavanas, the lords of the Horas and Drekkanas are as
+> described in the following sloka […] so that, according to this view, the
+> ownership of the Horas is not restricted to the Sun and the Moon, but is
+> shared by all the planets. But this view of the Yavanas is not recognised by
+> Varahamihira, nor even by authorities like Satya […] But it may be mentioned
+> here that this convention of the Yavanas has been accepted for Prasna (Horary
+> astrology) while the other is recognised for purposes of horoscopy."
+
+So the split is old, and the classical resolution is by *use*: the Parashari
+hora for a natal chart, the Yavana hora for prasna. Chandra draws neither a
+natal chart nor a prasna, so neither use applies to it directly — which is one
+more argument for leaving D2 out of the first pass.
 
 Rao's *Parasara's Hora Chart Decoded* enumerates the competing readings as View
 1 (Cancer/Leo), View 2 (day/night-strong signs — the Kashinatha family), View 3
@@ -663,10 +869,18 @@ how.
 > length."
 > — BPHS ch. 6 v. 7–8
 
-Corroborated by Narasimha Rao: "Bodies in the first 10° of a rasi are placed in
-drekkana chart in the same rasi. Bodies in the middle 10° of a rasi are placed
-in drekkana chart in the 5th from the rasi. Bodies in the last 10° of a rasi are
-placed in drekkana chart in the 9th from the rasi."
+Corroborated by four classical texts and two moderns. The classics give
+*lords*, as with D2 — but here that is harmless, because the 5th and 9th from a
+sign are always in its own trine, so lord and sign agree:
+
+| Source | Words |
+|---|---|
+| Phaladeepika 3:4 | "The Drekkana or third portions of a sign belong to the lords of the sign itself, of the 5th house and of the 9th house." |
+| Jataka Parijata I.30 | "…owned by the lords of the sign itself, of the son's or 5th house, and of the 9th or the house of Dharma" |
+| Saravali 3.14 | "first Lord of the same Rasi, second Lord of the 5th Rasi therefrom and third Lord of the 9th from the Rasi in question" |
+| Brihat Jataka I.11 | "The Decanates are ruled by the lords of its own, fifth and ninth houses." |
+| Narasimha Rao | "Bodies in the first 10° of a rasi are placed in drekkana chart in the same rasi. Bodies in the middle 10° […] in the 5th from the rasi. Bodies in the last 10° […] in the 9th from the rasi." |
+| Sanjay Rath | stated as signs, not lords: "The first Drekkana of a sign is mapped to itself, the second is mapped to the sign in the fifth from it and the third is mapped to the sign in the ninth from it." |
 
 **Why 1st/5th/9th:** they are the trines, which are the same-element signs
 (§3.3). A drekkana never changes a body's element.
@@ -798,8 +1012,17 @@ quadruplicity — movable stays movable, fixed stays fixed, dual stays dual.
 | 7.49972° | Mesha 7°29′59″ | 1 of 4 | **Mesha** |
 | 7.50000° | Mesha 7°30′00″ | 2 of 4 | **Karka** |
 
-**Variants.** JHora ships "**two different variations of D-4 charts**". The
-second is **unverified** (§9).
+**Variants.** JHora ships "**two different variations of D-4 charts**". Its
+reimplementation enumerates four: Parashari, parivritti cyclic, parivritti
+even-reverse, Somanatha alternate — the three generic axes of §4.4. Which of
+those is JHora's second is **unverified** (§9).
+
+Maitreya offers a "Continuous" D-4 alongside "Parasara" — and, read from its
+source, **the continuous branch computes a D-2, not a D-4** (`ret = 2 * len`).
+The defect is present identically in Maitreya 8 and in the Maitreya 9 fork.
+Recorded because it is a caution about corroborating against software: an
+implementation is evidence of what its author intended only where the code has
+been read.
 
 **Nodes:** always the 7th from each other.
 
@@ -822,9 +1045,20 @@ second is **unverified** (§9).
 > are Scorpio, Sagittarius, Capricorn etc."
 > — BPHS ch. 6 v. 10–11
 
-Corroborated verbatim in effect by Narasimha Rao: "starting from the rasi
-itself, if it is an odd rasi, or starting from the 7th sign from it, if it is an
-even rasi", with the same segment size to the same precision.
+Corroborated four times over:
+
+| Source | Words |
+|---|---|
+| Phaladeepika 3:6 | "The Saptamsas or the 1/7th portion are in the case of an odd sign, counted regularly from the sign itself. In the case of an even sign, they are counted from 7th sign onwards." |
+| Jataka Parijata I.31 | "…in the case of an odd sign to be counted regularly from the lord thereof, while in the case of an even sign, they are to be reckoned from the lord of the 7th house onwards" |
+| Saravali 3.16 | states it as a bare enumeration instead of a rule: "The Sapthamsas for the 12 Rasis from Aries onwards are, respectively, counted from Aries, Scorpio, Gemini, Capricorn, Leo, Pisces, Libra, Taurus, Sagittarius, Cancer, Aquarius and Virgo." |
+| Narasimha Rao | "starting from the rasi itself, if it is an odd rasi, or starting from the 7th sign from it, if it is an even rasi" |
+
+Saravali's twelve-sign list is worth checking against the formula rather than
+trusting, since it is the one source that could disagree without looking like
+it. `(7s) mod 12` for `s = 0…11` gives Mesha, Vrishchika, Mithuna, Makara,
+Simha, Meena, Tula, Vrishabha, Dhanu, Karka, Kumbha, Kanya — Saravali's list
+exactly. Santhanam's note on the verse says the same in words.
 
 **Rule:** `(7s + p) mod 12` — equivalently `(s + 6·(s mod 2) + p) mod 12`. Both
 forms are given because the first is the continuous-division form (§4.1) and the
@@ -841,13 +1075,18 @@ second is the verse's form; they agree for every `s`.
 | 4.28556° | Mesha 4°17′08″ | 1 of 7 | **Mesha** |
 | 4.28583° | Mesha 4°17′09″ | 2 of 7 | **Vrishabha** |
 
-The last two are the reason §6.5 exists: the first boundary is at
+The last two are the reason §6.6 exists: the first boundary is at
 4.285714285…°, and it is the only one of the sixteen vargas whose boundaries are
 not exactly representable.
 
 Narasimha Rao's own examples reproduce: Mithuna 10° → Simha; Kanya 19° → Karka.
 
-**Variants.** None found. JHora lists no D-7 variations on its feature page.
+**Variants.** None in the classical literature. JHora's feature page lists none
+either — but its release notes for 7.63 record "**2 new definitions of D-7**",
+"mostly related to reversal of divisions in an even sign". Its reimplementation
+enumerates six: Parashari with the even sign counted forward from the 7th
+(default), counted backward from the 7th, run in reverse from the end of the
+7th, parivritti cyclic, parivritti even-reverse, and Somanatha alternate. See §4.4: the alternatives are the generic axes, not separate traditions.
 
 **Nodes:** always the 7th from each other.
 
@@ -871,11 +1110,33 @@ Narasimha Rao's own examples reproduce: Mithuna 10° → Simha; Kanya 19° → K
 > Gemini."
 > — BPHS ch. 6 v. 12
 
-Narasimha Rao states the **same rule in different words**: "Bodies in the 9
-parts of a rasi go into the 9 rasis starting from Ar, Cp, Li or Cn, based on
-whether the rasi is a fiery, earthy, airy or watery sign."
+**The classics state the rule in two different vocabularies, and the split runs
+across texts rather than between them.**
 
-**These are the same rule, and that is worth showing rather than asserting:**
+By starting sign, which is the element form in disguise:
+
+| Source | Words |
+|---|---|
+| Phaladeepika 3:4 | "The first Navamsa in the signs from Aries onwards begins respectively with Aries, Capricorn, Libra and Cancer." |
+| Saravali 3.11 | "The Navansas for these Rasis are calculated from Aries, Capricorn, Libra and Cancer in their order." |
+| Jataka Parijata I.32–33 | spelled out sign by sign: "The Navamsas of Dhanus, Mesha and Simha respectively belong to the nine signs from Mesha onwards; those of Vrishabha, Kanya and Makara, to Makara […] The nine signs beginning with Thula are the owners of the Navamsas of Mithuna, Thula and Kumbha. The Navamsas of Kataka, Vrischika and Meena respectively appertain to the nine signs from Kataka onwards." |
+| Narasimha Rao | with the element names attached: "starting from Ar, Cp, Li or Cn, based on whether the rasi is a fiery, earthy, airy or watery sign" |
+
+By class, which is BPHS's form — and which the others state through the
+vargottama, the navamsa of a sign that bears the sign's own name:
+
+| Source | Words |
+|---|---|
+| Brihat Jataka I.14 | "In the cardinal signs, the first Navamsa […] is termed Vargottama […] In the fixed signs the fifth Navamsa […] In the mutable signs the ninth Navamsa" |
+| Saravali 3.13 | "The first Navansa of a Movable Rasi, the 5th one in a Fixed Rasi and the 9th one in a Common (Dual) Rasi are called Vargothamamsa." |
+
+**These are the same rule, and that is worth showing rather than asserting.**
+*Light on Life* is the source that states the equivalence outright, quoting
+Phaladeepika and then adding: "Note that the first navamsha for the cardinal
+constellation (chara rashi) is always that constellation; the fifth navamsha for
+a fixed constellation (sthira rashi) is always that constellation; and the ninth
+navamsha for a mutable constellation (dvisvabhava rashi) is always that
+constellation."
 
 | Rashi | BPHS (movable/fixed/dual) | Rao (element) | Start |
 |---|---|---|---|
@@ -886,8 +1147,11 @@ whether the rasi is a fiery, earthy, airy or watery sign."
 | Simha | fixed → 9th = Mesha | fiery → Mesha | Mesha |
 | Kanya | dual → 5th = Makara | earthy → Makara | Makara |
 
-and so on for all twelve. Both reduce to `9s mod 12`. Two independent
-statements, one rule.
+and so on for all twelve. Both reduce to `9s mod 12`. Checked at every sign:
+same / 9th / 5th for movable / fixed / dual gives Mesha, Makara, Tula, Karka,
+Mesha, Makara, Tula, Karka, Mesha, Makara, Tula, Karka — which is
+fiery / earthy / airy / watery cycling Mesha, Makara, Tula, Karka. **Six
+independent statements, one rule.**
 
 **Rule:** `(9s + p) mod 12`
 
@@ -950,9 +1214,17 @@ Every general reference consulted gives the Parashari rule and no other.
 > 9th thereof."
 > — BPHS ch. 6 v. 13–14
 
-Corroborated by Narasimha Rao: "starting from the rasi itself or the 9th from
-it, based on whether the rasi is an odd or even sign." Aliases: Dasamaamsa,
-Karmamsa, Swargamsa.
+Corroborated three times over: Phaladeepika 3:6, "In the case of an odd sign,
+the Dasamamsas or 1/10th portions are counted from the sign itself. In the case
+of an even sign, they are counted from the 9th onwards"; Jataka Parijata I.35,
+the same in the same words but as lords; and Narasimha Rao, "starting from the
+rasi itself or the 9th from it, based on whether the rasi is an odd or even
+sign." Aliases: Dasamaamsa, Karmamsa, Swargamsa.
+
+Note that BPHS's ch. 6 verse also assigns ten *deities* — Indra, Agni, Yama,
+Rakshasa, Varuna, Vayu, Kubera, Isana, Brahma, Anantha, reversed for an even
+sign. Those are a parallel scheme on the same segments, not a competing sign
+mapping, and this document does not carry them.
 
 **Rule:** `(s + 8·(s mod 2) + p) mod 12`
 
@@ -972,7 +1244,11 @@ Vrishabha's start, and the verse says Makara.
 
 Rao's examples reproduce: Mithuna 10° → Kanya; Vrishchika 19° → Makara.
 
-**Variants.** None found.
+**Variants.** None in the classical literature. JHora 7.63 records "**3 new
+definitions of D-10**"; its reimplementation enumerates six — Parashari with the
+even sign counted forward from the 9th (default), backward from the 9th, in
+reverse from the end of the 9th, parivritti cyclic, parivritti even-reverse, and
+Somanatha alternate. See §4.4: these are the generic axes applied to the Parashari rule, not separate traditions.
 
 **Nodes:** always the 7th from each other.
 
@@ -995,8 +1271,11 @@ Rao's examples reproduce: Mithuna 10° → Kanya; Vrishchika 19° → Makara.
 > Capricorn, Aquarius and Pisces."
 > — BPHS ch. 6 v. 15
 
-Corroborated by Narasimha Rao: "Bodies in the 12 parts of a rasi go into the 12
-rasis starting from the rasi itself."
+Corroborated four times: Phaladeepika 3:4, "The owners of the Dwadasamas or
+1/12th portion of a sign are counted from that sign"; Jataka Parijata I.35, the
+same; Saravali 3.13, "The rulers of Dwadasamasas start from that Rasi itself";
+and Narasimha Rao, "Bodies in the 12 parts of a rasi go into the 12 rasis
+starting from the rasi itself."
 
 The simplest of the sixteen: no odd/even branch, no class branch, no element
 branch. Every rashi's twelve parts run through all twelve signs starting from
@@ -1016,8 +1295,11 @@ itself.
 
 Rao's examples reproduce: Mithuna 11° → Tula; Vrishchika 19° → Mithuna.
 
-**Variants.** None found. This is the one varga where no source consulted
-offered an alternative.
+**Variants.** None in the classical literature, and D12 is the only varga for
+which no source consulted offered an alternative rule. JHora 7.63 still records
+"**one new definition of D-12**", and its reimplementation enumerates five —
+Parashari, Parashari with even-sign reversal, parivritti cyclic, parivritti
+even-reverse, Somanatha alternate. See §4.4: these are the generic axes applied to the Parashari rule, not separate traditions.
 
 **Nodes:** always the 7th from each other.
 
@@ -1043,7 +1325,43 @@ Corroborated by Narasimha Rao: "starting from Ar, Le and Sg, based on whether
 the rasi is movable, fixed or dual", with the useful note that "After going over
 the 12 rasis from a rasi, we get the same rasi as the 13th rasi. So the 13th,
 14th, 15th and 16th rasis from a rasi are simply the 1st, 2nd, 3rd and 4th
-rasis" — i.e. the `mod 12` is in the source, not an implementation liberty.
+rasis" — i.e. the `mod 12` is in the source, not an implementation liberty. Also
+by Santhanam's own supplementary note to Saravali, item (10): "The counting
+commences from Aries for Chara Rasis, from Leo for Sthira Rasis and from
+Sagittarius for Dwiswabhava Rasis."
+
+Jataka Parijata I.36's notes corroborate the same mapping arithmetically, by
+describing it as a division of the whole ecliptic: "the ecliptic is cut up into
+192 equal segments of 1°52′30″ each in length. The segments are named in regular
+consecution, in the order of the zodiacal signs, so that the initial segment of
+the sign Aries takes on the name of that sign, that of the sign Taurus assumes
+the name of Leo, and so forth." That is §4.1's continuous form, `(4s + p) mod
+12`, stated as such.
+
+> **A genuine classical disagreement — the only one in the sixteen where a
+> commentator names the split in print.**
+>
+> Jataka Parijata I.36 states the D16 rule as *deities* rather than signs: "Their
+> lords in the case of an odd sign are Brahma, Vishnu, Hara and Ravi recurring in
+> regular order. When the Lagna is an even sign, the lords of the Shodasamsas are
+> to be counted in the inverse order from Bhaskara or Ravi." Phaladeepika 3:6
+> gives a related but not identical allocation. And Jataka Parijata's own
+> commentator then says so:
+>
+> > "But **Phaladeepika and Sarvartha Chintamani interpret the allocation of the
+> > Shodasamsa rulerships differently.** On that account, the language of
+> > Jatakaparijata cannot be forced to bear a meaning which its author did not
+> > evidently intend. Jatakaparijata and Parasara go a good way together as
+> > regards Shodasamsa rulerships."
+>
+> Note what is and is not in dispute. Jataka Parijata carries **both** the deity
+> scheme and the Mesha/Simha/Dhanu sign scheme, without reconciling them; the
+> named disagreement is about the *deity* allocation. What Sarvartha Chintamani's
+> D16 *sign* rule actually is remains **unverified** (§9) — it is known here only
+> through Jataka Parijata's report of it.
+>
+> BPHS, Jataka Parijata, Santhanam's Saravali supplement and Narasimha Rao all
+> agree on Mesha / Simha / Dhanu. That is what §7.9's rule states.
 
 **Trap:** D16 and D20 both branch on movable/fixed/dual, and their start signs
 are **not** the same. D16 is Mesha / Simha / Dhanu. D20 is Mesha / Dhanu /
@@ -1067,7 +1385,11 @@ transcription error in one of them.
 
 Rao's examples reproduce: Mithuna 11° → Vrishabha; Vrishchika 19° → Mithuna.
 
-**Variants.** None found.
+**Variants.** **One classical disagreement, quoted above** — the only varga where
+a commentator names one in print. Plus the modern generic axes: JHora 7.63
+records "one new definition of D-16"; its reimplementation enumerates four —
+Parashari, parivritti even-reverse, parivritti cyclic, Somanatha alternate
+(§4.4).
 
 **Nodes:** **always in the same rashi** (§4.2).
 
@@ -1109,7 +1431,9 @@ See the trap noted in §7.9: the fixed and dual starts are the reverse of D16's.
 Rao's examples reproduce: Mithuna 11° → Meena; Vrishchika 19° → Dhanu (his own
 note that "the 13th from Sg is Sg itself" is the `mod 12`).
 
-**Variants.** None found.
+**Variants.** None in the classical literature. JHora 7.63 records "**one new
+definition of D-20**"; its reimplementation enumerates four, the same set as
+D16. See §4.4: these are the generic axes applied to the Parashari rule, not separate traditions.
 
 **Nodes:** **always in the same rashi.**
 
@@ -1153,7 +1477,10 @@ beyond its parity — every odd rashi starts at Simha, every even rashi at Karka
 
 Rao's examples reproduce: Mithuna 11° → Mesha; Vrishchika 19° → Tula.
 
-**Variants.** None found.
+**Variants.** None in the classical literature. JHora 7.63 records "**2 new
+definitions of D-24**"; its reimplementation enumerates exactly three —
+Parashari, Parashari with even-sign reversal, and Parashari with an even-sign
+"double reverse". The counts agree for once. See §4.4: these are the generic axes applied to the Parashari rule, not separate traditions.
 
 **Nodes:** **always in the same rashi.**
 
@@ -1218,11 +1545,29 @@ Santhanam's note continues:
 > calculation for Nakshatramsa. That source obviously is defective and I would
 > prefer Parasara's version as given in our present text."
 
-So **Saravali (Kalyana Varma) gives a different nakshatramsa rule.** What that
-rule is is **unverified** here (§9) — only that the same translator judged it
-defective and preferred BPHS. That judgement is his, not this document's, and if
-D27 is ever shipped the disagreement should be named on the surface the way
-D-026's node dispute is.
+**Traced, and it is not what the footnote implies.** Kalyana Varma's *Saravali*
+contains **no nakshatramsa rule at all** — its varga verses (ch. 3, vv. 11–18)
+cover only the dasavarga, and ch. 61 says so: "The effects of ten divisions
+(Dasa Vargas) will help to arrive at the natal Ascendant." The "different
+calculation" is Santhanam's **own** supplementary note, appended to his Saravali
+to complete the shodasavarga. Item (13):
+
+> "Nakshatramsa or Sapthavimsamsa: This is 1/27th part of a Rasi. **The counting
+> starts from the Rasi itself, whether it is an odd one or an even one.** For
+> example, for Aries, start from Aries and count upto Pisces, you get 12
+> Sapthavimsamsas. Then the 13th one is again Aries […] the 27th one is Gemini."
+
+So the rejected rule is `(s + p) mod 12` — the D12 shape applied at 27 parts —
+against BPHS's `(3s + p) mod 12`. They agree only for Mesha, Karka, Tula and
+Makara, and differ for the other eight. **Not a disagreement between two
+classics: one translator publishing two rules and later repudiating the first.**
+
+Recorded in full because the alternative — writing "Saravali differs" and moving
+on — would have left a false claim about a classical text standing in a
+specification.
+
+*(Santhanam's BPHS footnote cites "P. 31"; the passage sits on p. 24 of the
+Vol. I scan read here. Same content, different printing.)*
 
 **Worked examples**
 
@@ -1238,6 +1583,14 @@ D-026's node dispute is.
 
 The Mithuna 11° row is the one Rao gets wrong. It is included deliberately: a
 test asserting **Karka** there is a test that would have caught the erratum.
+
+**Variants.** Besides Santhanam's repudiated one above, JHora 7.63 records "**one
+new definition of D-27**"; its reimplementation enumerates three — Parashari, Parashari with
+even-sign reversal, Somanatha alternate (§4.4). An independent statement of the
+Parashari rule, in the same words as BPHS's verse, is given by Barbara Pijan
+Lama: "The Saptavimshamsha distribution commences from Mesha and other Movable
+Rashi for all the 12 Rashi", with "Size of 1 Bhamsa = 1 degree + 6 minutes + 40
+seconds of arc."
 
 **Nodes:** always the 7th from each other.
 
@@ -1308,9 +1661,34 @@ checked more than the rest:
 
 | Source | Form given | Agrees |
 |---|---|---|
+| Brihat Jataka I.7 | "Five, five, eight, seven and five parts (degrees) are respectively those of Mars, Saturn, Jupiter, Mercury and Venus in the odd signs. In the even signs their order is reversed." Aiyar's note resolves "reversed": "the first five are those of Venus; the next seven are those of Mercury; the next eight are those of Jupiter; the next five are those of Saturn; and the last five are those of Mars." | yes |
+| Phaladeepika 3:4 | states both parities in full: "In an even sign it is reversed. Then Venus, Mercury, Jupiter, Saturn and Mars have 5, 7, 8, 5 and 5 degrees respectively." | yes |
+| Jataka Parijata I.37 | "In an even sign, Sukra, Budha, Guru, Sani and Kuja have 5, 7, 8, 5 and 5 degrees respectively." | yes |
+| B.V. Raman, *Hindu Predictive Astrology* ch. XI | tabulated: "In even signs — Venus Mercury Jupiter Saturn Mars / 5 7 8 5 5 = 30" | yes |
+| Saravali 3.15 + Santhanam's table | verse says only "reverse"; his table resolves it as 5/7/8/5/5 | yes |
 | Narasimha Rao | ten degree intervals, odd and even | yes |
-| Sanjay Rath, *Trimsamsa D-30 Chart* | cumulative table: odd 5/10/18/25/30 → Ar, Aq, Sg, Ge, Li; even 5/12/20/25/30 → Ta, Vi, Pi, Cp, Sc | yes |
+| Sanjay Rath, *Trimsamsa D-30 Chart* | cumulative: odd 5/10/18/25/30 → Ar, Aq, Sg, Ge, Li; even 5/12/20/25/30 → Ta, Vi, Pi, Cp, Sc | yes |
 | DesiUtils D30 calculator | degrees, lord, target sign and deity, both parities | yes |
+
+The Sanskrit at BPHS 6.27–28 is *vyatyayāt* / *viparyayāt*, "by reversal", and
+the question is whether the reversal applies to the degree quanta as well as to
+the lords. **Eight sources say it does.** One dissent was found: Sarajit
+Poddar keeps the odd boundaries and reverses only the lord order — but his own
+page contradicts itself (the prose puts Venus first, the table puts Venus at
+25–30°) and names Sagittarius, an odd sign, as an even-sign target. Reported as
+a transcription defect rather than a rival scheme; his own teacher Sanjay Rath
+publishes 5/7/8/5/5.
+
+**The classical citation for the *sign* mapping**, which BPHS's verse does not
+give, is Jataka Parijata I.37's note — and it states the parity rule as a
+principle rather than a table:
+
+> "Each of the planets other than the Sun and the Moon own two signs, one odd and
+> the other even. When a planet is in an odd sign, then take the odd Thrimsamsa
+> Rasi of the planet in whose Thrimsamsa the first planet lies. Thus, a planet in
+> an odd sign in a Guru Trimsamsa must be placed in the Thrimsamsa kundali in
+> Dhanus (an odd sign) and not in Meena, while a planet in an even sign in Guru
+> Trimsamsa must be placed in Meena."
 
 Rath adds the reason the luminaries are absent: "The Sun and Moon are not the
 Lords of any trimsamsa and the Nodes (Rahu & Ketu) also do not own any
@@ -1336,18 +1714,35 @@ Boundary vectors: Mesha 9°59′59″ → Kumbha, Mesha 10°00′00″ → Dhanu
 Vrishabha 11°59′59″ → Kanya, Vrishabha 12°00′00″ → Meena. The odd and even
 boundary sets differ (10/18/25 against 12/20/25), so both need testing.
 
-**Variants.** JHora ships "**three different variations of D-30 charts**", and
-Sanjay Rath states plainly that "There are two methods to draw a Trimsamsa (D30)
-Chart. We discuss the method of Parashara" — then does not give the other. So
-the existence of alternatives is attested twice and no source states one.
+**Variants — and one of them is a live argument, not a footnote.**
 
-JHora's reimplementation names five: traditional Parashari, a cyclic
-"parivritti" trimsamsa, a "shashtyamsa-like" trimsamsa, an even-sign reversal,
-and the Somanatha alternate. Those are names in an enumeration, not rules, and
-none of them is recorded here as a rule. §9.
+Sanjay Rath: "There are two methods to draw a Trimsamsa (D30) Chart. We discuss
+the method of Parashara." JHora ships three; its reimplementation names five —
+traditional Parashari, a cyclic "parivritti" trimsamsa, a "shashtyamsa-like"
+trimsamsa, an even-sign reversal, and the Somanatha alternate. Methods 2–5 are
+all **equal 1° divisions occupying all twelve signs**.
+
+The equal division has a named advocate on the record. Asked directly which of
+the two to use, Ernst Wilhelm answered:
+
+> "Lords are just lords, not for forming a chart. Form a chart by dividing the
+> sign into 30."
+
+That is a coherent position, not a mistake: the classical texts assign
+trimsamsa *lords*, and Varahamihira and Kalyana Varma use trimsamsas as lords
+without ever drawing a D30 chart at all — Brihat Jataka XXI, "A person born when
+the Trimsamsa of Mars is occupied by the Sun"; Saravali ch. 46, "In Leo the
+Trimsamsa of Mars will make the female garrulous." Note that the Sun *occupies*
+a trimsamsa there quite happily. The sign mapping, and with it the ten-sign
+restriction, is a property of the modern drawing convention.
+
+**A trap in the wording.** Several translations define the *word* trimsamsa as
+a 1/30 equal part and then immediately give the unequal scheme — Aiyar on Brihat
+Jataka I.7, Raman ch. XI. Those are definitions of the arc, not endorsements of
+equal division. Popular sites collapse the two.
 
 The Parashari unequal scheme above is the default in JHora, in Maitreya and in
-VedAstro, and is the only one any consulted source states.
+VedAstro, and is what every classical text states.
 
 **A second, independent axis exists for D30 and only D30.** JHora 7.51 added an
 option that concerns not which sign a body lands in but *where in that sign*:
@@ -1402,7 +1797,9 @@ Like D24, the start does not depend on the rashi beyond its parity.
 
 Rao's examples reproduce: Mithuna 11° → Mithuna; Vrishchika 19° → Vrishchika.
 
-**Variants.** None found.
+**Variants.** None in the classical literature. JHora's reimplementation
+enumerates four — Parashari, parivritti even-reverse, parivritti cyclic,
+Somanatha alternate. See §4.4: these are the generic axes applied to the Parashari rule, not separate traditions.
 
 **Nodes:** **always in the same rashi.**
 
@@ -1444,7 +1841,8 @@ The same three start signs as D16, on the same three classes.
 
 Rao's examples reproduce: Mithuna 11° → Mesha; Vrishchika 19° → Dhanu.
 
-**Variants.** None found.
+**Variants.** None in the classical literature. JHora's reimplementation
+enumerates four, the same set as D40. See §4.4: these are the generic axes applied to the Parashari rule, not separate traditions.
 
 **Nodes:** **always in the same rashi.**
 
@@ -1506,8 +1904,12 @@ would silently mirror every even sign.
 The last two data rows are BPHS's own example and Rao's own example
 respectively, both reproducing.
 
-**Variants.** None found for the sign mapping. JHora lists no D-60 variations on
-its feature page.
+**Variants.** None in the classical literature, and none for the sign mapping in
+any source that states a rule. JHora's feature page lists no D-60 variations —
+but its release notes for 7.63 record "**3 new definitions of D-60**", and its
+reimplementation enumerates four: from the sign itself (default), cyclic from
+Mesha, even-sign reversal from Mesha, even-sign reversal from the sign. See
+§4.4.
 
 **Nodes:** always the 7th from each other.
 
@@ -1523,21 +1925,51 @@ Everything this document declines to resolve, in one place. Precedent: **D-026**
 (no dignity for the nodes) and the planetary-war rule — where authorities
 differ, the app prints the difference or prints nothing, never a winner.
 
+**The classical disagreements** — different authorities, different rules:
+
 | # | Varga | The disagreement |
 |---|---|---|
-| 1 | D2 | Six schemes in JHora. Standard Cancer–Leo occupies two signs; Parivritti Dwaya occupies twelve; Kashinatha uses day/night sign strength. They give different charts for the same body |
-| 2 | D2 | Whether Sanjay Rath's six-sign Surya Hora / Chandra Hora is a D-2 mapping at all, or a different object |
-| 3 | D3 | Four schemes in JHora. Parashari (1st/5th/9th) is the default and is universal in the general literature; the **Jagannatha** drekkana is sourced in §7.3 and gives a different answer for every fixed and dual sign; Somanatha and Parivritti-traya are named but their rules were not found |
-| 4 | D4 | Two schemes in JHora; the second not found |
-| 5 | D9 | Three schemes in JHora, for the varga usually treated as settled; the other two not found |
-| 6 | D27 | Santhanam states that Saravali gives a different nakshatramsa calculation and calls it defective. Two classics, two rules |
-| 7 | D27 | BPHS's *verse* says only "from Aries and other movable signs"; the element assignment comes from the translator's note. The verse alone is not computable |
-| 8 | D30 | Three schemes in JHora, and Sanjay Rath says outright that there are two methods and gives only Parashara's. The Parashari unequal 5/5/8/7/5 is the default everywhere consulted and is corroborated by four sources; the alternatives were not found |
+| 1 | **D16** | **The only one a commentator names in print.** Jataka Parijata I.36's notes: "Phaladeepika and Sarvartha Chintamani interpret the allocation of the Shodasamsa rulerships differently." What Sarvartha Chintamani's rule is remains unknown; the sign mapping Mesha/Simha/Dhanu is agreed by BPHS, Jataka Parijata, Saravali's supplement and Rao |
+| 2 | D2 | **Every classical text gives lords, not signs.** Sun's hora and Moon's hora are stated by Phaladeepika, Jataka Parijata, Saravali, Brihat Jataka and BPHS alike; the step to Simha and Karka is in none of them. Six modern completions follow, of which the two best argued by JHora's author are not the standard one |
+| 3 | D2 | The **Yavana hora** gives the horas to all seven grahas. Rejected for natal work by Varahamihira and Satya, accepted for prasna — Jataka Parijata I.30's notes |
+| 4 | D2 | Whether Sanjay Rath's six-sign Surya/Chandra Hora is a D-2 mapping at all, or a different object |
+| 5 | D3 | Parashari (1st/5th/9th) is universal in the classical literature, but the **Jagannatha** and **Somanatha** drekkanas are separate traditions with published, incompatible answers: Meena 20°–30° is Vrishchika, Meena and Tula respectively |
+| 6 | D9 | Kalachakra navamsa, Krishna Mishra navamsa and a "Rath nadi navamsa" that counts backwards in watery and earthy signs are separate schemes, not transformations. Textual sources not found |
+| 7 | **D30** | **Equal or unequal.** Every classical text gives the unequal 5/5/8/7/5, but every classical text uses trimsamsas as *lords* and never draws a D30 chart. Ernst Wilhelm, asked directly: "Lords are just lords, not for forming a chart. Form a chart by dividing the sign into 30." JHora ships three schemes, four of its reimplementation's five are equal 1° divisions occupying all twelve signs |
+| 8 | D30 | The even-sign split. Eight sources give 5/7/8/5/5; one (Sarajit Poddar) keeps 5/5/8/7/5 and reverses only lordship, on a page that contradicts itself |
+| 9 | D27 | BPHS's *verse* says only "from Aries and other movable signs"; the element assignment comes from the translator's note. The verse alone is not computable |
+| 10 | Varga lagna | JHora, its reimplementation and Maitreya all divide the exact ascendant. VedAstro instead divides each **house midpoint** independently, so its divisional houses need not be twelve consecutive signs. A different model, not a different formula |
+
+**Resolved, and recorded because the resolution is the useful part:**
+
+| # | Was | Is |
+|---|---|---|
+| 11 | "Saravali gives a different D27 rule and Santhanam calls it defective" | *Saravali has no D27 rule.* The rejected rule is Santhanam's own supplementary note — `(s + p) mod 12` instead of `(3s + p) mod 12` — which he later repudiated in his BPHS. One translator, two rules, not two classics (§7.12) |
+
+**The mechanical disagreements** — the same rule with a switch flipped, per §4.4:
+
+| # | The axis | Where it shows up |
+|---|---|---|
+| 9 | Parivritti / cyclic | offered for nearly every varga by JHora and by Maitreya ("Continuous") |
+| 10 | Even-sign reversal | JHora 7.63: "one new definition of D-2, D-3, D-12, D-16, D-20 and D-27, 2 new definitions of D-7 and D-24 and 3 new definitions of D-10 and D-60. The alternative definitions are mostly related to reversal of divisions in an even sign" |
+| 11 | Somanatha alternate | odd forward from Mesha, even backward from Meena; offered for nearly every varga |
+| 12 | D30 degree-within-sign | JHora 7.51 offers two ways to stretch an unequal segment across a sign. Maitreya silently runs even signs backwards. Only matters if a varga chart prints degrees |
+
+**Disagreements inside a single source**, recorded because they are a caution
+about the method:
+
+| # | Where |
+|---|---|
+| 13 | JHora's feature page says three D-9 variants; its 7.4 release note adds a fourth. Its feature page lists no D-7, D-10, D-12, D-16, D-20, D-24, D-27 or D-60 variants; its 7.63 release note adds several of each |
+| 14 | BPHS ch. 6's D-27 verse and Santhanam's note to it differ in what they specify (§7.12) |
+| 14a | Santhanam's BPHS footnote attributes a D-27 rule to *Saravali*; *Saravali* has no D-27 rule, and the rule is his own supplementary note (§7.12) |
+| 15 | Narasimha Rao's D-27 worked example contradicts his own rule (§7.12) |
+| 16 | Maitreya's "Continuous" D-4 computes a D-2. Read from its source; present in both the original and a fork |
 
 Position taken: **the first pass implements the Parashari rule only, and names
 it.** A varga chart should say which scheme produced it, for the same reason
 `chakra.rs` carries `place` — a D-2 computed one way looks exactly like a D-2
-computed another.
+computed another, and there is no mark on the chart to tell them apart.
 
 ---
 
@@ -1548,33 +1980,96 @@ reconstruction.
 
 | # | What is unknown |
 |---|---|
-| 1 | The rules of three of JHora's six D-2 variants. Only Cancer–Leo, Parivritti Dwaya and Kashinatha were sourced |
-| 2 | The Kashinatha D-2 rule where a rashi's lord owns only one sign (Simha under the Moon's hora, Karka under the Sun's) |
-| 3 | The mapping rule of the Somanatha drekkana. Only one data point found (Meena 20°–30° → Tula); the rule is referred out to two Jaimini texts not consulted |
-| 3a | The mapping rule of the Parivritti-traya drekkana. Named in every list of four; no source states it |
-| 4 | The second D-4 variant in JHora |
-| 5 | The second and third D-9 variants in JHora |
-| 6 | What Saravali's nakshatramsa rule actually is |
-| 7 | The second and third D-30 variants in JHora — their existence is attested twice, their rules not once |
-| 8 | The numeric spread between the ayanamsas the app offers (§6.4). Measurable in-app with `Engine::ayanamsa`; not quoted here because no source table was found |
-| 9 | Whether any tradition places Rahu or Ketu in a varga by a rule other than the one used for a graha. Nothing found either way; the silence is itself weak evidence that the ordinary rule applies |
+| 1 | **Sarvartha Chintamani's D16 rule.** Known only through Jataka Parijata's report that it differs. Phaladeepika's D16 allocation is stated but as deities, not as signs |
+| 2 | The Kashinatha D-2 rule where a rashi's lord owns only one sign — Simha under the Moon's hora, Karka under the Sun's. Raman's scheme states its equivalent exception ("for Moon, both day and night signs are Cancer and for Sun, both day and night signs are Leo"); Kashinatha's does not |
+| 3 | B.V. Raman's hora rule **from Raman's own text**. It is described and implemented in software but no page in Raman was located |
+| 4 | The Yavana hora's actual sloka — Jataka Parijata's note refers to it without reproducing it here |
+| 5 | Whether Sanjay Rath's six-sign Surya/Chandra Hora is a D-2 mapping rule or a different object |
+| 6 | The **textual** sources for the Somanatha and Jagannatha drekkanas. Their rules are known here only from software and from JHora's author; the underlying works (Rath's *Upadesa Sutras*, Rangacharya's *Jaimini Sutramritam*, Somanatha's own text) were not consulted |
+| 7 | The rules of the Kalachakra navamsa and the non-uniform Krishna Mishra navamsa |
+| 8 | Which of the generic axes is JHora's second D-4 variant |
+| 9 | The rules of JHora's second and third D-30 variants beyond the bare names in its reimplementation |
+| 10 | A second authority, in words, for "only ten signs can be occupied in D30". It follows by construction from tables four sources agree on, and was verified here by enumeration, but only a calculator site states it outright |
+| 11 | The numeric spread between the ayanamsas the app offers (§6.4). Measurable in-app with `Engine::ayanamsa`; not quoted here because no source table was found |
+| 12 | Whether any tradition places Rahu or Ketu in a varga by a rule other than the one used for a graha. Searched for specifically. No classical text addresses the nodes in vargas at all; four independent implementations have no node branch in any varga function; the only "reverse" doctrines found attach to nodal *aspects* and to certain *dasas*. **Do not put a node reversal in the implementation on this evidence** |
+| 13 | What AstroSage, Prokerala or Drik Panchang actually compute. None publishes a varga rule or offers a variant selector. Determining their behaviour would mean running known data through each and comparing — not done |
+| 14 | Whether Narasimha Rao's D-40, D-45 and D-60 timing figures follow from his own stated ones. He gives the rate ("lagna moves 1′ in 4 sec") and works D-10 and D-24 ("D-10 in 12 min […] D-24 in 5 min") but never writes the finer three. §6.1's numbers for those are this document's arithmetic, not his |
+| 15 | K.S. Charak, *Elements of Vedic Astrology* — the source VedAstro's tables claim to follow. The archive.org scan's OCR is unusable |
 
 ---
 
 ## 10. Sources
 
+Ordered by weight. A rule was accepted only when a primary text and at least one
+independent statement agreed; where only one source exists, §9 says so.
+
+### Primary text
+
 | Source | Supports |
 |---|---|
-| [Brihat Parasara Hora Sastra Vol. I, tr. R. Santhanam, Ranjan Publications, Delhi 1992 — archive.org scan](https://archive.org/details/heag_brihat-parasara-hora-sastra-vol-1-by-maharshi-parasara-commentary-editor-tr) | The primary text. Ch. 4 v. 5–11 (sign classifications), ch. 5 (day/night strength), ch. 6 v. 2–41 (all sixteen varga rules, speculums and worked examples), ch. 7 v. 1–8 (what each varga is read for) and v. 42–53 (varga groupings), plus Santhanam's notes on the Sun and Moon in D30 and on Saravali's D27 |
-| [Brihat Parashara Hora Shastra — second archive.org scan of the same Santhanam translation](https://archive.org/details/BPHSEnglish) | Cross-check. Used where the first scan's OCR is unreadable; the two agree where both are legible |
-| [P.V.R. Narasimha Rao, *Vedic Astrology: An Integrated Approach*, ch. 6 "Divisional Charts"](https://www.vedicastrologer.org/articles/vedic_astro_textbook.pdf) | Independent statement of all sixteen rules with worked examples, in modern notation. The D9 rule stated by element rather than by class, the D30 degree ranges, the D60 procedure, and the statement that lagna and special lagnas divide like planets. Contains the D27 erratum recorded in §7.12 |
-| [Features of Jagannatha Hora — vedicastrologer.org](https://www.vedicastrologer.org/jh/features.htm) | The variant counts, verbatim: six D-2, four D-3, two D-4, three D-9, three D-30; and that JHora offers 23 divisional charts, mean or true nodes, and seven named ayanamsas |
-| [P.V.R. Narasimha Rao, "Using Kashinatha Hora Chart" — Sri Jagannatha Jyotish discussion articles](https://jyotish-blog.blogspot.com/2008/06/using-kashinatha-hora-chart.html) | The standard Cancer–Leo hora rule stated as a rule ("Sun's hora means Leo in hora chart"), the Parivritti Dwaya hora rule, and the Kashinatha hora rule with a worked example |
-| [Sanjay Rath, "Principles of Divisional Charts"](https://srath.com/jyoti%E1%B9%A3a/principles-of-divisional-charts/) | The drekkana rule stated independently; a worked example that applies it **to the lagna** ("Lagna at 14° Pisces is in second Drekkana and is mapped into Cancer the fifth house from Pisces"); the six-sign Surya/Chandra Hora conception |
-| [P.V.R. Narasimha Rao, "Jagannatha Drekkana"](https://jyotish-blog.blogspot.com/2005/03/jagannatha-drekkana.html) · [and "Somnatha Drekkana"](https://jyotish-blog.blogspot.com/2005/02/somnatha-drekkana.html) | The Jagannatha drekkana mapping in full, with two worked comparisons against the Parashari; and the one Somanatha data point, with its rule referred out to texts not consulted |
-| [Vijayalur, "Drekkana / Dreshkana / Decanate"](https://vijayalur.com/2011/05/19/drekkana-dreshkana-decante/) | Independent statement of the Parashari drekkana ("The first Drekkana of any sign is ruled by the owning planet, second Drekkana by the 5th lord and the third Drekkana by the 9th lord"), and that there are four kinds — while declining to state the other three |
+| [Brihat Parasara Hora Sastra Vol. I, tr. R. Santhanam, Ranjan Publications, Delhi 1992 — archive.org scan](https://archive.org/details/heag_brihat-parasara-hora-sastra-vol-1-by-maharshi-parasara-commentary-editor-tr) | The primary text. Ch. 4 v. 5–11 (sign classifications, elements, day/night strength), ch. 6 v. 2–41 (all sixteen varga rules, speculums and worked examples), ch. 7 v. 1–8 (what each varga is read for) and v. 42–53 (the varga groupings), plus Santhanam's notes on the Sun and Moon in D30 and on Saravali's D27 |
+| [Brihat Parashara Hora Shastra — a second archive.org scan of the same Santhanam translation](https://archive.org/details/BPHSEnglish) | Cross-check. Used where the first scan's OCR is unreadable; the two agree wherever both are legible |
+
+### The other classical texts
+
+Each was read in full, not quoted from a secondary source. Two of them —
+Phaladeepika and Jataka Parijata — present the **dasavarga**, ten divisions, not
+the sixteen; Saravali's verses cover the dasavarga too, and its remaining six
+come from Santhanam's supplement. Jataka Parijata's notes do list all sixteen by
+name, which is an independent attestation of the list itself.
+
+| Source | Supports |
+|---|---|
+| [Brihat Jataka, tr. Swami Vijnananda](https://archive.org/stream/BrihatJatakaOfVarahamihiraBySwamiVijnananda/Brihat%20Jataka%20of%20Varahamihira%20By%20Swami%20Vijnananda_djvu.txt) · [tr. N. Chidambaram Aiyar](https://archive.org/stream/brihatjataka00varaiala/brihatjataka00varaiala_djvu.txt) | I.11 — the sign classifications by alternation, the odd/even Sanskrit (*ayuji* / *samabhe*), the direction trines, the hora lords, the drekkana lords. I.14 — navamsa by vargottama. I.7 with Aiyar's note — the D30 degree split for both parities. Ch. XXI and XXIV — trimsamsas used as lords with the Sun occupying one |
+| [Jataka Parijata Vol. I, tr. V. Subrahmanya Sastri](https://archive.org/stream/JatakaParijataVolIOfIIByVSubrahmanyaSastri/Jataka%20Parijata%20Vol%20I%20of%20II%20by%20V%20Subrahmanya%20Sastri_djvu.txt) | I.30 — hora and drekkana lords, **and the Yavana hora dissent**. I.31 — saptamsa, "of Lagna and other houses". I.32–34 — navamsa in both formulations. I.35 — dasamsa, dwadasamsa. **I.36 — the named D16 disagreement with Phaladeepika and Sarvartha Chintamani**, and the 192-segment continuous statement. **I.37 with its note — the D30 degree split and the classical statement of the sign mapping by parity** |
+| [Phaladeepika, tr. V. Subrahmanya Sastri](https://jyotishvidya.com/HTMLobj-9415/Mantreswara_s__Phaladeeplka_.pdf) | 3:4 — hora, drekkana, dwadasamsa, navamsa start signs, D30 split with both parities spelled out. 3:6 — saptamsa, dasamsa, and the D16 allocation that Jataka Parijata reports as differing. 3:11 — the navamsa and drekkana **of the ascendant** |
+| [Saravali Vol. I, tr. R. Santhanam](https://static1.squarespace.com/static/5e5b12e392faf542399f9528/t/6444ef10e62dac013a8d316a/1682239298930/Saravali+-+R+Santhanam+-+Vol-1.pdf) | 3.11–3.18 — navamsa, dwadasamsa, vargottama, hora, D30, saptamsa as a twelve-sign enumeration, and **v. 18's generic formula for computing any varga**. Santhanam's supplementary notes — D16, D20, D24, D27, D40, D45, D60, including **the repudiated D27 rule of §7.12** |
+| [B.V. Raman, *Hindu Predictive Astrology*, ch. XI](https://archive.org/stream/hindupredictiveastrologyofbvraman/Hindu%20Predictive%20Astrology%20of%20B%20V%20Raman_djvu.txt) | The D30 table for both parities, 5/5/8/7/5 and 5/7/8/5/5 |
+| [Hart deFouw & Robert Svoboda, *Light on Life*](https://storage.yandexcloud.net/j108/library/1h8hzjau/Robert_Svoboda_-_Light_on_life_An_Introduction_to_the_Astrology_of_India.pdf) | Ch. 5 — the movable/fixed/dual and the four element groups, enumerated in the text. Ch. on navamsa — **the explicit statement that the class formulation and the element formulation are the same rule**, and a full worked procedure that fixes the varga ascendant first |
+
+### Independent statements of the rules
+
+| Source | Supports |
+|---|---|
+| [P.V.R. Narasimha Rao, *Vedic Astrology: An Integrated Approach*, ch. 6 "Divisional Charts"](https://www.vedicastrologer.org/articles/vedic_astro_textbook.pdf) | All sixteen rules restated in modern notation with worked examples; D9 stated by element rather than by class; the D30 degree ranges; the D60 procedure; the statement that lagna and special lagnas divide like planets. Contains the D27 erratum recorded in §7.12. Ch. 32 supplies the birth-time-error figures in §6.1 |
+| [Sanjay Rath, "Principles of Divisional Charts"](https://srath.com/jyoti%E1%B9%A3a/principles-of-divisional-charts/) | The drekkana rule stated independently; a worked example applying it **to the lagna**; the six-sign Surya/Chandra Hora conception |
 | [Sanjay Rath, "Trimsamsa D-30 Chart"](https://srath.com/jyoti%E1%B9%A3a/varga/trimsamsa-d-30-chart/) | Third independent statement of the D30 table, in cumulative-degree form; that the Sun, Moon, Rahu and Ketu own no trimsamsa; that the lagna is divided like a planet; and that a second D30 method exists which he does not give |
+| [Ernst Wilhelm, forum answer on D30](https://astrology-videos.com/forum/general-predictive-astrology/trimsamsa-d30-calculation-rashi-30-or-using-planetary-lords) | The equal-1° trimsamsa position, on the record and unhedged: "Lords are just lords, not for forming a chart. Form a chart by dividing the sign into 30." |
+| [Vijayalur, "Drekkana / Dreshkana / Decanate"](https://vijayalur.com/2011/05/19/drekkana-dreshkana-decante/) | Independent statement of the Parashari drekkana, and that there are four kinds — while declining to state the other three |
+| [Barbara Pijan Lama, "D-27 Bhamsha"](https://barbarapijan.com/bpa/Varga/D27_Bhamsha.htm) | Independent statement of the D27 segment size and starting rule, in BPHS's own phrasing |
 | [DesiUtils — Trimsamsa D30 calculator](https://desiutils.in/astrology/trimsamsa-d30) | Fourth statement of the D30 table, as published calculator behaviour, including the ten-sign restriction stated outright |
+
+### The variants
+
+| Source | Supports |
+|---|---|
+| [Features of Jagannatha Hora](https://www.vedicastrologer.org/jh/features.htm) | The variant counts, verbatim: six D-2, four D-3, two D-4, three D-9, three D-30; 23 divisional charts; mean or true nodes; seven named ayanamsas; and the birth-time tool that "the time to be subtracted or added in order to change the lagna in the divisional chart is displayed at one mouse click" |
+| JHora release notes — [7.32](https://www.vedicastrologer.org/jh/update_7.32.htm), [7.4](https://www.vedicastrologer.org/jh/update_7.4.htm), [7.5](https://www.vedicastrologer.org/jh/update_7.5.htm), [7.51](https://www.vedicastrologer.org/jh/update_7.51.htm), [7.63](https://www.vedicastrologer.org/jh/update_7.63.htm) | The navamsa variant history; the uniform Krishna Mishra rule; the generic custom D-N structures; the D-30 divisional-longitude option; and 7.63's "reversal of divisions in an even sign" additions that the feature page never absorbed |
+| [P.V.R. Narasimha Rao, "Using Kashinatha Hora Chart"](https://jyotish-blog.blogspot.com/2008/06/using-kashinatha-hora-chart.html) · ["Parasara's Hora Chart Decoded"](https://blog.indianastrologysoftware.com/parasaras-hora-chart-decoded/) | The Cancer–Leo rule stated as a rule; Parivritti Dwaya; Kashinatha with a worked example; Uma-Shambhu; and the four-way enumeration of the D-2 disagreement with the author's objection to each |
+| [P.V.R. Narasimha Rao, "What is Dreshkona?"](https://jyotish-blog.blogspot.com/2005/03/what-is-dreshkona.html) · ["Jagannatha Drekkana"](https://jyotish-blog.blogspot.com/2005/03/jagannatha-drekkana.html) · ["Somnatha Drekkana"](https://jyotish-blog.blogspot.com/2005/02/somnatha-drekkana.html) | The four D-3 schemes by JHora's own UI labels; the Jagannatha mapping in full; the Somanatha description; and the three-way worked disagreement on Meena 20°–30° |
+
+### Implementations read as evidence
+
+Software is corroboration of what practitioners compute, not of what a text
+says. Each is flagged for how far it can be trusted.
+
+| Source | Weight | Supports |
+|---|---|---|
+| [Maitreya 8 — source](https://github.com/martin-pe/maitreya8), [docs](https://saravali.github.io/) | **Strong.** Open source, read directly; its rules are in `src/jyotish/Varga.cpp` | Independent implementation of all sixteen Parashari rules; only three variant switches, all undocumented; the D-30 even-sign degree reversal; the node display-degree reversal; and the "Continuous" D-4 defect |
+| [PyJHora](https://github.com/naturalstupid/PyJHora) | **Medium.** A reimplementation of JHora, not JHora. Its own README says features "outside of his book but in his JHora software were collected from various internet sources" | The most complete machine-readable enumeration of variant names in existence; the generic parivritti / even-reverse / Somanatha algorithms with docstrings; and confirmation that no varga function anywhere branches on Rahu or Ketu |
+| [VedAstro](https://github.com/VedAstro/VedAstro) | **Weak — use only as a third opinion.** Its varga tables were generated by a language model, per the authors' own commit messages ("thanks to GPT4-32K & GPT-4"), and the functions that consume them are absent from the published source | Agrees with the Parashari rule for every varga including the unequal D30; but its varga-lagna-by-house-midpoint model is a real design divergence (§5) |
+| [Swiss Ephemeris — programmer's docs](https://www.astro.com/swisseph/swephprg.htm) | — | Computes no vargas at all. Establishes that §7 is entirely ours to implement (§6.5) |
+
+### Not used
+
+`jagannathhora.com` and `jagannathahora.com` carry JHora-branded varga content
+and are **not** authored by P.V.R. Narasimha Rao. They appear high in search
+results for every query in this document and were excluded on that ground.
+AstroSage, Prokerala and Drik Panchang list the sixteen with significations but
+publish no computation rule; AstroSage says so outright — "I will not explore
+the mathematics behind these divisional charts."
+
+---
 
 In-repo references: `docs/DECISIONS.md` D-003 (ayanamsa, `Ketu = Rahu + 180°`),
 D-006 (provenance), D-026 (no dignity for the nodes); `docs/TODO.md` E1
