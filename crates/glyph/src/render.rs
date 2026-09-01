@@ -155,10 +155,27 @@ const MARK_CLEARANCE: f32 = 0.8;
 /// words.
 /// The Lagna Kundali's menu bar icon.
 ///
-/// Two concentric squares, the outer one rotated - the North Indian chart's own
-/// construction reduced to what survives at 22 points. Not a graha glyph,
-/// because the chart is not a graha and a tenth symbol in that alphabet would
-/// read as one.
+/// The North Indian chart's construction reduced to what survives at 22 points:
+/// the outer square, the midpoint diamond filled solid, and the part of each
+/// diagonal that crosses a corner triangle.
+///
+/// The fill is what makes it hold up. Every outline version of this mark reads
+/// thin beside the moon, which is a filled disc - and worse, an outline that
+/// carries the whole construction turns to a grey blur when macOS maps the 2x
+/// buffer onto a 1x slot, because eight strokes in 22 points is more line than
+/// there is room for. A solid middle halves cleanly. The diagonals are what stop
+/// the result reading as a lozenge in a box; they are drawn only in the corner
+/// triangles, since inside the diamond they would be the colour of the fill.
+///
+/// Rejected, and why:
+///
+/// | Candidate | Why not |
+/// |---|---|
+/// | Square and diamond, no diagonals | What shipped. Reads as a generic mark rather than a chart |
+/// | The full twelve-compartment construction | Legible at 2x, a grey blob once halved |
+/// | Square and diagonals, no diamond | Reads as a cross through a box, which is the shape of a cancel button |
+/// | The South Indian frame | Its broken grid reads as noise at this size |
+/// | Corner triangles filled, middle open | Reads as an octagon, and the chart is not one |
 ///
 /// Static. The chart behind it changes constantly and none of that is legible at
 /// this size; what changes is in the tooltip, which is rebuilt on hover.
@@ -176,43 +193,95 @@ pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
     };
     paint.set_color_rgba8(r, g, b, u8::MAX);
 
-    // Inset so the square reads at the same optical weight as the round glyphs
-    // beside it: a square that fills its slot looks larger than a disc that
-    // does, because it has more area at the corners.
-    let inset = SLOT_POINTS * 0.18 * scale as f32;
-    let edge = size as f32 - inset * 2.0;
+    // The weight a graha glyph ends up at, reproduced.
+    //
+    // This mark is built in pixels while a graha is built in design-grid units
+    // and scaled, and tiny-skia scales the stroke with the transform. Passing
+    // `STROKE_WIDTH` to a path already in pixels therefore drew this at
+    // `STROKE_WIDTH` *pixels* - 1.8 against a graha's 3.3 at 2x, a little over
+    // half the weight of every glyph beside it. That is why the mark looked
+    // faint, and no amount of redrawing the shape would have fixed it.
+    let weight = STROKE_WIDTH * (SLOT_POINTS / DESIGN_GRID) * scale as f32;
 
-    let mut outer = tiny_skia::PathBuilder::new();
-    outer.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
+    let inset = SLOT_POINTS * CHART_INSET * scale as f32;
+    let edge = size as f32 - inset * 2.0;
+    let far = size as f32 - inset;
+    let middle = size as f32 / 2.0;
+
+    let mut square = tiny_skia::PathBuilder::new();
+    square.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
         RenderError::Allocation {
             width: size,
             height: size,
         },
     )?);
-    let outer = outer
-        .finish()
-        .ok_or(RenderError::EmptyPath("chart square"))?;
-    pixmap.stroke_path(&outer, &paint, &glyph_stroke(), Transform::identity(), None);
+    pixmap.stroke_path(
+        &square
+            .finish()
+            .ok_or(RenderError::EmptyPath("chart square"))?,
+        &paint,
+        &stroke_of(weight),
+        Transform::identity(),
+        None,
+    );
 
-    // The inner diamond: the midpoints of the outer square's sides, which is the
-    // line the North Indian chart is built from.
-    let middle = size as f32 / 2.0;
-    let mut inner = tiny_skia::PathBuilder::new();
-    inner.move_to(middle, inset);
-    inner.line_to(size as f32 - inset, middle);
-    inner.line_to(middle, size as f32 - inset);
-    inner.line_to(inset, middle);
-    inner.close();
-    let inner = inner
-        .finish()
-        .ok_or(RenderError::EmptyPath("chart diamond"))?;
-    pixmap.stroke_path(&inner, &paint, &glyph_stroke(), Transform::identity(), None);
+    // Held off the square by a stroke's width, so the two shapes stay two
+    // shapes. Touching, they merged into one silhouette at 1x.
+    let clearance = weight * 1.15;
+    let mut diamond = tiny_skia::PathBuilder::new();
+    diamond.move_to(middle, inset + clearance);
+    diamond.line_to(far - clearance, middle);
+    diamond.line_to(middle, far - clearance);
+    diamond.line_to(inset + clearance, middle);
+    diamond.close();
+    pixmap.fill_path(
+        &diamond
+            .finish()
+            .ok_or(RenderError::EmptyPath("chart diamond"))?,
+        &paint,
+        FillRule::Winding,
+        Transform::identity(),
+        None,
+    );
+
+    // Half way from each corner to the centre, which is where the diamond's edge
+    // is: any further and the stub disappears into the fill.
+    let mut stubs = tiny_skia::PathBuilder::new();
+    for (x, y) in [(inset, inset), (far, inset), (far, far), (inset, far)] {
+        stubs.move_to(x, y);
+        stubs.line_to(x + (middle - x) * 0.5, y + (middle - y) * 0.5);
+    }
+    pixmap.stroke_path(
+        &stubs
+            .finish()
+            .ok_or(RenderError::EmptyPath("chart diagonals"))?,
+        &paint,
+        &stroke_of(weight * 0.8),
+        Transform::identity(),
+        None,
+    );
 
     Ok(Icon {
         rgba: pixmap.take(),
         width: size,
         height: size,
     })
+}
+
+/// Clearance between the chart mark and the edge of its slot.
+///
+/// Tighter than the 0.18 the outline version used. A filled shape reads smaller
+/// than an outline of the same size, because the outline's ink is all at the
+/// edge where it defines the silhouette.
+const CHART_INSET: f32 = 0.12;
+
+fn stroke_of(width: f32) -> Stroke {
+    Stroke {
+        width,
+        line_cap: LineCap::Round,
+        line_join: LineJoin::Round,
+        ..Stroke::default()
+    }
 }
 
 pub fn graha_icon(
