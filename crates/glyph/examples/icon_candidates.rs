@@ -66,19 +66,80 @@ fn main() {
         b: 239,
     };
 
-    let chart = from_icon(chart_icon(SCALE, tint).expect("chart"));
-    let moon = from_icon(moon_icon(0.35, true, false, SCALE, tint).expect("moon"));
-    let guru =
-        from_icon(graha_icon(chandra_ephemeris::Graha::Guru, SCALE, tint, false).expect("guru"));
+    let mut plates: Vec<(String, Pixmap)> = Vec::new();
 
-    let plates: Vec<(&str, Pixmap)> = vec![
-        ("chart", chart.clone()),
-        ("chart halved", halved(&chart)),
-        ("moon", moon.clone()),
-        ("moon halved", halved(&moon)),
-        ("guru", guru.clone()),
-        ("guru halved", halved(&guru)),
-    ];
+    plates.push((
+        "chart".into(),
+        from_icon(chart_icon(SCALE, tint).expect("chart")),
+    ));
+    plates.push((
+        "moon".into(),
+        from_icon(moon_icon(0.35, true, false, SCALE, tint).expect("moon")),
+    ));
+    for graha in chandra_ephemeris::Graha::ALL {
+        plates.push((
+            graha.name().to_string(),
+            from_icon(graha_icon(graha, SCALE, tint, false).expect("graha")),
+        ));
+    }
+    // Guru marked, which is the one state the menu bar carries: the glyph is
+    // drawn smaller and pinned to the top left to make room for the mark.
+    plates.push((
+        "Guru retrograde".into(),
+        from_icon(graha_icon(chandra_ephemeris::Graha::Guru, SCALE, tint, true).expect("marked")),
+    ));
+
+    if std::env::args().any(|arg| arg == "--halved") {
+        plates = plates
+            .into_iter()
+            .map(|(name, pixmap)| (format!("{name} halved"), halved(&pixmap)))
+            .collect();
+    }
+
+    // Optical weight, measured. A row of icons looks even when they carry
+    // similar ink in similar space, not when their nominal boxes match - which
+    // is why these are read off the pixels rather than off the design.
+    if std::env::args().any(|arg| arg == "--measure") {
+        println!(
+            "{:<18} {:>9} {:>9} {:>9} {:>12}",
+            "icon", "ink w x h", "coverage", "of slot", "off centre"
+        );
+        for (name, pixmap) in &plates {
+            let (mut x0, mut y0, mut x1, mut y1) = (u32::MAX, u32::MAX, 0u32, 0u32);
+            let mut ink = 0f64;
+            for y in 0..pixmap.height() {
+                for x in 0..pixmap.width() {
+                    let alpha = pixmap.pixel(x, y).expect("pixel").alpha();
+                    if alpha == 0 {
+                        continue;
+                    }
+                    ink += f64::from(alpha) / 255.0;
+                    x0 = x0.min(x);
+                    y0 = y0.min(y);
+                    x1 = x1.max(x);
+                    y1 = y1.max(y);
+                }
+            }
+            let (w, h) = (x1 + 1 - x0, y1 + 1 - y0);
+            let slot = f64::from(pixmap.width() * pixmap.height());
+            // Where the ink actually sits against the middle of the slot. A
+            // glyph centred on its design grid rather than on its own ink reads
+            // as hanging off to one side in a row of them.
+            let middle = f64::from(pixmap.width()) / 2.0;
+            let dx = (f64::from(x0) + f64::from(x1) + 1.0) / 2.0 - middle;
+            let dy = (f64::from(y0) + f64::from(y1) + 1.0) / 2.0 - middle;
+            println!(
+                "{name:<18} {:>4} x{:>4} {:>8.1}% {:>8.1}% {:>+5.1},{:>+5.1}",
+                w,
+                h,
+                100.0 * ink / f64::from(w * h),
+                100.0 * ink / slot,
+                dx,
+                dy
+            );
+        }
+        return;
+    }
 
     let cell = SLOT * SCALE * ZOOM;
     let gap = 8;

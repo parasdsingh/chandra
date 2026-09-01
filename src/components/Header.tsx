@@ -250,25 +250,38 @@ function qualifier(label: string): { before: string; after: string } | null {
   };
 }
 
-/** Two concentric squares, the outer one rotated: the North Indian chart's own
- *  construction, and the same shape the status item is drawn with. */
+/** The Lagna Kundali's mark: the North Indian construction reduced to what
+ *  survives at this size - the outer square, the midpoint diamond filled solid,
+ *  and the part of each diagonal that crosses a corner triangle.
+ *
+ *  The same shape and the same proportions as the status item, scaled from its
+ *  22pt slot onto a 16px box: 0.12 of the slot as the inset, a stroke of 1.2,
+ *  the diamond held off the square by 1.15 strokes, and the stubs run half way
+ *  from each corner to the centre. Drawn twice in two languages, so the numbers
+ *  are written here rather than left to be re-derived. */
 function ChartMark(): JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
       <rect
-        x="1.6"
-        y="1.6"
-        width="12.8"
-        height="12.8"
+        x="1.92"
+        y="1.92"
+        width="12.16"
+        height="12.16"
         fill="none"
         stroke="currentColor"
         stroke-width="1.2"
       />
       <path
-        d="M 8 1.6 L 14.4 8 L 8 14.4 L 1.6 8 Z"
+        d="M 8 3.3 L 12.7 8 L 8 12.7 L 3.3 8 Z"
+        fill="currentColor"
+        stroke="none"
+      />
+      <path
+        d="M 1.92 1.92 L 4.96 4.96 M 14.08 1.92 L 11.04 4.96 M 14.08 14.08 L 11.04 11.04 M 1.92 14.08 L 4.96 11.04"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.2"
+        stroke-width="0.96"
+        stroke-linecap="round"
       />
     </svg>
   );

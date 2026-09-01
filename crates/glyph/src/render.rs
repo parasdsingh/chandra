@@ -201,7 +201,7 @@ pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
     // `STROKE_WIDTH` *pixels* - 1.8 against a graha's 3.3 at 2x, a little over
     // half the weight of every glyph beside it. That is why the mark looked
     // faint, and no amount of redrawing the shape would have fixed it.
-    let weight = STROKE_WIDTH * (SLOT_POINTS / DESIGN_GRID) * scale as f32;
+    let weight = STROKE_WIDTH * (SLOT_POINTS / DESIGN_GRID) * scale as f32 * CHART_WEIGHT;
 
     let inset = SLOT_POINTS * CHART_INSET * scale as f32;
     let edge = size as f32 - inset * 2.0;
@@ -227,7 +227,7 @@ pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
 
     // Held off the square by a stroke's width, so the two shapes stay two
     // shapes. Touching, they merged into one silhouette at 1x.
-    let clearance = weight * 1.15;
+    let clearance = weight * CHART_CLEARANCE;
     let mut diamond = tiny_skia::PathBuilder::new();
     diamond.move_to(middle, inset + clearance);
     diamond.line_to(far - clearance, middle);
@@ -269,11 +269,27 @@ pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
 }
 
 /// Clearance between the chart mark and the edge of its slot.
+const CHART_INSET: f32 = 0.18;
+
+/// The chart mark's stroke, as a fraction of a graha glyph's.
 ///
-/// Tighter than the 0.18 the outline version used. A filled shape reads smaller
-/// than an outline of the same size, because the outline's ink is all at the
-/// edge where it defines the silhouette.
-const CHART_INSET: f32 = 0.12;
+/// Thinner, and measured rather than chosen. Optical weight is ink in a slot,
+/// not nominal size: a graha's symbol is a short path and covers 12 to 18 per
+/// cent of its slot, and the moon - the only other filled mark - covers 20. A
+/// square at a graha's own stroke weight, with a solid diamond inside it,
+/// measured 45 per cent and dominated the row.
+///
+/// The square's perimeter is the reason. It is far longer than any glyph's path,
+/// so the same stroke on it lays down several times the ink. The fill is what
+/// carries the mark's presence; the outline only has to bound it.
+const CHART_WEIGHT: f32 = 0.62;
+
+/// How far the diamond is held off the square, in strokes.
+///
+/// Wide enough that the two read as two shapes at 1x, and wide enough to keep
+/// the fill's area in proportion: the diamond is the single heaviest thing in
+/// the mark, and its area falls with the square of this.
+const CHART_CLEARANCE: f32 = 2.6;
 
 fn stroke_of(width: f32) -> Stroke {
     Stroke {
