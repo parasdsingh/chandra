@@ -451,11 +451,13 @@ export function Preview(): JSX.Element {
         )}
       </For>
 
-      {/* Five grahas in one sign, found by scanning the year rather than picked
-          by hand. This is the only case that reaches `cluster`'s branch for a
-          row that will not fit its compartment at any width. */}
+      {/* The ceiling: eight bodies in one sign, found by scanning two centuries
+          rather than picked by hand. Eight is the most there can ever be - the
+          seven grahas can all share a sign and exactly one node can join them,
+          because Rahu and Ketu are opposite by construction. This is February
+          1962, and it is the case every layout rule here is answerable to. */}
       <ChartCase
-        title="Chart · the year's densest conjunction"
+        title="Chart · eight in one sign (Feb 1962)"
         chart={data.chakraCrowded}
         format="north"
         numbered={false}
@@ -465,7 +467,7 @@ export function Preview(): JSX.Element {
           grid rather than a set of kites and triangles, so the row that has to
           be squeezed is a different shape. */}
       <ChartCase
-        title="Chart · densest conjunction, South Indian"
+        title="Chart · eight in one sign, South Indian"
         chart={data.chakraCrowded}
         format="south"
         numbered={false}

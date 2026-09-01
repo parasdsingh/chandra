@@ -42,17 +42,26 @@ fn instant(year: i32, month: u32, day: u32, day_fraction: f64) -> i64 {
     )) * 1000.0) as i64
 }
 
-/// The most crowded compartment of 2026.
+/// The most crowded compartment the ephemeris can produce.
 ///
 /// Found rather than hardcoded, for the same reason the moonless day is: a date
 /// picked once by hand stops being the densest conjunction as soon as anything
 /// about the ephemeris changes, and then the harness quietly draws an easy case
 /// while claiming to draw the hard one.
+///
+/// Scanned over two centuries rather than one year. A year's worst case is not
+/// the drawing's worst case, and the drawing is what this is for. The ceiling is
+/// eight: the seven grahas can all share a sign, and exactly one node can join
+/// them because Rahu and Ketu are opposite by construction and so can never be
+/// in the same sign as each other.
+///
+/// Occupancy does not depend on where the observer stands - only the lagna does
+/// - so the place this is cast for does not affect what is found.
 fn crowded(almanac: &Almanac) -> chandra_almanac::chakra::Chakra {
-    (1..=365)
+    (0..73_000)
         .map(|day| {
             almanac
-                .chakra(instant(2026, 1, 1, 0.5) + day * 86_400_000, PLACE)
+                .chakra(instant(1950, 1, 1, 0.5) + day * 86_400_000, PLACE)
                 .expect("crowded scan")
         })
         .max_by_key(|chart| {

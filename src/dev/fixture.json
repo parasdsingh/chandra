@@ -236,48 +236,33 @@
   "chakraCrowded": {
     "lagna": {
       "degrees_in_rashi": [
-        3,
-        22,
-        10.461035881660337
+        11,
+        37,
+        57.4432423591179
       ],
-      "longitude": 123.36957250996713,
-      "name": "Simha",
-      "rashi": "simha"
+      "longitude": 101.63262312287753,
+      "name": "Karka",
+      "rashi": "karka"
     },
     "place": "Bengaluru",
     "rashis": [
       {
         "grahas": [],
-        "house": 9,
+        "house": 10,
         "name": "Mesha",
         "rashi": "mesha",
         "short": "Ari"
       },
       {
         "grahas": [],
-        "house": 10,
+        "house": 11,
         "name": "Vrishabha",
         "rashi": "vrishabha",
         "short": "Tau"
       },
       {
-        "grahas": [
-          {
-            "combust": false,
-            "degrees_in_rashi": [
-              21,
-              0,
-              53.315885724833834
-            ],
-            "dignity": null,
-            "graha": "guru",
-            "longitude": 81.0148099682569,
-            "name": "Guru",
-            "retrograde": true,
-            "short": "Ju"
-          }
-        ],
-        "house": 11,
+        "grahas": [],
+        "house": 12,
         "name": "Mithuna",
         "rashi": "mithuna",
         "short": "Gem"
@@ -287,120 +272,98 @@
           {
             "combust": false,
             "degrees_in_rashi": [
-              21,
-              47,
-              59.53528376680197
+              24,
+              42,
+              19.98938389575528
             ],
-            "dignity": "own_sign",
-            "graha": "chandra",
-            "longitude": 111.79987091215744,
-            "name": "Chandra",
+            "dignity": null,
+            "graha": "rahu",
+            "longitude": 114.70555260663771,
+            "name": "Rahu",
             "retrograde": false,
-            "short": "Mo"
+            "short": "Ra"
           }
         ],
-        "house": 12,
+        "house": 1,
         "name": "Karka",
         "rashi": "karka",
         "short": "Can"
       },
       {
-        "grahas": [
-          {
-            "combust": false,
-            "degrees_in_rashi": [
-              14,
-              45,
-              24.771980571426866
-            ],
-            "dignity": null,
-            "graha": "ketu",
-            "longitude": 134.75688110571429,
-            "name": "Ketu",
-            "retrograde": false,
-            "short": "Ke"
-          }
-        ],
-        "house": 1,
+        "grahas": [],
+        "house": 2,
         "name": "Simha",
         "rashi": "simha",
         "short": "Leo"
       },
       {
         "grahas": [],
-        "house": 2,
+        "house": 3,
         "name": "Kanya",
         "rashi": "kanya",
         "short": "Vir"
       },
       {
         "grahas": [],
-        "house": 3,
+        "house": 4,
         "name": "Tula",
         "rashi": "tula",
         "short": "Lib"
       },
       {
         "grahas": [],
-        "house": 4,
+        "house": 5,
         "name": "Vrishchika",
         "rashi": "vrishchika",
         "short": "Sco"
       },
       {
         "grahas": [],
-        "house": 5,
+        "house": 6,
         "name": "Dhanu",
         "rashi": "dhanu",
         "short": "Sag"
-      },
-      {
-        "grahas": [],
-        "house": 6,
-        "name": "Makara",
-        "rashi": "makara",
-        "short": "Cap"
       },
       {
         "grahas": [
           {
             "combust": true,
             "degrees_in_rashi": [
-              4,
-              54,
-              47.249250423883495
+              9,
+              25,
+              24.494465199404658
             ],
-            "dignity": null,
+            "dignity": "exalted",
             "graha": "mangala",
-            "longitude": 304.9131247917844,
+            "longitude": 279.4234706847776,
             "name": "Mangala",
             "retrograde": false,
             "short": "Ma"
           },
           {
-            "combust": false,
+            "combust": true,
             "degrees_in_rashi": [
-              14,
-              45,
-              24.771980571426866
+              10,
+              32,
+              19.876602535423444
             ],
-            "dignity": null,
-            "graha": "rahu",
-            "longitude": 314.7568811057143,
-            "name": "Rahu",
+            "dignity": "own_sign",
+            "graha": "shani",
+            "longitude": 280.5388546118154,
+            "name": "Shani",
             "retrograde": false,
-            "short": "Ra"
+            "short": "Sa"
           },
           {
             "combust": false,
             "degrees_in_rashi": [
-              16,
-              40,
-              59.38834283040251
+              22,
+              53,
+              18.40444498679517
             ],
             "dignity": null,
             "graha": "surya",
-            "longitude": 316.683163428564,
+            "longitude": 292.888445679163,
             "name": "Surya",
             "retrograde": false,
             "short": "Su"
@@ -408,13 +371,13 @@
           {
             "combust": true,
             "degrees_in_rashi": [
-              27,
-              30,
-              59.58932700264086
+              23,
+              0,
+              34.17451523555428
             ],
             "dignity": null,
             "graha": "budha",
-            "longitude": 327.51655259083407,
+            "longitude": 293.00949292089877,
             "name": "Budha",
             "retrograde": true,
             "short": "Me"
@@ -422,48 +385,82 @@
           {
             "combust": false,
             "degrees_in_rashi": [
-              29,
-              36,
-              47.03876526217755
+              24,
+              42,
+              19.989383895704123
+            ],
+            "dignity": null,
+            "graha": "ketu",
+            "longitude": 294.7055526066377,
+            "name": "Ketu",
+            "retrograde": false,
+            "short": "Ke"
+          },
+          {
+            "combust": true,
+            "degrees_in_rashi": [
+              25,
+              4,
+              9.080161477536421
             ],
             "dignity": null,
             "graha": "shukra",
-            "longitude": 329.61306632368394,
+            "longitude": 295.06918893374376,
             "name": "Shukra",
             "retrograde": false,
             "short": "Ve"
+          },
+          {
+            "combust": true,
+            "degrees_in_rashi": [
+              25,
+              24,
+              29.15856048749447
+            ],
+            "dignity": "debilitated",
+            "graha": "guru",
+            "longitude": 295.4080996001354,
+            "name": "Guru",
+            "retrograde": false,
+            "short": "Ju"
+          },
+          {
+            "combust": true,
+            "degrees_in_rashi": [
+              29,
+              49,
+              31.035259499512904
+            ],
+            "dignity": null,
+            "graha": "chandra",
+            "longitude": 299.8252875720832,
+            "name": "Chandra",
+            "retrograde": false,
+            "short": "Mo"
           }
         ],
         "house": 7,
+        "name": "Makara",
+        "rashi": "makara",
+        "short": "Cap"
+      },
+      {
+        "grahas": [],
+        "house": 8,
         "name": "Kumbha",
         "rashi": "kumbha",
         "short": "Aqu"
       },
       {
-        "grahas": [
-          {
-            "combust": false,
-            "degrees_in_rashi": [
-              7,
-              33,
-              32.89168571779555
-            ],
-            "dignity": null,
-            "graha": "shani",
-            "longitude": 337.55913657936605,
-            "name": "Shani",
-            "retrograde": false,
-            "short": "Sa"
-          }
-        ],
-        "house": 8,
+        "grahas": [],
+        "house": 9,
         "name": "Meena",
         "rashi": "meena",
         "short": "Pis"
       }
     ],
     "source": "swieph",
-    "unix_ms": 1772366400000
+    "unix_ms": -249393600000
   },
   "chakraMoshier": {
     "lagna": {
@@ -529,11 +526,11 @@
             "degrees_in_rashi": [
               21,
               45,
-              51.098593036766715
+              51.09858884561049
             ],
             "dignity": null,
             "graha": "shani",
-            "longitude": 81.76419405362132,
+            "longitude": 81.76419405245711,
             "name": "Shani",
             "retrograde": false,
             "short": "Sa"
@@ -551,11 +548,11 @@
             "degrees_in_rashi": [
               4,
               2,
-              0.48690812282529805
+              0.48689153945701946
             ],
             "dignity": "debilitated",
             "graha": "mangala",
-            "longitude": 94.03346858558967,
+            "longitude": 94.03346858098318,
             "name": "Mangala",
             "retrograde": false,
             "short": "Ma"
@@ -565,11 +562,11 @@
             "degrees_in_rashi": [
               20,
               34,
-              51.206316947670985
+              51.20636840925158
             ],
             "dignity": null,
             "graha": "budha",
-            "longitude": 110.58089064359658,
+            "longitude": 110.58089065789146,
             "name": "Budha",
             "retrograde": false,
             "short": "Me"
@@ -609,11 +606,11 @@
             "degrees_in_rashi": [
               8,
               31,
-              9.406221167002968
+              9.40618064205637
             ],
             "dignity": "debilitated",
             "graha": "shukra",
-            "longitude": 158.51927950587972,
+            "longitude": 158.5192794946228,
             "name": "Shukra",
             "retrograde": false,
             "short": "Ve"
@@ -631,11 +628,11 @@
             "degrees_in_rashi": [
               14,
               51,
-              50.256829903335074
+              50.256825013652815
             ],
             "dignity": null,
             "graha": "guru",
-            "longitude": 194.8639602305287,
+            "longitude": 194.86396022917046,
             "name": "Guru",
             "retrograde": false,
             "short": "Ju"

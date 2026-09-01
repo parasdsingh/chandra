@@ -160,6 +160,36 @@ function spanOver(
   return { min, max };
 }
 
+/**
+ * The rectangle a compartment's caption occupies.
+ *
+ * The anchor decides which side of `at.x` the text runs, which is the same
+ * three cases `text-anchor` has.
+ */
+function captionBox(
+  at: Point,
+  anchor: "start" | "middle" | "end",
+  numbered: boolean,
+): Box {
+  const width = numbered ? CAPTION_NUMBER_WIDTH : CAPTION_NAME_WIDTH;
+  const left =
+    anchor === "start" ? at.x : anchor === "middle" ? at.x - width / 2 : at.x - width;
+
+  return {
+    min: left,
+    max: left + width,
+    top: at.y - CAPTION_ABOVE,
+    bottom: at.y + CAPTION_BELOW,
+  };
+}
+
+interface Box {
+  min: number;
+  max: number;
+  top: number;
+  bottom: number;
+}
+
 /** A graha label's box, measured from its baseline at the caption size.
  *
  * From the rendered text rather than derived from the font size: at 11px the box
@@ -179,6 +209,22 @@ const GRAHA_BELOW = 3;
  * between two labels; this is how much room one label needs. They were the same
  * number by coincidence and neither was measured. */
 const GRAHA_HALF = 13;
+
+/** The compartment's caption, as a box to keep grahas out of.
+ *
+ * Measured from the rendered labels: a three-letter name is 24 wide and a house
+ * number 12.4, and both run 9.5 above their baseline and 2.1 below. Rounded
+ * outwards.
+ *
+ * Reserving it is not optional. `cluster` used to know only the compartment's
+ * outline, so a graha could be placed exactly where the caption already was -
+ * `Leo` sat under `Su` in the North Indian chart, and `Cap` under `Ma` in the
+ * South. Both were found by measuring label boxes against graha boxes; neither
+ * was visible as anything worse than slightly heavy text. */
+const CAPTION_NAME_WIDTH = 25;
+const CAPTION_NUMBER_WIDTH = 13;
+const CAPTION_ABOVE = 10;
+const CAPTION_BELOW = 3;
 
 const LABEL_ASCENT = 12;
 const LABEL_DESCENT = 6;
@@ -306,7 +352,12 @@ function clampInside(points: Point[], start: Point): Point {
  * is finally pushed inside the compartment's edges - a wedge is narrow at one
  * end, and the row nearest the point is the one that would otherwise escape.
  */
-function cluster(points: Point[], centre: Point, count: number): Point[] {
+function cluster(
+  points: Point[],
+  centre: Point,
+  count: number,
+  caption: Box,
+): Point[] {
   const desired = count <= 1 ? 1 : count <= 4 ? 2 : 3;
 
   // Every shape the count can be laid out in, best first. More columns is a
@@ -321,14 +372,51 @@ function cluster(points: Point[], centre: Point, count: number): Point[] {
   );
 
   for (const columns of shapes) {
-    const laid = rows(points, centre, count, columns);
+    const lines = Math.ceil(count / columns);
+    const reach = ((lines - 1) / 2) * GRAHA_ROW;
+
+    // Centred first, then clear of the caption below it, then clear above. A
+    // block that will not fit beside the caption often fits under it: eight
+    // bodies two abreast is four rows, which a South Indian cell has room for
+    // only once the caption is not taking a bite out of the top one.
+    const shifts = [
+      0,
+      caption.bottom + GRAHA_ABOVE + reach - centre.y,
+      caption.top - GRAHA_BELOW - reach - centre.y,
+    ];
+
+    for (const shift of shifts) {
+      const laid = rows(points, centre, count, columns, caption, shift, GRAHA_ROW);
+      if (laid) return laid;
+    }
+  }
+
+  // Nothing fits at the ordinary pitch, at any shape or offset. The rows are
+  // squeezed together until the block fits the compartment's height instead.
+  //
+  // Bodies may then overlap. That is the right way to lose: a graha drawn
+  // outside its compartment is *wrong* - it reads as standing in a sign it is
+  // not in - and overlapping text is only hard to read. Containment first.
+  //
+  // Reached by a compartment genuinely too small for what is standing in it. A
+  // South Indian cell is 79 x 60, a caption takes 13 of the height, and four
+  // rows of 11px text need about 50 in the 39 that leaves: eight bodies in one
+  // sign does not fit, and no arrangement of them does.
+  const ys = points.map((point) => point.y);
+  const room =
+    Math.max(...ys) - Math.min(...ys) - GRAHA_MARGIN - GRAHA_ABOVE - GRAHA_BELOW;
+
+  for (const columns of shapes) {
+    const lines = Math.ceil(count / columns);
+    const pitch = lines > 1 ? Math.min(GRAHA_ROW, room / (lines - 1)) : GRAHA_ROW;
+    const laid = rows(points, centre, count, columns, caption, 0, pitch);
     if (laid) return laid;
   }
 
-  // Nothing fits, at any shape. One column down the compartment's middle, which
-  // is the arrangement whose unavoidable overhang is smallest.
+  // Not even one column will go: the compartment is narrower than a single
+  // label. Its middle is all that is left.
   return Array.from({ length: count }, (_, index) => {
-    const y = centre.y + (index - (count - 1) / 2) * GRAHA_ROW;
+    const y = centre.y + (index - (count - 1) / 2) * (room / Math.max(1, count));
     const span = spanAt(points, y);
     return { x: (span.min + span.max) / 2, y };
   });
@@ -349,6 +437,9 @@ function rows(
   centre: Point,
   count: number,
   columns: number,
+  caption: Box,
+  shift: number,
+  pitch: number,
 ): Point[] | null {
   const lines = Math.ceil(count / columns);
   const placed: Point[] = [];
@@ -358,16 +449,43 @@ function rows(
     const column = index % columns;
     const inThisRow = Math.min(columns, count - line * columns);
 
-    const y = centre.y + (line - (lines - 1) / 2) * GRAHA_ROW;
+    const y = centre.y + shift + (line - (lines - 1) / 2) * pitch;
 
     // The narrowest the compartment gets over the label's own box, not over the
     // scanline its baseline sits on. Where a compartment has a diagonal wall the
     // top of that box is the tight point, so a baseline that measured as inside
     // still put the top corner through the wall.
+    // Vertical fit, checked explicitly. `spanOver` catches it for a kite or a
+    // triangle, where running past the shape means running into a converging
+    // wall - but a South Indian compartment is a rectangle, whose span is the
+    // same at every height, so a block hanging out of the bottom measured as
+    // fitting perfectly at every row.
+    const ys = points.map((point) => point.y);
+    if (
+      y - GRAHA_ABOVE < Math.min(...ys) + GRAHA_MARGIN / 2 ||
+      y + GRAHA_BELOW > Math.max(...ys) - GRAHA_MARGIN / 2
+    ) {
+      return null;
+    }
+
     const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
+
+    // Where the row runs level with the caption, the caption's own box comes out
+    // of the room available. It is against a wall, so what is left is one
+    // interval rather than two: the side of it with more space in.
+    const level =
+      y + GRAHA_BELOW > caption.top && y - GRAHA_ABOVE < caption.bottom;
+    let { min, max } = span;
+    if (level) {
+      const toTheLeft = caption.min - span.min;
+      const toTheRight = span.max - caption.max;
+      if (toTheRight >= toTheLeft) min = Math.max(min, caption.max);
+      else max = Math.min(max, caption.min);
+    }
+
     const half = ((inThisRow - 1) * GRAHA_COLUMN) / 2 + GRAHA_HALF;
-    const lowest = span.min + half + GRAHA_MARGIN / 2;
-    const highest = span.max - half - GRAHA_MARGIN / 2;
+    const lowest = min + half + GRAHA_MARGIN / 2;
+    const highest = max - half - GRAHA_MARGIN / 2;
     if (lowest > highest) return null;
 
     const middle = Math.min(Math.max(centre.x, lowest), highest);
@@ -616,6 +734,11 @@ export function Chakra(props: {
                 compartment.points,
                 compartment.body,
                 compartment.rashi.grahas.length,
+                captionBox(
+                  compartment.label,
+                  compartment.labelAnchor,
+                  props.format === "north" && props.numbered,
+                ),
               )}
             >
               {(at_, at) => {
