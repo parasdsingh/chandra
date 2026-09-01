@@ -590,6 +590,12 @@ So the build order inverts: the chart is created **first** and sits at the right
 is the end that survives. It is the item with no switch, so it is the one that has to be there;
 everything else can be turned off deliberately, which is a different thing from being taken away.
 
+**And the sequence runs the other way.** The row reads Ketu first and Surya last from left to
+right — the navagraha sequence reversed. The two ends are not equivalent: the left is the one
+macOS eats into, so the sequence is laid out to put the two lights at the end that survives and
+the nodes at the end that goes first. The settings list still offers the grahas in the ordinary
+sequence, because a list has no disposable end.
+
 **Why the moon stops being special.** Once the chart holds the permanent slot, the moon being
 permanent as well is a second exception with no reason behind it — and D-009's own rationale
 ("the menu bar stays clean until the user opts in") argues for fewer fixed items rather than two.

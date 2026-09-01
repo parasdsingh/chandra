@@ -44,18 +44,24 @@ fn tray_id(graha: Graha) -> String {
 pub fn build(app: &AppHandle) -> Result<()> {
     let subjects = app.state::<AppState>().tray_subjects();
 
-    // Built back to front. macOS puts each new status item to the *left* of the
-    // ones already there, so creating in canonical order would lay the row out
-    // backwards. Reversed here, the row reads Surya first and Ketu last from
-    // left to right, in the same order the settings list offers them.
+    // macOS puts each new status item to the *left* of the ones already there, so
+    // creating in canonical order lays the row out backwards - and backwards is
+    // what this row wants. Read left to right it runs Ketu first and Surya last,
+    // the navagraha sequence reversed.
     //
-    // The chart is created *first*, which puts it at the right-hand end. That
-    // end is the one that survives: when the frontmost app has a long menu bar
-    // macOS squeezes status items out from the left, and the chart - created
-    // last, so drawn leftmost - was the item that disappeared. It is the one
-    // item with no switch, so it is the one that has to be there.
+    // Which way round matters because the two ends are not equivalent. When the
+    // frontmost app has a long menu bar, macOS squeezes status items out **from
+    // the left**, so the left end is the disposable one and the right end is the
+    // one that survives. Running the sequence this way puts the two lights at
+    // the end that survives and the nodes at the end that goes first, which is
+    // the right way round to lose items.
+    //
+    // The chart is created first of all, so it sits furthest right. It is the
+    // one item with no switch, so it is the one that has to be there - and it
+    // used to be created last, which put it leftmost and made the feature that
+    // had just been built the first thing macOS threw away (D-030).
     build_item(app, CHART_ID.to_string(), panel::Subject::Chart)?;
-    for graha in subjects.into_iter().rev() {
+    for graha in subjects {
         build_item(app, tray_id(graha), panel::Subject::Graha(graha))?;
     }
 
