@@ -69,10 +69,14 @@ pub fn build(app: &AppHandle) -> Result<()> {
     // one item with no switch, so it is the one that has to be there - and it
     // used to be created last, which put it leftmost and made the feature that
     // had just been built the first thing macOS threw away (D-030).
-    // The divisions, highest first, so the row reads D1 at the right-hand end
-    // with the finer charts running left from it. D1 is the one that must
-    // survive being squeezed, and the right end is the end that does.
-    for varga in app.state::<AppState>().chart_vargas().into_iter().rev() {
+    // D1 created first, so it sits furthest right - the end that survives when
+    // macOS squeezes the row. The finer divisions run left from it in order, and
+    // are the ones that can afford to go: D1 is the chart the others divide.
+    //
+    // Not reversed. macOS puts each new item to the *left* of the ones already
+    // there, so creating in order lays them out right to left, which is what is
+    // wanted here and the opposite of what the grahas need.
+    for varga in app.state::<AppState>().chart_vargas() {
         build_item(app, chart_id(varga), panel::Subject::Chart(varga))?;
     }
     for graha in subjects {
