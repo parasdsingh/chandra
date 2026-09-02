@@ -173,7 +173,7 @@ const MARK_CLEARANCE: f32 = 0.8;
 ///
 /// Static. The chart behind it changes constantly and none of that is legible at
 /// this size; what changes is in the tooltip, which is rebuilt on hover.
-pub fn chart_icon(division: u32, scale: u32, tint: Tint) -> Result<Icon, RenderError> {
+pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
     let size = SLOT_POINTS as u32 * scale;
     let mut pixmap = Pixmap::new(size, size).ok_or(RenderError::Allocation {
         width: size,
@@ -202,70 +202,41 @@ pub fn chart_icon(division: u32, scale: u32, tint: Tint) -> Result<Icon, RenderE
     let far = size as f32 - inset;
     let middle = size as f32 / 2.0;
 
-    {
-        let mut square = tiny_skia::PathBuilder::new();
-        square.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
-            RenderError::Allocation {
-                width: size,
-                height: size,
-            },
-        )?);
-        pixmap.stroke_path(
-            &square
-                .finish()
-                .ok_or(RenderError::EmptyPath("chart square"))?,
-            &paint,
-            &stroke_of(weight),
-            Transform::identity(),
-            None,
-        );
-    }
-
-    // The middle says which division this is. Several charts sit in the row at
-    // once and they are the same shape otherwise, so without it the reader has a
-    // line of identical marks.
-    //
-    // D1 keeps the solid diamond it has always had. It is the rashi chart - the
-    // chart, not a division of it - and writing `1` in it would make it look like
-    // one of the sixteen rather than the one they all divide.
-    if division <= 1 {
-        // Held off the square by a stroke's width, so the two shapes stay two
-        // shapes. Touching, they merged into one silhouette at 1x.
-        let clearance = weight * CHART_CLEARANCE;
-        let mut diamond = tiny_skia::PathBuilder::new();
-        diamond.move_to(middle, inset + clearance);
-        diamond.line_to(far - clearance, middle);
-        diamond.line_to(middle, far - clearance);
-        diamond.line_to(inset + clearance, middle);
-        diamond.close();
-        pixmap.fill_path(
-            &diamond
-                .finish()
-                .ok_or(RenderError::EmptyPath("chart diamond"))?,
-            &paint,
-            FillRule::Winding,
-            Transform::identity(),
-            None,
-        );
-    } else {
-        // The numeral takes the diamond's place inside D1's own square. Same
-        // frame, same inset, same weight, so a division reads as the same object
-        // as the rashi chart rather than as a different kind of mark.
-        //
-        // A wide rectangle was tried first, for the extra width two digits want.
-        // It is legible and it is the wrong shape: it reads as a tag rather than
-        // as a chart, and the square is the thing that says "chart". What the
-        // square actually needed was not more room but a heavier numeral - the
-        // first attempt drew it in strokes the weight of the frame, which is
-        // thin enough to disappear at 22 points however large the digits are.
-        numerals(&mut pixmap, division, inset, far, weight, &paint)?;
-
-        return Ok(Icon {
-            rgba: pixmap.take(),
+    let mut square = tiny_skia::PathBuilder::new();
+    square.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
+        RenderError::Allocation {
             width: size,
             height: size,
-        });
-    }
+        },
+    )?);
+    pixmap.stroke_path(
+        &square
+            .finish()
+            .ok_or(RenderError::EmptyPath("chart square"))?,
+        &paint,
+        &stroke_of(weight),
+        Transform::identity(),
+        None,
+    );
+
+    // Held off the square by a stroke's width, so the two shapes stay two
+    // shapes. Touching, they merged into one silhouette at 1x.
+    let clearance = weight * CHART_CLEARANCE;
+    let mut diamond = tiny_skia::PathBuilder::new();
+    diamond.move_to(middle, inset + clearance);
+    diamond.line_to(far - clearance, middle);
+    diamond.line_to(middle, far - clearance);
+    diamond.line_to(inset + clearance, middle);
+    diamond.close();
+    pixmap.fill_path(
+        &diamond
+            .finish()
+            .ok_or(RenderError::EmptyPath("chart diamond"))?,
+        &paint,
+        FillRule::Winding,
+        Transform::identity(),
+        None,
+    );
 
     // Half way from each corner to the centre, which is where the diamond's edge
     // is: any further and the stub disappears into the fill.
@@ -289,112 +260,6 @@ pub fn chart_icon(division: u32, scale: u32, tint: Tint) -> Result<Icon, RenderE
         width: size,
         height: size,
     })
-}
-
-/// The division's number, drawn inside the mark.
-///
-/// Seven segments per digit rather than a font. The crate has no text rendering
-/// and no font to embed. At the size this ends up, about six points a digit, a
-/// seven-segment numeral is *more* legible than a typeface would be: it has no
-/// strokes thin enough to disappear and no counters small enough to fill in.
-///
-/// `inset` and `far` are the frame's inside, top and bottom.
-///
-/// Two digits at most, which is all sixteen divisions need.
-fn numerals(
-    pixmap: &mut Pixmap,
-    division: u32,
-    inset: f32,
-    far: f32,
-    weight: f32,
-    paint: &Paint,
-) -> Result<(), RenderError> {
-    let digits: Vec<u32> = if division >= 10 {
-        vec![division / 10, division % 10]
-    } else {
-        vec![division]
-    };
-
-    // Sized to fill the square, which it has to itself: the diamond and the
-    // diagonals are not drawn when a numeral is. Two digits get a narrower cell
-    // each so the pair still fits across the inside.
-    let room = far - inset;
-    // A pair needs to breathe more than it needs to be tall. At 0.72 of the
-    // square the two digits ran into each other and into the frame, and `10`
-    // read as one shape; shorter, with a wider gap, is easier to read even
-    // though it is smaller.
-    let height = room * if digits.len() == 2 { 0.62 } else { 0.72 };
-    let width = if digits.len() == 2 {
-        height * 0.46
-    } else {
-        height * 0.54
-    };
-    let gap = width * if digits.len() == 2 { 0.46 } else { 0.30 };
-    let total = width * digits.len() as f32 + gap * (digits.len() as f32 - 1.0);
-
-    let middle = (inset + far) / 2.0;
-    let top = middle - height / 2.0;
-    let mut left = middle - total / 2.0;
-
-    // Heavier than the frame around it. The frame only has to bound the mark;
-    // the numeral has to be read, and a digit drawn at the frame's own weight is
-    // what was illegible the first time.
-    let stroke = Stroke {
-        width: weight / CHART_WEIGHT * 0.78,
-        line_cap: LineCap::Round,
-        line_join: LineJoin::Round,
-        ..Stroke::default()
-    };
-
-    for digit in digits {
-        let mut path = tiny_skia::PathBuilder::new();
-        let right = left + width;
-        let centre = top + height / 2.0;
-        let bottom = top + height;
-
-        // Segments, clockwise from the top, then the two lower verticals and the
-        // bar across the middle: the order the mask below is written in.
-        let segments: [(f32, f32, f32, f32); 7] = [
-            (left, top, right, top),        // top
-            (right, top, right, centre),    // upper right
-            (right, centre, right, bottom), // lower right
-            (left, bottom, right, bottom),  // bottom
-            (left, centre, left, bottom),   // lower left
-            (left, top, left, centre),      // upper left
-            (left, centre, right, centre),  // middle
-        ];
-
-        // Which segments each numeral lights, in the order above.
-        const MASKS: [[bool; 7]; 10] = [
-            [true, true, true, true, true, true, false],     // 0
-            [false, true, true, false, false, false, false], // 1
-            [true, true, false, true, true, false, true],    // 2
-            [true, true, true, true, false, false, true],    // 3
-            [false, true, true, false, false, true, true],   // 4
-            [true, false, true, true, false, true, true],    // 5
-            [true, false, true, true, true, true, true],     // 6
-            [true, true, true, false, false, false, false],  // 7
-            [true, true, true, true, true, true, true],      // 8
-            [true, true, true, true, false, true, true],     // 9
-        ];
-
-        let mask = MASKS[(digit % 10) as usize];
-        for (lit, (x0, y0, x1, y1)) in mask.into_iter().zip(segments) {
-            if !lit {
-                continue;
-            }
-            path.move_to(x0, y0);
-            path.line_to(x1, y1);
-        }
-
-        if let Some(path) = path.finish() {
-            pixmap.stroke_path(&path, paint, &stroke, Transform::identity(), None);
-        }
-
-        left = right + gap;
-    }
-
-    Ok(())
 }
 
 /// Clearance between the chart mark and the edge of its slot.

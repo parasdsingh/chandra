@@ -193,14 +193,33 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
         let Some(item) = app.tray_by_id(&chart_id(varga)) else {
             continue;
         };
-        // The division is drawn into the mark. Several charts can be in the row
-        // at once and they are otherwise the same shape, so without the number
-        // the reader has a line of identical icons and no way to tell which is
-        // which but to hover each one.
-        let icon = chart_icon(varga.division(), ICON_SCALE, tint)
-            .map_err(|e| AppError::Engine(format!("cannot draw the chart icon: {e}")))?;
-        item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
-            .map_err(|e| AppError::Engine(format!("cannot set the chart icon: {e}")))?;
+        // D1 draws the kundali mark. Every other division is *text* - macOS sets
+        // a status item's title in the menu bar's own font, at the menu bar's own
+        // size, and inverts it with the appearance for free.
+        //
+        // Which is what the hand-drawn numerals were badly imitating. They were
+        // seven-segment shapes because this crate has no text rendering and no
+        // font to embed - but the crate never needed one: the platform draws
+        // text in the menu bar already, and the clock is 119 points of it.
+        //
+        // Lowercase, which is narrower than capitals and still unambiguous
+        // beside a row of glyphs.
+        if varga == Varga::D1 {
+            let icon = chart_icon(ICON_SCALE, tint)
+                .map_err(|e| AppError::Engine(format!("cannot draw the chart icon: {e}")))?;
+            item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
+                .map_err(|e| AppError::Engine(format!("cannot set the chart icon: {e}")))?;
+            item.set_title(None::<&str>)
+                .map_err(|e| AppError::Engine(format!("cannot clear the chart title: {e}")))?;
+        } else {
+            // Both, in this order. An item that has carried an icon keeps it
+            // until it is given `None`, so a division switched on after D1 would
+            // otherwise show a mark and a title at once.
+            item.set_icon(None)
+                .map_err(|e| AppError::Engine(format!("cannot clear the chart icon: {e}")))?;
+            item.set_title(Some(varga.key()))
+                .map_err(|e| AppError::Engine(format!("cannot set the chart title: {e}")))?;
+        }
         // The tooltip is rebuilt on hover, which is what makes the lagna in it
         // current to the second. This is the text before the first hover.
         item.set_tooltip(Some(varga.label()))

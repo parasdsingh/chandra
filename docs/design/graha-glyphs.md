@@ -1,5 +1,16 @@
 # Graha glyphs: drawing the bodies instead of their symbols
 
+> **Not adopted.** The bodies keep their astrological symbols. Kept for the
+> measurement — a depicted planet is a circle plus an interior feature, and
+> interior features do not survive being made small — and so the next person to
+> propose this starts from the numbers rather than from the idea.
+>
+> A second pass drew Mars with polar caps, Mercury with craters, Jupiter with
+> belts and the spot, Venus with streaks on the *diagonal* and Saturn with its
+> rings, which is a stronger set than the one measured below: orientation is not
+> fine detail, and Venus as a featureless disc is what collapsed the original
+> comparison. That pass was not measured, because the change was dropped first.
+
 Status: **design and measurement.** Nothing here is built. §2 is the recommendation; §10 is
 what would have to be edited if it is accepted.
 
