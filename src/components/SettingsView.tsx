@@ -140,13 +140,15 @@ function Root(props: {
       // different divisions are reading different charts; the reverse is the
       // same chart drawn two ways.
       value: () =>
-        props.boot.vargas.find((v) => v.key === settings().chart.varga)?.label ??
-        "",
+        props.boot.vargas.find((v) => v.key === settings().chart.varga)
+          ?.label ?? "",
     },
     {
       id: "menubar",
       value: () =>
-        trayCount() === 0 ? "Chart only" : `${trayCount()} calendar${trayCount() === 1 ? "" : "s"}`,
+        trayCount() === 0
+          ? "Chart only"
+          : `${trayCount()} calendar${trayCount() === 1 ? "" : "s"}`,
     },
     { id: "size", value: () => sizeLabel(settings().appearance.scale) },
     { id: "advanced", value: () => "" },
@@ -442,6 +444,60 @@ export function placeFromCity(settings: Settings, city: City): Settings {
 
 function Location(props: SectionProps): JSX.Element {
   const [locating, setLocating] = createSignal(false);
+
+  // `undefined` until the field is touched, so the inputs show the location in
+  // force rather than an empty box, and stop showing it the moment the user
+  // starts typing their own.
+  const [typedLatitude, setTypedLatitude] = createSignal<string | undefined>();
+  const [typedLongitude, setTypedLongitude] = createSignal<
+    string | undefined
+  >();
+  const [coordinateError, setCoordinateError] = createSignal<string>();
+
+  async function applyCoordinates() {
+    const latitude = Number(typedLatitude() ?? props.boot.location.latitude);
+    const longitude = Number(typedLongitude() ?? props.boot.location.longitude);
+
+    // Both, or neither. Rejecting rather than clamping: a latitude of 91 is a
+    // typing mistake and not a request to stand at the pole, and silently
+    // moving somebody 1° is worse than telling them.
+    const valid =
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      Math.abs(latitude) <= 90 &&
+      Math.abs(longitude) <= 180;
+    if (!valid) {
+      setCoordinateError("Latitude runs −90 to 90 and longitude −180 to 180.");
+      return;
+    }
+    setCoordinateError(undefined);
+
+    // The nearest city names the point. Only names it: the zone in force is
+    // kept, because no precision recovers a political boundary from a point
+    // (D-031). `null` means the coordinates were not on the globe, which the
+    // check above has already excluded, so the fallback is for safety only.
+    const nearest = await ipc
+      .nearestCity(latitude, longitude)
+      .catch(() => null);
+
+    props.apply({
+      ...settings(),
+      location: {
+        ...settings().location,
+        mode: "manual",
+        place: {
+          label: nearest?.city ?? props.boot.location.label,
+          zone: props.boot.location.zone,
+          latitude,
+          longitude,
+          // The coordinates are the user's; the height is not something they
+          // implied by typing them. The nearest city's would be a guess about a
+          // place they have just said they are not in.
+          elevation: null,
+        },
+      },
+    });
+  }
   const [searching, setSearching] = createSignal(false);
   const settings = () => props.boot.settings;
 
@@ -501,6 +557,47 @@ function Location(props: SectionProps): JSX.Element {
             }}
           />
         </div>
+
+        {/* Coordinates typed by hand: the last resort for somewhere no dataset
+            has, and the only way to be exact. 34,129 cities is a great many more
+            than 448, and it is still every place over 15,000 people - a village
+            is not in it, and somebody living in one has no other way to say so.
+
+            Applied only when both fields parse and both are on the globe. A
+            half-typed latitude is not a location, and writing one as it is typed
+            would move the observer to the equator between keystrokes.
+
+            The zone is not touched. A zone boundary is political and is not
+            recoverable from a point (D-031), so these coordinates keep whatever
+            zone is already in force; only the name comes from the nearest city,
+            which is a label and nothing more. */}
+        <div class="settings__row">
+          <span class="settings__label">Coordinates</span>
+          <input
+            class="settings__number"
+            type="number"
+            step="0.0001"
+            placeholder="latitude"
+            aria-label="Latitude, degrees north"
+            value={typedLatitude() ?? props.boot.location.latitude.toFixed(4)}
+            onInput={(event) => setTypedLatitude(event.currentTarget.value)}
+            onChange={() => applyCoordinates()}
+          />
+          <input
+            class="settings__number"
+            type="number"
+            step="0.0001"
+            placeholder="longitude"
+            aria-label="Longitude, degrees east"
+            value={typedLongitude() ?? props.boot.location.longitude.toFixed(4)}
+            onInput={(event) => setTypedLongitude(event.currentTarget.value)}
+            onChange={() => applyCoordinates()}
+          />
+        </div>
+
+        <Show when={coordinateError()}>
+          {(problem) => <p class="settings__empty">{problem()}</p>}
+        </Show>
 
         <div class="settings__actions">
           {/* Not offered while a chosen location is in force. A manual override

@@ -231,12 +231,41 @@ amount of care in `swe_houses_ex` recovers that.
 
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 5.1 | Decide the dataset | queued | GeoNames `cities15000` as D-007 says (~25k, ~2 MB), or `cities5000` (~50k). Both CC-BY, both offline |
-| 5.2 | Bundle it, and record the attribution | queued | CC-BY needs the credit shown somewhere. The About pane |
-| 5.3 | Search that scales to 25k | queued | The current linear scan over 418 is fine; over 25k with a per-keystroke debounce it needs measuring |
-| 5.4 | Keep the timezone table as the fallback | queued | It is what makes the app work before a location is chosen, and D-007's step 3 |
-| 5.5 | Coordinates entered by hand | queued | The last resort for somewhere no dataset has. Also the only way to be exact |
-| 5.6 | Amend D-007 | queued | It describes a dataset the app has never had. That is the part that should not have survived this long |
+| 5.1 | ~~Decide the dataset~~ | done | `cities15000`, as D-007 said. 34,129 places, not the ~25k it estimated |
+| 5.2 | ~~Bundle it, and record the attribution~~ | done | `tools/geonames.sh` and `make geonames`. Credit in the About pane and in `data/NOTICE` |
+| 5.3 | ~~Search that scales~~ | done | Measured, and it needed the work: the first keystroke blocked for ~850 ms on a linear region lookup, and every keystroke after allocated tens of thousands of strings. Maps and precomputed folds. A budget test pins it |
+| 5.4 | ~~Keep the timezone table as the fallback~~ | done | And in the search corpus: 62 zones have no city over 15,000 people, so searching cities alone made them unreachable |
+| 5.5 | ~~Coordinates entered by hand~~ | done | Rejected rather than clamped when off the globe. The nearest city names the point; the zone in force is kept, because no precision recovers a political boundary from one |
+| 5.6 | ~~Amend D-007~~ | done | **D-031**. Also corrected three documents naming a `zone1970.tab` the app has never shipped |
+
+---
+
+## E6. The animated lagna, and the divisional charts
+
+Specification: **`docs/design/vargas.md`** for the divisions. The animation has
+none yet.
+
+### E6 tasks
+
+| # | Task | Status | Notes |
+|---|---|---|---|
+| 6.1 | ~~Research every varga rule, cited~~ | done | All sixteen, each corroborated against two sources, with worked examples a test is written from. Ten disagreements collected and left unresolved; fifteen gaps marked unverified rather than filled |
+| 6.2 | ~~Settle the three that needed a decision~~ | done | **D-032**. D2 Cancer–Leo, D30 the classical unequal split, D27 the translator's element rule. One scheme, no variant setting |
+| 6.3 | ~~D1, D3, D7, D9, D12~~ | done | `crates/almanac/src/varga.rs`. Schema 10 carries the choice; the caption names the scheme on hover |
+| 6.4 | The other eleven | ready | D2 and D30 need their own shapes - D2 occupies two signs, D30 is the one unequal division. The rest are the same arithmetic with a different multiplier |
+| 6.5 | Graha placement by degree within the sign | queued | Moved here from E1. It is the animation's own mapping, so solving it separately would be solving it twice |
+| 6.6 | The animation | queued | Rashi names drifting across a compartment, handing over as the lagna crosses. Needs a specification before anything is built |
+
+**Measured, for 6.6.** One chart costs 47 µs (`bench_chakra`), so recomputing at
+10 Hz is 0.047% of one core. Interpolating between fetches would buy nothing and
+would mean drawing a lagna the app never computed. Gated on the panel being
+open, and a toggle in Advanced, on by default.
+
+**A drawing constraint the research turned up.** Rahu and Ketu land in the *same*
+rashi in D2, D16, D20, D24, D30, D40 and D45, because a sign and the sign
+opposite share both parity and movable/fixed/dual class. D2 puts all nine bodies
+into two signs. The eight-in-one-compartment case the harness draws is not the
+ceiling once those ship.
 
 ---
 
