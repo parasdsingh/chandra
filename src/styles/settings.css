@@ -252,22 +252,13 @@
    first two: `D30` does not fit the 18px a glyph needs, and `Chaturvimsamsa` is
    twice the length of `Mangala`. */
 .settings__toggle--division {
-  grid-template-columns: 30px 96px 1fr 26px;
+  grid-template-columns: 34px 1fr 26px;
 }
 
 .settings__division {
   font: var(--type-caption);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-}
-
-/* The purpose truncates rather than wrapping. It is the least important thing
-   in the row and the only one that can be long; wrapping it would make some
-   rows two lines tall and the list stop scanning. */
-.settings__hint--clipped {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .settings__toggle-name {

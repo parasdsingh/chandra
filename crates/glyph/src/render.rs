@@ -202,7 +202,7 @@ pub fn chart_icon(division: u32, scale: u32, tint: Tint) -> Result<Icon, RenderE
     let far = size as f32 - inset;
     let middle = size as f32 / 2.0;
 
-    if division <= 1 {
+    {
         let mut square = tiny_skia::PathBuilder::new();
         square.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
             RenderError::Allocation {
@@ -248,51 +248,18 @@ pub fn chart_icon(division: u32, scale: u32, tint: Tint) -> Result<Icon, RenderE
             None,
         );
     } else {
-        // A frame around it, and a wide one.
+        // The numeral takes the diamond's place inside D1's own square. Same
+        // frame, same inset, same weight, so a division reads as the same object
+        // as the rashi chart rather than as a different kind of mark.
         //
-        // Without a frame the mark is a bare number, which in a menu bar reads
-        // as a count of something rather than as an icon. With the *square*
-        // frame it started with, the digits came out about four points wide and
-        // could not be read at all - a square spends width on height that two
-        // digits do not need. This one is as wide as the slot and only as tall
-        // as the digits, so it costs almost no width and still says "a mark".
-        //
-        // `D9` inside it was tried and does not fit: at this size the `1` of
-        // `D12` merges into the `D` and the pair reads as `D2`. The letter is in
-        // the tooltip, the panel's title and the settings list, each of which
-        // has room for it.
-        let tag_x = size as f32 * 0.05;
-        let tag_y = size as f32 * 0.22;
-        let mut tag = tiny_skia::PathBuilder::new();
-        tag.push_rect(
-            tiny_skia::Rect::from_xywh(
-                tag_x,
-                tag_y,
-                size as f32 - tag_x * 2.0,
-                size as f32 - tag_y * 2.0,
-            )
-            .ok_or(RenderError::EmptyPath("chart tag"))?,
-        );
-        pixmap.stroke_path(
-            &tag.finish().ok_or(RenderError::EmptyPath("chart tag"))?,
-            &paint,
-            &stroke_of(weight * 0.7),
-            Transform::identity(),
-            None,
-        );
+        // A wide rectangle was tried first, for the extra width two digits want.
+        // It is legible and it is the wrong shape: it reads as a tag rather than
+        // as a chart, and the square is the thing that says "chart". What the
+        // square actually needed was not more room but a heavier numeral - the
+        // first attempt drew it in strokes the weight of the frame, which is
+        // thin enough to disappear at 22 points however large the digits are.
+        numerals(&mut pixmap, division, inset, far, weight, &paint)?;
 
-        numerals(
-            &mut pixmap,
-            division,
-            tag_y,
-            size as f32 - tag_y,
-            weight,
-            &paint,
-        )?;
-        // No diagonals under a numeral. They exist to stop the diamond reading as
-        // a lozenge in a box, and a number needs no such help - while four
-        // strokes reaching into the middle of a 44 pixel square turn two digits
-        // into a smudge. Tried, and it did.
         return Ok(Icon {
             rgba: pixmap.take(),
             width: size,
@@ -348,27 +315,32 @@ fn numerals(
         vec![division]
     };
 
-    // Sized to the frame's inside height, which is what limits it: the frame is
-    // as wide as the slot, so width is not the constraint here and two digits
-    // still get a cell each.
+    // Sized to fill the square, which it has to itself: the diamond and the
+    // diagonals are not drawn when a numeral is. Two digits get a narrower cell
+    // each so the pair still fits across the inside.
     let room = far - inset;
-    let height = room * 0.56;
+    // A pair needs to breathe more than it needs to be tall. At 0.72 of the
+    // square the two digits ran into each other and into the frame, and `10`
+    // read as one shape; shorter, with a wider gap, is easier to read even
+    // though it is smaller.
+    let height = room * if digits.len() == 2 { 0.62 } else { 0.72 };
     let width = if digits.len() == 2 {
-        height * 0.56
+        height * 0.46
     } else {
-        height * 0.64
+        height * 0.54
     };
-    let gap = width * 0.36;
+    let gap = width * if digits.len() == 2 { 0.46 } else { 0.30 };
     let total = width * digits.len() as f32 + gap * (digits.len() as f32 - 1.0);
 
     let middle = (inset + far) / 2.0;
     let top = middle - height / 2.0;
     let mut left = middle - total / 2.0;
 
-    // Full weight rather than the frame's reduced one. A thin seven-segment
-    // numeral inside a frame is exactly what was illegible the first time.
+    // Heavier than the frame around it. The frame only has to bound the mark;
+    // the numeral has to be read, and a digit drawn at the frame's own weight is
+    // what was illegible the first time.
     let stroke = Stroke {
-        width: weight / CHART_WEIGHT * 0.72,
+        width: weight / CHART_WEIGHT * 0.78,
         line_cap: LineCap::Round,
         line_join: LineJoin::Round,
         ..Stroke::default()

@@ -57,10 +57,9 @@ pub struct Choice {
 
 /// A divisional chart, as the front end needs it.
 ///
-/// More than a `Choice` because three surfaces need different parts: the menu
-/// bar draws the number, the panel's title names the division, and the settings
-/// list says what each is read for - which is what makes sixteen numbered rows
-/// choosable rather than a wall of them.
+/// More than a `Choice` because three surfaces need different parts of it: the
+/// menu bar draws the number, the panel's title names the division, and the
+/// settings list shows both.
 #[derive(Debug, Serialize)]
 pub struct VargaInfo {
     pub key: &'static str,
@@ -70,8 +69,6 @@ pub struct VargaInfo {
     pub name: &'static str,
     /// The number in the name, which is what the menu bar icon draws.
     pub division: u32,
-    /// What the division is read for, per BPHS ch. 7 vv. 1-8.
-    pub reads: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -139,7 +136,6 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
                 label: v.label(),
                 name: v.name(),
                 division: v.division(),
-                reads: v.reads(),
             })
             .collect(),
     })

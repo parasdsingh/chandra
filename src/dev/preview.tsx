@@ -115,10 +115,10 @@ const boot: Bootstrap = {
   // sixteen: the settings pane is what draws them, and it draws whatever this
   // list holds.
   vargas: [
-    { key: "d1", label: "D1 · Rashi", name: "Rashi", division: 1, reads: "the physique" },
-    { key: "d2", label: "D2 · Hora", name: "Hora", division: 2, reads: "wealth" },
-    { key: "d9", label: "D9 · Navamsa", name: "Navamsa", division: 9, reads: "the spouse" },
-    { key: "d30", label: "D30 · Trimsamsa", name: "Trimsamsa", division: 30, reads: "evils" },
+    { key: "d1", label: "D1 · Rashi", name: "Rashi", division: 1 },
+    { key: "d2", label: "D2 · Hora", name: "Hora", division: 2 },
+    { key: "d9", label: "D9 · Navamsa", name: "Navamsa", division: 9 },
+    { key: "d30", label: "D30 · Trimsamsa", name: "Trimsamsa", division: 30 },
   ] as const,
 };
 

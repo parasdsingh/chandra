@@ -793,22 +793,12 @@ function Chart(props: SectionProps): JSX.Element {
                 });
               }}
             >
-              {/* Four cells, the same four the graha rows use: a mark, a name,
-                  what it is, and the switch. `D9` takes the glyph's place, which
-                  is what makes the two lists read as one kind of thing. The row
-                  carried three children against a four-column grid before, so
-                  everything slid one column left and the switch landed in the
-                  hint's place. */}
-              <span class="settings__division">
-                D{choice.division}
-              </span>
+              {/* The number, the name, the switch. What each division is read
+                  for was here too and is gone: sixteen rows each carrying a
+                  phrase is a paragraph to scan rather than a list, and the names
+                  are what a reader picks by. */}
+              <span class="settings__division">D{choice.division}</span>
               <span class="settings__toggle-name">{choice.name}</span>
-              {/* What the division is read for, cited to BPHS ch. 7 vv. 1-8.
-                  Sixteen numbered rows is a wall a reader cannot choose from;
-                  this is the classical answer to "which one do I want". */}
-              <span class="settings__hint settings__hint--clipped">
-                {choice.reads}
-              </span>
               <span class="settings__switch" aria-hidden="true" />
             </button>
           );

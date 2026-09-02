@@ -588,8 +588,6 @@ export interface VargaInfo {
   name: string;
   /** The number in the name, which is what the menu bar icon draws. */
   division: number;
-  /** What the division is read for, per BPHS ch. 7 vv. 1–8. */
-  reads: string;
 }
 
 export interface City {

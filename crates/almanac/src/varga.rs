@@ -159,36 +159,6 @@ impl Varga {
         }
     }
 
-    /// What the division is read for.
-    ///
-    /// BPHS ch. 7 vv. 1-8 (Santhanam), via `docs/design/vargas.md` §2. Carried
-    /// because a settings list of sixteen numbered charts tells a reader nothing
-    /// about which they want, and this is the classical answer to that question.
-    ///
-    /// D45 and D60 are both given as general indications by the source, and both
-    /// are written so here rather than one of them being given something more
-    /// specific to tell them apart.
-    pub const fn reads(self) -> &'static str {
-        match self {
-            Varga::D1 => "the physique",
-            Varga::D2 => "wealth",
-            Varga::D3 => "happiness through coborn",
-            Varga::D4 => "fortunes",
-            Varga::D7 => "sons and grandsons",
-            Varga::D9 => "the spouse",
-            Varga::D10 => "power and position",
-            Varga::D12 => "parents",
-            Varga::D16 => "conveyances",
-            Varga::D20 => "worship, spiritual progress",
-            Varga::D24 => "learning",
-            Varga::D27 => "strength and weakness",
-            Varga::D30 => "evils",
-            Varga::D40 => "auspicious and inauspicious effects",
-            Varga::D45 => "all general indications",
-            Varga::D60 => "all general indications",
-        }
-    }
-
     /// The division's own name, without its number.
     pub const fn name(self) -> &'static str {
         match self {
