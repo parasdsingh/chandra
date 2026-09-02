@@ -4,6 +4,7 @@
 use std::sync::mpsc;
 use std::time::Duration;
 
+use chandra_almanac::varga::Varga;
 use chandra_ephemeris::Graha;
 use tauri::{
     AppHandle, Emitter, LogicalPosition, Manager, Rect, WebviewUrl, WebviewWindow,
@@ -370,16 +371,24 @@ pub async fn request_device_location(app: &AppHandle) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Subject {
     Graha(Graha),
-    /// The Lagna Kundali. Its own status item, and its own panel.
-    Chart,
+    /// A Lagna Kundali in one division. Its own status item, and its own panel.
+    ///
+    /// Carries the division rather than reading it from settings, because
+    /// several can be in the menu bar at once: the item that was clicked is the
+    /// only thing that says which chart to open.
+    Chart(Varga),
 }
 
 impl Subject {
-    /// The key the front end switches on: a graha's own key, or `chart`.
-    pub fn key(self) -> &'static str {
+    /// The key the front end switches on: a graha's own key, or `chart:d9`.
+    ///
+    /// Prefixed rather than bare, so `chart:` names the kind and what follows
+    /// names the division. A bare `d9` would collide with nothing today and read
+    /// as a graha key tomorrow.
+    pub fn key(self) -> String {
         match self {
-            Subject::Graha(graha) => graha.key(),
-            Subject::Chart => "chart",
+            Subject::Graha(graha) => graha.key().to_string(),
+            Subject::Chart(varga) => format!("chart:{}", varga.key()),
         }
     }
 }

@@ -8,6 +8,7 @@ use chandra_almanac::chakra::Chakra;
 use chandra_almanac::lunar::MonthSystem;
 use chandra_almanac::month::{DayDetail, GrahaMonth, MonthIndex, MoonMonth};
 use chandra_almanac::time::DateKey;
+use chandra_almanac::varga::Varga;
 use chandra_almanac::Snapshot;
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType};
 use serde::Serialize;
@@ -231,12 +232,19 @@ pub async fn day_detail(
 /// one, and a command that read its own clock could not be asked for the same
 /// moment twice.
 #[tauri::command]
-pub async fn chakra(app: AppHandle, unix_ms: i64) -> Result<Chakra> {
+pub async fn chakra(app: AppHandle, unix_ms: i64, varga: String) -> Result<Chakra> {
     blocking(app, move |state| {
         // The label comes from the resolution chain, which is the only layer
         // that knows what the coordinates are called.
         let place = state.location().label;
-        let varga = state.settings().chart.varga;
+        // Named by the caller, because several charts can be open in turn and the
+        // panel knows which item was clicked. An unknown key is the rashi chart:
+        // a division the back end does not have is a front end out of step, and
+        // the chart it has always drawn is the safe answer.
+        let varga = Varga::ALL
+            .into_iter()
+            .find(|v| v.key() == varga)
+            .unwrap_or(Varga::D1);
         state
             .almanac
             .chakra(unix_ms, &place, varga)

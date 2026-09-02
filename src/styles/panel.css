@@ -110,6 +110,14 @@
    absent on settings and behind the gate, and the column still holds its 24px.
    That makes centring the text the same axis the caption under the chart is
    centred on, so a title and its subtitle finally share one. */
+/* The division's number, inside the chart mark. Small caps-height digits that
+   read as part of the frame rather than as a label on it: the mark is 16px and
+   the numeral has to live inside a 12px square without touching its walls. */
+.header__division {
+  font: 600 8px / 1 var(--font-stack);
+  letter-spacing: -0.3px;
+}
+
 .header__label {
   font: var(--type-title);
   letter-spacing: var(--track-title);

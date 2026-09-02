@@ -252,7 +252,8 @@ none yet.
 | 6.1 | ~~Research every varga rule, cited~~ | done | All sixteen, each corroborated against two sources, with worked examples a test is written from. Ten disagreements collected and left unresolved; fifteen gaps marked unverified rather than filled |
 | 6.2 | ~~Settle the three that needed a decision~~ | done | **D-032**. D2 Cancer–Leo, D30 the classical unequal split, D27 the translator's element rule. One scheme, no variant setting |
 | 6.3 | ~~D1, D3, D7, D9, D12~~ | done | `crates/almanac/src/varga.rs`. Schema 10 carries the choice; the caption names the scheme on hover |
-| 6.4 | The other eleven | ready | D2 and D30 need their own shapes - D2 occupies two signs, D30 is the one unequal division. The rest are the same arithmetic with a different multiplier |
+| 6.4 | ~~The other eleven~~ | done | All sixteen. D2 and D30 have their own shapes as expected; the other nine are the same arithmetic with a different multiplier. 95 worked examples from the specification, plus the occupancy property (D2 reaches 2 signs, D30 reaches 10 and never Karka or Simha) and the node property (together in seven divisions, opposite in nine) |
+| 6.4a | ~~Several divisions at once~~ | done | **D-033.** Each is a switch with its own status item, its own panel and its own numbered icon. Crowded compartments set smaller type, which D2 forced: it puts eight bodies in one compartment every day |
 | 6.5 | Graha placement by degree within the sign | queued | Moved here from E1. It is the animation's own mapping, so solving it separately would be solving it twice |
 | 6.6 | The animation | queued | Rashi names drifting across a compartment, handing over as the lagna crosses. Needs a specification before anything is built |
 

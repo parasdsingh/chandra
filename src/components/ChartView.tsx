@@ -124,16 +124,27 @@ function provenance(chart: ChakraData): string {
   const division =
     chart.varga === "d1"
       ? "Rashi chart (D1)"
-      : `${VARGA_NAMES[chart.varga]} (${chart.varga.toUpperCase()})`;
+      : `${VARGA_NAMES[chart.varga] ?? "Division"} (${chart.varga.toUpperCase()})`;
   return `${division} · ${chart.scheme} scheme`;
 }
 
 const VARGA_NAMES: Record<string, string> = {
   d1: "Rashi",
+  d2: "Hora",
   d3: "Drekkana",
+  d4: "Chaturthamsa",
   d7: "Saptamsa",
   d9: "Navamsa",
+  d10: "Dasamsa",
   d12: "Dwadasamsa",
+  d16: "Shodasamsa",
+  d20: "Vimsamsa",
+  d24: "Chaturvimsamsa",
+  d27: "Bhamsa",
+  d30: "Trimsamsa",
+  d40: "Khavedamsa",
+  d45: "Akshavedamsa",
+  d60: "Shashtiamsa",
 };
 
 /** Characters that fit the caption's 288px line at 10px uppercase.

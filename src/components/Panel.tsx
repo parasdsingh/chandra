@@ -32,6 +32,7 @@ import type {
   MoonMonth,
   Settings,
   Snapshot,
+  VargaKey,
 } from "../ipc/types";
 import { isAppError } from "../ipc/types";
 import { addDays, noonAnchor, sameDate, todayIn } from "../lib/calendar";
@@ -66,11 +67,18 @@ export function Panel(props: Props): JSX.Element {
    * left open overnight ringing yesterday.
    */
   const [subject, setSubject] = createSignal<GrahaKey>(
-    // `chart` is not a graha. The chart borrows the moon's calendar for the
+    // A chart key is not a graha. The chart borrows the moon's calendar for the
     // views behind it, which is the one subject always present.
-    props.boot.subject === "chart"
+    vargaFromKey(props.boot.subject)
       ? "chandra"
       : (props.boot.subject as GrahaKey),
+  );
+
+  // Which division the chart shows. It comes from the item that was clicked and
+  // not from settings: several charts sit in the menu bar at once, so a setting
+  // would give every one of them the same answer.
+  const [varga, setVarga] = createSignal<VargaKey>(
+    vargaFromKey(props.boot.subject) ?? "d1",
   );
   const [today, setToday] = createSignal<DateKey>(
     todayIn(props.boot.location.zone),
@@ -83,9 +91,10 @@ export function Panel(props: Props): JSX.Element {
   );
   const [offset, setOffset] = createSignal(0);
   const [view, setView] = createSignal<View>(
-    // The chart has its own status item, so the panel can be opened straight
-    // onto it. `subject` is a graha key or `chart`; only the second is a view.
-    props.boot.subject === "chart" ? "chart" : "calendar",
+    // Each division has its own status item, so the panel can be opened straight
+    // onto one. `subject` is a graha key or a `chart:` key; only the second is a
+    // view.
+    vargaFromKey(props.boot.subject) ? "chart" : "calendar",
   );
 
   /**
@@ -104,8 +113,10 @@ export function Panel(props: Props): JSX.Element {
 
   const [chart] = createResource(
     () =>
-      view() === "chart" && locationIsSet(props.boot) ? chartAt() : undefined,
-    (at) => ipc.chakra(at),
+      view() === "chart" && locationIsSet(props.boot)
+        ? ([chartAt(), varga()] as const)
+        : undefined,
+    ([at, division]) => ipc.chakra(at, division),
   );
   const [section, setSection] = createSignal<SettingsSection>("root");
   /** Where settings was opened from, so closing it goes back there rather than
@@ -589,11 +600,13 @@ export function Panel(props: Props): JSX.Element {
    * subject sent `chart` to `graha_month`, which refused it - the panel opened
    * on an error every time its own item was clicked.
    */
-  function open(next: GrahaKey | "chart") {
-    const chart = next === "chart";
+  function open(next: string) {
+    const division = vargaFromKey(next);
+    const chart = division !== undefined;
     const now = todayIn(props.boot.location.zone);
     batch(() => {
-      setSubject(chart ? "chandra" : next);
+      if (division) setVarga(division);
+      setSubject(chart ? "chandra" : (next as GrahaKey));
       setToday(now);
       setAnchor(noonAnchor(now, timeZone()));
       setOffset(0);
@@ -621,7 +634,7 @@ export function Panel(props: Props): JSX.Element {
     onCleanup(() => window.removeEventListener("keydown", listener));
 
     const opened = listen<string>("chandra://open", (event) =>
-      open(event.payload as GrahaKey | "chart"),
+      open(event.payload as string),
     );
     onCleanup(() => void opened.then((unlisten) => unlisten()));
   });
@@ -688,6 +701,7 @@ export function Panel(props: Props): JSX.Element {
             else: there is no month to title, and a settings gear would offer a
             way round the one thing the app is insisting on. */}
         <Header
+          division={Number(varga().slice(1))}
           subject={subject()}
           subjectName={grahaInfo()?.name ?? "Chandra"}
           info={grahaInfo()}
@@ -861,6 +875,15 @@ const SETTINGS_PARENT: Partial<Record<SettingsSection, SettingsSection>> = {
   ingress: "advanced",
   compartments: "advanced",
 };
+
+/** The division a tray key names, or `undefined` if the key is a graha's.
+ *
+ *  `chart:d9`. Prefixed so the kind is readable without a lookup table, and so a
+ *  bare `d9` can never be mistaken for a graha key. */
+function vargaFromKey(key: string): VargaKey | undefined {
+  const division = key.startsWith("chart:") ? key.slice("chart:".length) : null;
+  return division ? (division as VargaKey) : undefined;
+}
 
 function toError(thrown: unknown): { code: string; message: string } {
   if (isAppError(thrown)) return { code: thrown.code, message: thrown.message };

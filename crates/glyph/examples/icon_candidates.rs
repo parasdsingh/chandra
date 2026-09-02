@@ -59,6 +59,10 @@ fn halved(source: &Pixmap) -> Pixmap {
     out
 }
 
+/// Every division that gets a menu bar item, so the sheet shows what a row of
+/// them actually looks like beside each other.
+const DIVISIONS: [u32; 16] = [1, 2, 3, 4, 7, 9, 10, 12, 16, 20, 24, 27, 30, 40, 45, 60];
+
 fn main() {
     // The first argument that is not a flag. Taking `nth(1)` blindly meant
     // running this with `--halved` and no path wrote a PNG named `--halved` into
@@ -75,10 +79,17 @@ fn main() {
 
     let mut plates: Vec<(String, Pixmap)> = Vec::new();
 
-    plates.push((
-        "chart".into(),
-        from_icon(chart_icon(SCALE, tint).expect("chart")),
-    ));
+    for division in DIVISIONS {
+        plates.push((
+            format!("D{division}"),
+            from_icon(chart_icon(division, SCALE, tint).expect("chart")),
+        ));
+    }
+    if std::env::args().any(|a| a == "--charts") {
+        render(&out, plates);
+        return;
+    }
+
     plates.push((
         "moon".into(),
         from_icon(moon_icon(0.35, true, false, SCALE, tint).expect("moon")),
@@ -148,6 +159,10 @@ fn main() {
         return;
     }
 
+    render(&out, plates);
+}
+
+fn render(out: &str, plates: Vec<(String, Pixmap)>) {
     let cell = SLOT * SCALE * ZOOM;
     let gap = 8;
     let mut sheet = Pixmap::new(
@@ -185,6 +200,6 @@ fn main() {
         }
     }
 
-    sheet.save_png(&out).expect("write png");
+    sheet.save_png(out).expect("write png");
     println!("wrote {out}");
 }

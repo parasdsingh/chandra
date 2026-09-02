@@ -36,7 +36,8 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-029](#d-029) | A location is required before the app will draw anything | accepted, amends D-007 |
 | [D-030](#d-030) | The chart is the permanent status item; every calendar is toggleable | accepted, amends D-009 |
 | [D-031](#d-031) | Two location tables: GeoNames for places, the tz table for zones | accepted, amends D-007 |
-| [D-032](#d-032) | One varga scheme, Parashari, named on the chart | accepted |
+| [D-032](#d-032) | One varga scheme, Parashari, named on the chart | accepted, amended by D-033 |
+| [D-033](#d-033) | Divisions are switches, not a choice: several charts at once | accepted, amends D-032 |
 
 ---
 
@@ -709,3 +710,42 @@ provenance lives.
 searched for specifically: no classical text addresses the nodes in vargas at all, and four
 independent implementations have no node branch in any varga function. A node reversal is exactly
 the kind of rule that sounds plausible enough to write without a source.
+
+
+---
+
+### D-033
+**Every division is a switch, and several charts sit in the menu bar at once.**
+
+Amends D-032, which gave the chart one division at a time.
+
+A practitioner reads D1 and D9 **together**. Switching between them to compare is not reading them
+together — it is reading one, remembering it, and reading the other. So a division is not a choice
+between charts; it is a chart, and it gets what every other chart in this app gets: its own status
+item, its own panel, and its own switch.
+
+**D1 has no switch.** It is the rashi chart, the one D-030 made permanent, and the chart the other
+fifteen are divisions *of*. `chart_vargas` forces it in, so a hand-edited settings file cannot
+leave the menu bar with no chart at all.
+
+**The item carries the division, not a setting.** `Subject::Chart(Varga)` and a `chart:d9` tray
+key. Reading it from settings would have given every item in the row the same answer, which is
+the one thing the change exists to prevent.
+
+**The icons carry a number.** Sixteen charts of the same shape are sixteen identical marks, and a
+row of those can only be told apart by hovering each one. D1 keeps its solid diamond — it is the
+chart, not a division of it, and writing `1` in it would make it look like one of the sixteen. The
+rest carry their number, drawn as seven segments rather than set in a typeface: the crate has no
+text rendering, and at six points a segment numeral has no stroke thin enough to vanish and no
+counter small enough to fill in. The diagonals are dropped where a numeral is drawn, because four
+strokes reaching into the middle of a 44-pixel square turn two digits into a smudge.
+
+**A crowded compartment is set in smaller type.** This is what forced it: **D2 puts all nine bodies
+into Karka and Simha**, so one compartment routinely holds eight — and unlike a grand conjunction,
+every chart looks like that in the hora. At full size those eight came out at a 4.1-unit row pitch
+against a 12.6-unit label, stacked threefold. The type now steps down to 86%, 74% and 62% of 11px
+until an arrangement fits, which is what a printed chart does. Overlapping type in a division that
+is crowded *every day* is not a degraded state; it is a broken feature.
+
+Schema 11 carries the set. A file naming one division keeps it, with D1 added if it was something
+else.

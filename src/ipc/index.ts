@@ -69,7 +69,8 @@ export const monthIndex = (
  * decides how often it wants a new chart and the same moment can be asked for
  * twice.
  */
-export const chakra = (unixMs: number) => invoke<Chakra>("chakra", { unixMs });
+export const chakra = (unix_ms: number, varga: string) =>
+  invoke<Chakra>("chakra", { unixMs: unix_ms, varga });
 
 export const dayDetail = (
   graha: GrahaKey,

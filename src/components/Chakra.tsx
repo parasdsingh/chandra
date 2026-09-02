@@ -174,7 +174,11 @@ function captionBox(
 ): Box {
   const width = numbered ? CAPTION_NUMBER_WIDTH : CAPTION_NAME_WIDTH;
   const left =
-    anchor === "start" ? at.x : anchor === "middle" ? at.x - width / 2 : at.x - width;
+    anchor === "start"
+      ? at.x
+      : anchor === "middle"
+        ? at.x - width / 2
+        : at.x - width;
 
   return {
     min: left,
@@ -381,14 +385,59 @@ function cluster(
   centre: Point,
   count: number,
   caption: Box,
-): Point[] {
+): Cluster {
+  // Full size first, then smaller. A crowded compartment is set in smaller type
+  // rather than in overlapping type, which is what a printed chart does and what
+  // the alternative forced: eight bodies in a D2 corner triangle came out at a
+  // 4.1 unit row pitch against a 12.6 unit label, stacked three deep.
+  //
+  // D2 is why this is not optional. Every chart looks like that in the hora -
+  // all nine bodies land in Karka and Simha, so one compartment routinely holds
+  // eight - and a division that is illegible every day is not a degraded state,
+  // it is a broken feature.
+  //
+  // The floor is 0.62, which is 11px down to about 7. Below that the ink is
+  // thinner than the frame it sits in.
+  for (const scale of [1, 0.86, 0.74, 0.62]) {
+    const laid = arrange(points, centre, count, caption, scale);
+    if (laid) return { at: laid, scale };
+  }
+
+  // Not even the smallest type fits. The rows are packed into the heights that
+  // can hold one and allowed to overlap, because a body drawn outside its
+  // compartment is *wrong* - it reads as standing in a sign it is not in - and
+  // overlapping text is only hard to read.
+  return { at: squeezed(points, centre, count, caption, 0.62), scale: 0.62 };
+}
+
+/** Where a compartment's bodies go, and how large they are set. */
+interface Cluster {
+  at: Point[];
+  scale: number;
+}
+
+/**
+ * The best arrangement at one type size, or nothing if none fits.
+ */
+function arrange(
+  points: Point[],
+  centre: Point,
+  count: number,
+  caption: Box,
+  scale: number,
+): Point[] | null {
+  const above = GRAHA_ABOVE * scale;
+  const below = GRAHA_BELOW * scale;
+  const half = GRAHA_HALF * scale;
+  const column = GRAHA_COLUMN * scale;
+
   // The band a baseline may sit in, so the whole label stays inside the
-  // compartment's height. Every arrangement below is placed within it rather
-  // than placed and then checked, which is what makes containment structural
-  // rather than something a search can fall through.
+  // compartment's height. Every arrangement is placed within it rather than
+  // placed and then checked, which is what makes containment structural rather
+  // than something a search can fall through.
   const ys = points.map((point) => point.y);
-  const top = Math.min(...ys) + GRAHA_MARGIN / 2 + GRAHA_ABOVE;
-  const bottom = Math.max(...ys) - GRAHA_MARGIN / 2 - GRAHA_BELOW;
+  const top = Math.min(...ys) + GRAHA_MARGIN / 2 + above;
+  const bottom = Math.max(...ys) - GRAHA_MARGIN / 2 - below;
 
   const desired = count <= 1 ? 1 : count <= 4 ? 2 : 3;
 
@@ -401,64 +450,71 @@ function cluster(
     (a, b) => Math.abs(a - desired) - Math.abs(b - desired) || a - b,
   );
 
-  // Pitches, loosest first. The ordinary row spacing is tried for every shape
-  // before any tighter one is, so a compartment only gets a squeezed block when
-  // no roomy arrangement of any shape would fit.
-  const pitches = [GRAHA_ROW, GRAHA_ROW * 0.85, GRAHA_ROW * 0.7];
-
-  for (const pitch of pitches) {
+  for (const pitch of [GRAHA_ROW * scale, GRAHA_ROW * scale * 0.85]) {
     for (const columns of shapes) {
       const lines = Math.ceil(count / columns);
       const reach = ((lines - 1) / 2) * pitch;
 
-      // The block's centre can only sit where the whole block stays in the
-      // band. If that interval is empty the block is taller than the
-      // compartment and no offset saves it.
+      // The block's centre can only sit where the whole block stays in the band.
+      // If that interval is empty the block is taller than the compartment and no
+      // offset saves it.
       const lowest = top + reach;
       const highest = bottom - reach;
       if (lowest > highest) continue;
 
       // Three preferences, each clamped into the feasible interval rather than
-      // used raw. Clamping is the fix for a whole class of near misses: the
-      // South Indian eight-body block failed by an eighth of a pixel, and a
-      // shift of that much fitted it.
+      // used raw. Clamping is the fix for a whole class of near misses: one
+      // arrangement failed by an eighth of a pixel, and a shift of that much
+      // fitted it.
       const preferences = [
         centre.y,
-        caption.bottom + GRAHA_ABOVE + reach,
-        caption.top - GRAHA_BELOW - reach,
+        caption.bottom + above + reach,
+        caption.top - below - reach,
       ];
 
       for (const preferred of preferences) {
         const middle = Math.min(Math.max(preferred, lowest), highest);
-        const laid = rows(points, centre.x, middle, count, columns, caption, pitch);
+        const laid = rows(points, centre.x, middle, count, columns, caption, {
+          pitch,
+          above,
+          below,
+          half,
+          column,
+        });
         if (laid) return laid;
       }
     }
   }
 
-  // Nothing fits at any shape, offset or pitch. The compartment is genuinely
-  // too small for what is standing in it, so the labels are stacked down its
-  // middle at whatever spacing the height allows and each one is pushed inside
-  // the shape at its own row.
-  //
-  // Bodies may then overlap. That is the right way to lose: a graha drawn
-  // outside its compartment is *wrong* - it reads as standing in a sign it is
-  // not in - and overlapping text is only hard to read.
-  //
-  // This clamps rather than trusting a centroid. It used to centre the stack on
-  // the compartment's `body`, which for a triangle is a third of the way up
-  // rather than the middle of the usable band - so a four-body stack in a corner
-  // triangle started fourteen units too high and its top label left the chart
-  // entirely.
-  // Only the heights where a label fits at all. Spreading the stack over the
-  // compartment's full height puts rows where the shape is narrower than one
-  // label - and in a wall triangle, whose long edge *is* the chart's edge, a
-  // label centred in a five-unit slot hangs five units off the side of the
-  // drawing. Rows are packed into the part of the shape that can hold them
-  // instead, overlapping each other rather than leaving the chart.
-  const needed = GRAHA_HALF * 2 + GRAHA_MARGIN;
+  return null;
+}
+
+/**
+ * The last resort: one column packed into whatever heights can hold a label.
+ *
+ * Spreading the stack over the compartment's full height puts rows where the
+ * shape is narrower than one label - and in a wall triangle, whose long edge
+ * *is* the chart's edge, a label centred in a five-unit slot hangs five units off
+ * the side of the drawing.
+ */
+function squeezed(
+  points: Point[],
+  centre: Point,
+  count: number,
+  caption: Box,
+  scale: number,
+): Point[] {
+  const above = GRAHA_ABOVE * scale;
+  const below = GRAHA_BELOW * scale;
+  const half = GRAHA_HALF * scale;
+
+  const ys = points.map((point) => point.y);
+  const top = Math.min(...ys) + GRAHA_MARGIN / 2 + above;
+  const bottom = Math.max(...ys) - GRAHA_MARGIN / 2 - below;
+
+  const needed = half * 2 + GRAHA_MARGIN;
   const fits = (y: number) => {
-    const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
+    const span = spanOver(points, y - above, y + below);
     return span.max - span.min >= needed;
   };
 
@@ -478,14 +534,10 @@ function cluster(
 
   return Array.from({ length: count }, (_, index) => {
     const y = count > 1 ? from + index * pitch : (from + to) / 2;
-    const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
-
-    // The caption comes out of the room here too. It was reserved in `rows` and
-    // not in this path, so a squeezed stack could land on the sign's own name -
-    // which it did, in a numbered corner triangle.
-    const { min, max } = withoutCaption(span, y, caption);
-    const lowest = min + GRAHA_HALF + GRAHA_MARGIN / 2;
-    const highest = max - GRAHA_HALF - GRAHA_MARGIN / 2;
+    const span = spanOver(points, y - above, y + below);
+    const { min, max } = withoutCaption(span, y, caption, above, below, half);
+    const lowest = min + half + GRAHA_MARGIN / 2;
+    const highest = max - half - GRAHA_MARGIN / 2;
 
     return {
       x:
@@ -508,8 +560,11 @@ function withoutCaption(
   span: { min: number; max: number },
   y: number,
   caption: Box,
+  above: number,
+  below: number,
+  half: number,
 ): { min: number; max: number } {
-  const level = y + GRAHA_BELOW > caption.top && y - GRAHA_ABOVE < caption.bottom;
+  const level = y + below > caption.top && y - above < caption.bottom;
   if (!level) return span;
 
   const toTheLeft = caption.min - span.min;
@@ -528,8 +583,17 @@ function withoutCaption(
   // side of it is always the whole compartment; a number is placed near the
   // chart's middle, where the compartment is widest, so it can leave two narrow
   // sides and no wide one.
-  const needed = GRAHA_HALF * 2 + GRAHA_MARGIN;
+  const needed = half * 2 + GRAHA_MARGIN;
   return kept.max - kept.min >= needed ? kept : span;
+}
+
+/** One type size's dimensions, so an arrangement can be tried at several. */
+interface Metrics {
+  pitch: number;
+  above: number;
+  below: number;
+  half: number;
+  column: number;
 }
 
 /**
@@ -549,8 +613,9 @@ function rows(
   count: number,
   columns: number,
   caption: Box,
-  pitch: number,
+  size: Metrics,
 ): Point[] | null {
+  const { pitch, above, below, half, column: columnWidth } = size;
   const lines = Math.ceil(count / columns);
   const placed: Point[] = [];
 
@@ -572,24 +637,23 @@ function rows(
     // fitting perfectly at every row.
     const ys = points.map((point) => point.y);
     if (
-      y - GRAHA_ABOVE < Math.min(...ys) + GRAHA_MARGIN / 2 ||
-      y + GRAHA_BELOW > Math.max(...ys) - GRAHA_MARGIN / 2
+      y - above < Math.min(...ys) + GRAHA_MARGIN / 2 ||
+      y + below > Math.max(...ys) - GRAHA_MARGIN / 2
     ) {
       return null;
     }
 
-    const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
+    const span = spanOver(points, y - above, y + below);
+    const { min, max } = withoutCaption(span, y, caption, above, below, half);
 
-    const { min, max } = withoutCaption(span, y, caption);
-
-    const half = ((inThisRow - 1) * GRAHA_COLUMN) / 2 + GRAHA_HALF;
-    const lowest = min + half + GRAHA_MARGIN / 2;
-    const highest = max - half - GRAHA_MARGIN / 2;
+    const reach = ((inThisRow - 1) * columnWidth) / 2 + half;
+    const lowest = min + reach + GRAHA_MARGIN / 2;
+    const highest = max - reach - GRAHA_MARGIN / 2;
     if (lowest > highest) return null;
 
     const middle = Math.min(Math.max(centreX, lowest), highest);
     placed.push({
-      x: middle + (column - (inThisRow - 1) / 2) * GRAHA_COLUMN,
+      x: middle + (column - (inThisRow - 1) / 2) * columnWidth,
       y,
     });
   }
@@ -843,8 +907,8 @@ export function Chakra(props: {
               />
             </Show>
 
-            <For
-              each={cluster(
+            {(() => {
+              const laid = cluster(
                 compartment.points,
                 compartment.body,
                 compartment.rashi.grahas.length,
@@ -853,39 +917,61 @@ export function Chakra(props: {
                   compartment.labelAnchor,
                   props.format === "north" && props.numbered,
                 ),
-              )}
-            >
-              {(at_, at) => {
-                const graha = () => compartment.rashi.grahas[at()]!;
-                return (
-                  <>
-                    <text
-                      class="chakra__graha"
-                      classList={{
-                        "is-combust": graha().combust,
-                      }}
-                      x={at_.x}
-                      y={at_.y}
-                      text-anchor="middle"
-                    >
-                      {/* Brackets are the retrograde mark. `Sa(r)` put a second
+              );
+              return (
+                <For each={laid.at}>
+                  {(at_, at) => {
+                    const graha = () => compartment.rashi.grahas[at()]!;
+                    return (
+                      <>
+                        <text
+                          class="chakra__graha"
+                          classList={{
+                            "is-combust": graha().combust,
+                          }}
+                          x={at_.x}
+                          y={at_.y}
+                          text-anchor="middle"
+                          // Smaller type where the compartment could not hold
+                          // the bodies at full size, which is what a printed
+                          // chart does.
+                          //
+                          // An inline style, not a `font-size` attribute. A
+                          // presentation attribute loses to any stylesheet rule
+                          // and `.chakra__graha` sets the `font` shorthand, so
+                          // the attribute was silently overridden - every
+                          // measurement came back at the full size while the
+                          // code believed it had shrunk.
+                          style={
+                            laid.scale === 1
+                              ? undefined
+                              : {
+                                  "font-size": `${(11 * laid.scale).toFixed(2)}px`,
+                                }
+                          }
+                        >
+                          {/* Brackets are the retrograde mark. `Sa(r)` put a second
                           token beside the name and made the cluster read as
                           five things rather than four; `(Sa)` marks the name
                           itself and costs no width the compartment has to find.
                           The bracket is also what a printed chart uses. */}
-                      {graha().retrograde
-                        ? `(${graha().short})`
-                        : graha().short}
-                      {/* The hover says everything the abbreviation cannot: the
+                          {graha().retrograde
+                            ? `(${graha().short})`
+                            : graha().short}
+                          {/* The hover says everything the abbreviation cannot: the
                           full name, where it stands, and what it is doing
                           there. A native SVG title, so it needs no positioning
                           and cannot be clipped by the panel's own edges. */}
-                      <title>{describe(graha(), compartment.rashi.name)}</title>
-                    </text>
-                  </>
-                );
-              }}
-            </For>
+                          <title>
+                            {describe(graha(), compartment.rashi.name)}
+                          </title>
+                        </text>
+                      </>
+                    );
+                  }}
+                </For>
+              );
+            })()}
           </>
         )}
       </For>

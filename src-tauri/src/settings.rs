@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 10;
+pub const SCHEMA_VERSION: u32 = 11;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -97,7 +97,7 @@ impl AppearanceSetting {
 }
 
 /// The Lagna Kundali: which division it draws, and in which format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChartSetting {
     /// Which of the three chart formats is drawn. They differ in where a rashi
     /// is put on screen and not in what is true, so this changes the drawing and
@@ -106,9 +106,16 @@ pub struct ChartSetting {
     /// There is no `tray` field: the chart is the one status item that is always
     /// there (D-030), so there is nothing to switch.
     pub format: ChartFormat,
-    /// Which division the chart draws. `D1` is the rashi chart, which is what
-    /// the chart has always been.
-    pub varga: Varga,
+    /// Divisions with their own menu bar item.
+    ///
+    /// Several at once, not one at a time: a practitioner reads D1 and D9
+    /// together, and switching between them to compare is not reading them
+    /// together. Each enabled division gets its own status item and its own
+    /// panel, exactly as each enabled graha does.
+    ///
+    /// D1 is always in here. It is the chart the app has always had and the one
+    /// D-030 made permanent; the other fifteen are switches.
+    pub vargas: Vec<Varga>,
     /// Whether a North Indian compartment carries the sign's number rather than
     /// its name.
     ///
@@ -289,7 +296,7 @@ impl Default for Settings {
             chart: ChartSetting {
                 format: ChartFormat::North,
                 numbered: false,
-                varga: Varga::D1,
+                vargas: vec![Varga::D1],
             },
             tray: TraySetting {
                 // The moon, which is now listed here like any other calendar and
@@ -581,6 +588,32 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         }
         value["schema_version"] = serde_json::Value::from(10u32);
         version = 10;
+    }
+
+    // 10 -> 11. One division became a set of them, because several charts can be
+    // in the menu bar at once. The division the file names is carried over as the
+    // set's only member, and D1 is added if it was something else - the rashi
+    // chart is the permanent item and there has to be one.
+    if version == 10 {
+        if let Some(chart) = value
+            .get_mut("chart")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            let chosen = chart
+                .get("varga")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("d1")
+                .to_string();
+
+            let mut vargas = vec![serde_json::Value::from("d1")];
+            if chosen != "d1" {
+                vargas.push(serde_json::Value::from(chosen));
+            }
+            chart.remove("varga");
+            chart.insert("vargas".into(), serde_json::Value::Array(vargas));
+        }
+        value["schema_version"] = serde_json::Value::from(11u32);
+        version = 11;
     }
 
     match version {

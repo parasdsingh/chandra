@@ -386,7 +386,23 @@ export interface PlaceSetting {
  * is drawn and what is written in the compartment; they do not differ in what is
  * true.
  */
-export type VargaKey = "d1" | "d3" | "d7" | "d9" | "d12";
+export type VargaKey =
+  | "d1"
+  | "d2"
+  | "d3"
+  | "d4"
+  | "d7"
+  | "d9"
+  | "d10"
+  | "d12"
+  | "d16"
+  | "d20"
+  | "d24"
+  | "d27"
+  | "d30"
+  | "d40"
+  | "d45"
+  | "d60";
 
 export interface Chakra {
   unix_ms: number;
@@ -486,8 +502,11 @@ export interface Settings {
    *  is the one item that is always there (D-030). */
   chart: {
     format: ChartFormat;
-    /** Which division the chart draws. `d1` is the rashi chart. */
-    varga: VargaKey;
+    /** Divisions with their own menu bar item. Several at once: a practitioner
+     *  reads D1 and D9 together, and switching between them to compare is not
+     *  reading them together. `d1` is always in here — it is the permanent chart
+     *  item (D-030). */
+    vargas: VargaKey[];
     /** Whether a North Indian compartment carries the sign's number rather than
      *  its name. Both references write a number; a number is a lookup, so the
      *  name is the default here and this is the choice. */

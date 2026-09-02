@@ -5,6 +5,7 @@
 //! (tauri#8982, tauri#10912).
 
 use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::varga::Varga;
 use chandra_almanac::{Snapshot, SnapshotGraha};
 use chandra_ephemeris::Graha;
 use chandra_glyph::{chart_icon, graha_icon, moon_icon, Tint};
@@ -23,8 +24,16 @@ use crate::state::AppState;
 /// it is simply the one that is on by default.
 pub const MOON_ID: &str = "chandra.moon";
 
-/// The Lagna Kundali's item, which is the permanent one (D-030).
-pub const CHART_ID: &str = "chandra.chart";
+/// A Lagna Kundali's item, one per division shown.
+///
+/// D1's keeps the bare id it has always had. It is the permanent one (D-030) and
+/// the only chart item that existed before the divisions did.
+fn chart_id(varga: Varga) -> String {
+    if varga == Varga::D1 {
+        return "chandra.chart".to_string();
+    }
+    format!("chandra.chart.{}", varga.key())
+}
 
 /// Backing scale for tray icons. Rendering at 2x and letting macOS map the
 /// buffer onto the 22pt slot keeps the disc crisp on Retina, and downscales
@@ -60,7 +69,12 @@ pub fn build(app: &AppHandle) -> Result<()> {
     // one item with no switch, so it is the one that has to be there - and it
     // used to be created last, which put it leftmost and made the feature that
     // had just been built the first thing macOS threw away (D-030).
-    build_item(app, CHART_ID.to_string(), panel::Subject::Chart)?;
+    // The divisions, highest first, so the row reads D1 at the right-hand end
+    // with the finer charts running left from it. D1 is the one that must
+    // survive being squeezed, and the right end is the end that does.
+    for varga in app.state::<AppState>().chart_vargas().into_iter().rev() {
+        build_item(app, chart_id(varga), panel::Subject::Chart(varga))?;
+    }
     for graha in subjects {
         build_item(app, tray_id(graha), panel::Subject::Graha(graha))?;
     }
@@ -120,8 +134,10 @@ pub fn rebuild(app: &AppHandle) -> Result<()> {
     for graha in Graha::ALL {
         app.remove_tray_by_id(&tray_id(graha));
     }
+    for varga in Varga::ALL {
+        app.remove_tray_by_id(&chart_id(varga));
+    }
     app.remove_tray_by_id(MOON_ID);
-    app.remove_tray_by_id(CHART_ID);
     build(app)
 }
 
@@ -169,14 +185,21 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
         .map_err(|e| AppError::Engine(format!("cannot set the moon tooltip: {e}")))?;
     }
 
-    if let Some(item) = app.tray_by_id(CHART_ID) {
-        let icon = chart_icon(ICON_SCALE, tint)
+    for varga in state.chart_vargas() {
+        let Some(item) = app.tray_by_id(&chart_id(varga)) else {
+            continue;
+        };
+        // The division is drawn into the mark. Several charts can be in the row
+        // at once and they are otherwise the same shape, so without the number
+        // the reader has a line of identical icons and no way to tell which is
+        // which but to hover each one.
+        let icon = chart_icon(varga.division(), ICON_SCALE, tint)
             .map_err(|e| AppError::Engine(format!("cannot draw the chart icon: {e}")))?;
         item.set_icon_with_as_template(Some(to_image(&icon)), is_template)
             .map_err(|e| AppError::Engine(format!("cannot set the chart icon: {e}")))?;
         // The tooltip is rebuilt on hover, which is what makes the lagna in it
         // current to the second. This is the text before the first hover.
-        item.set_tooltip(Some("Lagna Kundali"))
+        item.set_tooltip(Some(varga.label()))
             .map_err(|e| AppError::Engine(format!("cannot set the chart tooltip: {e}")))?;
     }
 
@@ -233,7 +256,7 @@ fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: panel:
         // Asked for only the subject this item carries. The pointer is over one
         // item and the other tooltips are not about to be read.
         let subjects = match subject {
-            panel::Subject::Graha(Graha::Chandra) | panel::Subject::Chart => Vec::new(),
+            panel::Subject::Graha(Graha::Chandra) | panel::Subject::Chart(_) => Vec::new(),
             panel::Subject::Graha(graha) => vec![graha],
         };
         let now = jiff::Timestamp::now().as_millisecond();
@@ -248,7 +271,7 @@ fn refresh_tooltip(app: &AppHandle, id: tauri::tray::TrayIconId, subject: panel:
             panel::Subject::Graha(graha) => graha_tooltip(graha, snapshot.grahas.first()),
             // The lagna, which is the one thing on this chart that changes fast
             // enough to be worth a hover - about a degree every four minutes.
-            panel::Subject::Chart => chart_tooltip(&handle),
+            panel::Subject::Chart(varga) => chart_tooltip(&handle, varga),
         };
 
         let for_main = handle.clone();
@@ -276,24 +299,24 @@ fn moon_tooltip(snapshot: &Snapshot, system: MonthSystem) -> String {
 }
 
 /// What the chart item says on hover: what is rising, and how far into it.
-fn chart_tooltip(app: &AppHandle) -> String {
+fn chart_tooltip(app: &AppHandle, varga: Varga) -> String {
     let state = app.state::<AppState>();
     let now = jiff::Timestamp::now().as_millisecond();
     let place = state.location().label;
-    // The division the panel is set to, so the tooltip and the chart it opens
-    // never name two different rising signs.
-    let varga = state.settings().chart.varga;
+    // The item's own division, not a setting. Several are in the row at once, so
+    // reading one from settings would give every one of them the same answer.
     match state.almanac.chakra(now, &place, varga) {
         Ok(chart) => {
             let (degrees, minutes, _) = chart.lagna.degrees_in_rashi;
             format!(
-                "Lagna - {} {degrees}\u{00b0}{minutes:02}\u{2032}",
+                "{} - {} {degrees}\u{00b0}{minutes:02}\u{2032}",
+                varga.label(),
                 chart.lagna.name
             )
         }
         // The item still names itself. A tooltip is not the place to report that
         // an ephemeris call failed.
-        Err(_) => "Lagna Kundali".to_string(),
+        Err(_) => varga.label().to_string(),
     }
 }
 

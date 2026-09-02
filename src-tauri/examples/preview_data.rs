@@ -257,6 +257,17 @@ fn main() {
         "chakraNavamsa": almanac
             .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D9)
             .expect("navamsa"),
+        // D2, which occupies two compartments out of twelve and can therefore
+        // put all nine bodies in one. It is the hardest crowding case the app
+        // can produce, and it is not rare - every chart is like this in D2.
+        "chakraHora": almanac
+            .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D2)
+            .expect("hora"),
+        // D30, the unequal division, which reaches ten signs and never Karka or
+        // Simha.
+        "chakraTrimsamsa": almanac
+            .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D30)
+            .expect("trimsamsa"),
         // Before 1800, where the ephemeris falls back to the analytic model and
         // the pane has to say so.
         "chakraMoshier": almanac

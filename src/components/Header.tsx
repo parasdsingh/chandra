@@ -33,6 +33,9 @@ interface Props {
   onJump: () => void;
   /** Whether the picker is already open, so the title can say so. */
   jumping: boolean;
+  /** Which division the chart is, so the header's mark matches the menu bar item
+   *  that opened it. 1 is the rashi chart; several can be in the row at once. */
+  division: number;
   /** Whether the app is waiting for a location before it will show anything.
    *
    * The header then names the app and offers nothing: there is no month to
@@ -125,7 +128,7 @@ export function Header(props: Props): JSX.Element {
                     title, a gear. An empty slot left the title hanging where
                     every other view has something. */}
                 <span class="header__glyph">
-                  <ChartMark />
+                  <ChartMark division={props.division} />
                 </span>
               </Show>
             }
@@ -266,7 +269,7 @@ function qualifier(label: string): { before: string; after: string } | null {
  *  the stubs run half way from each corner to the centre, which is exactly where
  *  the diamond's edge crosses the diagonal. Drawn twice in two languages, so the
  *  numbers are written down rather than left to be re-derived from the other. */
-function ChartMark(): JSX.Element {
+function ChartMark(props: { division: number }): JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
       <rect
@@ -278,18 +281,35 @@ function ChartMark(): JSX.Element {
         stroke="currentColor"
         stroke-width="1.2"
       />
-      <path
-        d="M 8 3.3 L 12.7 8 L 8 12.7 L 3.3 8 Z"
-        fill="currentColor"
-        stroke="none"
-      />
-      <path
-        d="M 1.92 1.92 L 4.96 4.96 M 14.08 1.92 L 11.04 4.96 M 14.08 14.08 L 11.04 11.04 M 1.92 14.08 L 4.96 11.04"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="0.96"
-        stroke-linecap="round"
-      />
+      <Show
+        when={props.division > 1}
+        fallback={
+          <>
+            <path d="M 8 3.3 L 12.7 8 L 8 12.7 L 3.3 8 Z" fill="currentColor" />
+            <path
+              d="M 1.92 1.92 L 4.96 4.96 M 14.08 1.92 L 11.04 4.96 M 14.08 14.08 L 11.04 11.04 M 1.92 14.08 L 4.96 11.04"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="0.96"
+              stroke-linecap="round"
+            />
+          </>
+        }
+      >
+        {/* Real type here, where the tray icon has to draw seven segments by
+            hand: this is a web view with a font in it, and at 16px a numeral set
+            in the panel's own face is both more legible and more obviously the
+            same number as the one in the menu bar. */}
+        <text
+          class="header__division"
+          x="8"
+          y="11.6"
+          text-anchor="middle"
+          fill="currentColor"
+        >
+          {props.division}
+        </text>
+      </Show>
     </svg>
   );
 }

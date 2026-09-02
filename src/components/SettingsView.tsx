@@ -136,12 +136,13 @@ function Root(props: {
     { id: "location", value: () => props.boot.location.label },
     {
       id: "chart",
-      // The division, not the format. Two people with the same format and
-      // different divisions are reading different charts; the reverse is the
-      // same chart drawn two ways.
-      value: () =>
-        props.boot.vargas.find((v) => v.key === settings().chart.varga)
-          ?.label ?? "",
+      // How many charts are in the menu bar, not the format they are drawn in.
+      // Two people with the same format and different divisions are reading
+      // different charts; the reverse is the same chart drawn two ways.
+      value: () => {
+        const count = Math.max(1, settings().chart.vargas.length);
+        return count === 1 ? "D1 only" : `${count} divisions`;
+      },
     },
     {
       id: "menubar",
@@ -757,27 +758,46 @@ function Chart(props: SectionProps): JSX.Element {
         where the nine grahas stand now, not a birth chart.
       </p>
 
-      {/* The division, above the format. What the chart *is* comes before how it
-          is drawn, and D1 is the chart this has always been. */}
-      <ChoiceGroup label="Division">
-        <For each={props.boot.vargas}>
-          {(choice) => (
-            <Choice
-              label={choice.label}
-              selected={settings().chart.varga === choice.key}
-              onSelect={() =>
+      {/* Switches, not a choice. Several divisions can be in the menu bar at
+          once, because a practitioner reads D1 and D9 together and flipping
+          between them to compare is not reading them together. Each one on gets
+          its own status item and its own panel, exactly as each graha does.
+
+          D1 has no switch. It is the rashi chart, the one D-030 made permanent,
+          and the chart the others are divisions *of*. */}
+      <For each={props.boot.vargas}>
+        {(choice) => {
+          const permanent = choice.key === "d1";
+          const on = () =>
+            permanent ||
+            settings().chart.vargas.includes(choice.key as VargaKey);
+          return (
+            <button
+              class="settings__toggle"
+              classList={{ "is-on": on() }}
+              disabled={permanent}
+              aria-pressed={on()}
+              onClick={() => {
+                const chosen = new Set(settings().chart.vargas);
+                if (on()) chosen.delete(choice.key as VargaKey);
+                else chosen.add(choice.key as VargaKey);
+                chosen.add("d1");
                 props.apply({
                   ...settings(),
-                  chart: {
-                    ...settings().chart,
-                    varga: choice.key as VargaKey,
-                  },
-                })
-              }
-            />
-          )}
-        </For>
-      </ChoiceGroup>
+                  chart: { ...settings().chart, vargas: [...chosen] },
+                });
+              }}
+            >
+              <span class="settings__toggle-name">{choice.label}</span>
+              <span class="settings__switch" aria-hidden="true" />
+            </button>
+          );
+        }}
+      </For>
+
+      <p class="settings__hint settings__hint--foot">
+        Each division on gets its own menu bar item. D1 is always shown.
+      </p>
 
       <ChoiceGroup label="Format">
         <For each={CHART_FORMATS}>

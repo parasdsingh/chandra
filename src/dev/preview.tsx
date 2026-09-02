@@ -50,6 +50,8 @@ const data = fixture as unknown as {
   chakra: Chakra;
   chakraCrowded: Chakra;
   chakraNavamsa: Chakra;
+  chakraHora: Chakra;
+  chakraTrimsamsa: Chakra;
   chakraCorner: Chakra;
   chakraWall: Chakra;
   chakraMoshier: Chakra;
@@ -59,7 +61,7 @@ const context: FormatContext = { timeZone: data.timeZone };
 
 const boot: Bootstrap = {
   settings: {
-    schema_version: 10,
+    schema_version: 11,
     location: {
       mode: "manual",
       place: {
@@ -74,7 +76,7 @@ const boot: Bootstrap = {
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta", ingress: "rashi" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
-    chart: { format: "north", varga: "d1", numbered: false },
+    chart: { format: "north", vargas: ["d1", "d9"], numbered: false },
     tray: { subjects: ["chandra", "mangala", "shani"], colour_mode: false },
     appearance: { scale: 1 },
   },
@@ -135,6 +137,7 @@ function ChartCase(props: {
   return (
     <Case title={props.title}>
       <Header
+        division={props.chart ? Number(props.chart.varga.slice(1)) : 1}
         subject="chandra"
         subjectName="Chandra"
         info={data.grahas.find((graha) => graha.key === "chandra")}
@@ -177,6 +180,7 @@ function Case(props: { title: string; children: JSX.Element }): JSX.Element {
 function moonHeader(title: string) {
   return (
     <Header
+      division={1}
       subject="chandra"
       subjectName="Chandra"
       info={data.grahas.find((graha) => graha.key === "chandra")}
@@ -244,6 +248,7 @@ export function Preview(): JSX.Element {
 
       <Case title="Moon · day view">
         <Header
+          division={1}
           subject="chandra"
           subjectName="Chandra"
           info={data.grahas.find((graha) => graha.key === "chandra")}
@@ -350,6 +355,7 @@ export function Preview(): JSX.Element {
 
       <Case title="Mangala · retrograde month">
         <Header
+          division={1}
           subject="mangala"
           subjectName="Mangala"
           info={data.grahas.find((graha) => graha.key === "mangala")}
@@ -431,6 +437,7 @@ export function Preview(): JSX.Element {
         {(id) => (
           <Case title={`Settings · ${id}`}>
             <Header
+              division={1}
               subject="chandra"
               subjectName="Chandra"
               info={data.grahas.find((graha) => graha.key === "chandra")}
@@ -489,6 +496,30 @@ export function Preview(): JSX.Element {
       <ChartCase
         title="Chart · D9 navamsa, same instant"
         chart={data.chakraNavamsa}
+        format="north"
+        numbered={false}
+      />
+
+      {/* D2 is the crowding ceiling, and unlike the 1962 conjunction it is not
+          a once-a-century event: every chart looks like this in D2, because the
+          hora maps all nine bodies into Karka and Simha alone. */}
+      <ChartCase
+        title="Chart · D2 hora, two compartments"
+        chart={data.chakraHora}
+        format="north"
+        numbered={false}
+      />
+
+      <ChartCase
+        title="Chart · D2 hora, South Indian"
+        chart={data.chakraHora}
+        format="south"
+        numbered={false}
+      />
+
+      <ChartCase
+        title="Chart · D30 trimsamsa, the unequal division"
+        chart={data.chakraTrimsamsa}
         format="north"
         numbered={false}
       />

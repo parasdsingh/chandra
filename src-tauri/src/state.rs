@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use std::sync::{Mutex, RwLock};
 
+use chandra_almanac::varga::Varga;
 use chandra_almanac::{Almanac, MonthCursor};
 use chandra_ephemeris::Graha;
 
@@ -88,6 +89,23 @@ impl AppState {
             .collect()
     }
 
+    /// Divisions with their own menu bar item, in canonical order.
+    ///
+    /// D1 is forced in. It is the permanent chart item (D-030), and a settings
+    /// file that has been hand-edited to drop it would otherwise leave the menu
+    /// bar with no chart at all.
+    ///
+    /// Ordered like the grahas are, and for the same reason: the menu bar is a
+    /// row the eye learns the shape of, and an item that jumps position because
+    /// a neighbour was toggled makes the row unlearnable.
+    pub fn chart_vargas(&self) -> Vec<Varga> {
+        let chosen = self.settings().chart.vargas;
+        Varga::ALL
+            .into_iter()
+            .filter(|varga| *varga == Varga::D1 || chosen.contains(varga))
+            .collect()
+    }
+
     /// Applies new settings, propagating whatever changed into the almanac.
     ///
     /// Validate, persist, then mutate. Saving is the only step that can fail for
@@ -125,7 +143,7 @@ impl AppState {
         // The chart's own item counts: switching it on or off adds or removes a
         // status item exactly as a graha toggle does, and rebuilding is how a
         // status item comes and goes.
-        let tray_changed = next.tray != previous.tray;
+        let tray_changed = next.tray != previous.tray || next.chart.vargas != previous.chart.vargas;
         let scale_changed = next.appearance != previous.appearance;
         *self.settings.write().expect("settings lock") = next;
 

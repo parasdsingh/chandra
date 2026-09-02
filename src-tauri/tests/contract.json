@@ -453,7 +453,9 @@
     "chart": {
       "format": "string",
       "numbered": "boolean",
-      "varga": "string"
+      "vargas": [
+        "string"
+      ]
     },
     "location": {
       "elevation": "number",
