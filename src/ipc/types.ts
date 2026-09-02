@@ -386,8 +386,16 @@ export interface PlaceSetting {
  * is drawn and what is written in the compartment; they do not differ in what is
  * true.
  */
+export type VargaKey = "d1" | "d3" | "d7" | "d9" | "d12";
+
 export interface Chakra {
   unix_ms: number;
+  varga: VargaKey;
+  /** The scheme the division was computed by. Always `Parashari`, and carried
+   *  anyway: a D9 computed one way looks exactly like a D9 computed another, so
+   *  a chart that cannot say what produced it invites the reader to assume it
+   *  matches whatever they last saw elsewhere (D-032). */
+  scheme: string;
   /** Where the chart was cast for. Not decoration: the lagna moves a degree
    *  every four minutes, so a chart computed for the wrong city looks exactly
    *  like one computed for the right one. */
@@ -478,6 +486,8 @@ export interface Settings {
    *  is the one item that is always there (D-030). */
   chart: {
     format: ChartFormat;
+    /** Which division the chart draws. `d1` is the rashi chart. */
+    varga: VargaKey;
     /** Whether a North Indian compartment carries the sign's number rather than
      *  its name. Both references write a number; a number is a lookup, so the
      *  name is the default here and this is the choice. */
@@ -546,6 +556,9 @@ export interface Bootstrap {
   node_types: Choice[];
   month_systems: Choice[];
   grahas: GrahaInfo[];
+  /** The divisional charts on offer. Served rather than written out here so the
+   *  labels cannot drift from the Rust `Varga::label`. */
+  vargas: Choice[];
 }
 
 export interface City {

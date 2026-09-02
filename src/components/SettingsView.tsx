@@ -31,6 +31,7 @@ import type {
   MonthSystem,
   Resolved,
   Settings,
+  VargaKey,
 } from "../ipc/types";
 import { GrahaGlyph } from "./GrahaGlyph";
 
@@ -135,8 +136,12 @@ function Root(props: {
     { id: "location", value: () => props.boot.location.label },
     {
       id: "chart",
+      // The division, not the format. Two people with the same format and
+      // different divisions are reading different charts; the reverse is the
+      // same chart drawn two ways.
       value: () =>
-        CHART_FORMATS.find((f) => f.key === settings().chart.format)!.label,
+        props.boot.vargas.find((v) => v.key === settings().chart.varga)?.label ??
+        "",
     },
     {
       id: "menubar",
@@ -448,8 +453,9 @@ function Location(props: SectionProps): JSX.Element {
           {coordinates(props.boot.location)} ·{" "}
           {/* Not `0 m` when nobody knew. Rise and set are still computed at sea
               level, which is the assumption to make with no height - but saying
-              `0 m` reported that assumption as a measurement, and the city
-              table has no elevation column, so it said it for every city. */}
+              `0 m` reported that assumption as a measurement. The old city table
+              had no elevation column at all, so it said it for every city in the
+              world; GeoNames carries one, so most places now know (E5). */}
           {props.boot.location.elevation_known
             ? `${props.boot.location.elevation.toFixed(0)} m`
             : "height not set"}{" "}
@@ -637,7 +643,7 @@ function Panchanga(props: SectionProps): JSX.Element {
 }
 
 /**
- * The Lagna Kundali: whether it has a menu bar item, and which format it draws.
+ * The Lagna Kundali: which division it draws, and in which format.
  *
  * All three common formats, because they differ only in where a rashi is drawn.
  * North Indian is the default: it is the one most likely to be recognised, and
@@ -653,6 +659,28 @@ function Chart(props: SectionProps): JSX.Element {
         Always in the menu bar, at the right of the row. The chart it opens is
         where the nine grahas stand now, not a birth chart.
       </p>
+
+      {/* The division, above the format. What the chart *is* comes before how it
+          is drawn, and D1 is the chart this has always been. */}
+      <ChoiceGroup label="Division">
+        <For each={props.boot.vargas}>
+          {(choice) => (
+            <Choice
+              label={choice.label}
+              selected={settings().chart.varga === choice.key}
+              onSelect={() =>
+                props.apply({
+                  ...settings(),
+                  chart: {
+                    ...settings().chart,
+                    varga: choice.key as VargaKey,
+                  },
+                })
+              }
+            />
+          )}
+        </For>
+      </ChoiceGroup>
 
       <ChoiceGroup label="Format">
         <For each={CHART_FORMATS}>
@@ -846,7 +874,7 @@ function MenuBar(props: SectionProps): JSX.Element {
       <p class="settings__hint settings__hint--foot">
         {/* The permanent moon item is Chandra's item; a second one would put two
             moons in the menu bar. */}
-        The moon is always shown.
+        The chart is always shown; every calendar here can be switched off.
       </p>
 
       <Toggle

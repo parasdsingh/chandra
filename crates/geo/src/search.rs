@@ -1,5 +1,5 @@
 use crate::distance_km;
-use crate::parse::{cities, zones, Place};
+use crate::parse::{cities, searchable, zones, Place};
 
 /// Exact zone lookup.
 ///
@@ -56,11 +56,11 @@ pub fn search(query: &str, limit: usize) -> Vec<&'static Place> {
         return Vec::new();
     }
 
-    // Population breaks the tie, largest first, before the name does. Every
-    // entry that matched matched the same way, so what is left to decide is
-    // which of them the user is more likely to have meant - and "york" almost
-    // always means New York rather than York, Nebraska.
-    let mut ranked: Vec<(u8, &'static crate::parse::City)> = cities()
+    // Population breaks the tie, largest first, before the name does. Every entry
+    // in a tie matched the same way, so what is left to decide is which of them
+    // the user is more likely to have meant - the largest, among several places
+    // of one name.
+    let mut ranked: Vec<(u8, &'static crate::parse::City)> = searchable()
         .iter()
         .filter_map(|city| rank(city, &needle).map(|score| (score, city)))
         .collect();
@@ -87,31 +87,34 @@ fn rank(entry: &crate::parse::City, needle: &str) -> Option<u8> {
         return Some(1);
     }
 
+    // No rule matches the IANA zone. It did when this searched the 448-row zone
+    // table, where a zone name identified one row - but 34,129 cities share about
+    // 356 zones, so one zone match returned thousands of equal-scoring rows.
+    // `denver` answered with El Paso and Salt Lake City; `york` answered with
+    // Philadelphia, whose zone is `America/New_York`. A zone is an internal
+    // identifier and not a thing anybody types into a city field.
+    //
     // The region before the country. Someone who types a state or province name
     // is naming somewhere narrower than a country and should be answered with
     // it: `maharashtra` should not rank behind a country whose name happens to
     // contain the same letters.
     if entry
-        .place
-        .region
+        .folded_region
         .as_deref()
-        .is_some_and(|region| region.to_lowercase().starts_with(needle))
+        .is_some_and(|region| region.starts_with(needle))
     {
         return Some(2);
     }
 
-    let country = entry.place.country.to_lowercase();
+    let country = &entry.folded_country;
     if country.starts_with(needle) {
         return Some(3);
     }
     if names.iter().any(|name| name.contains(needle)) {
         return Some(4);
     }
-    if entry.place.zone.to_lowercase().contains(needle) {
-        return Some(5);
-    }
     if country.contains(needle) {
-        return Some(6);
+        return Some(5);
     }
     None
 }
@@ -126,9 +129,76 @@ mod tests {
     /// assumed - the list grew by a factor of 76 in E5, and the scan that was
     /// obviously fine over 448 entries is not obviously fine over 34,129.
     ///
-    /// The budget is generous on purpose: this asserts the scan has not become
-    /// something that needs an index, not that it hits a particular number on a
-    /// particular machine.
+    /// A name with accents is findable by the spelling people type.
+    ///
+    /// Three spellings reach the same city and all three are in use: the local
+    /// one, the same with accents stripped, and GeoNames' German-style
+    /// transliteration. Checked against the pre-fold code, where `dusseldorf`
+    /// and `koln` both returned nothing - Germany's fourth and seventh largest
+    /// cities, unfindable by anyone without an umlaut key.
+    #[test]
+    fn a_name_with_accents_is_found_by_a_plain_spelling() {
+        for (queries, expected) in [
+            (["Düsseldorf", "dusseldorf", "duesseldorf"], "Düsseldorf"),
+            (["Köln", "koln", "koeln"], "Köln"),
+            (["Zürich", "zurich", "zuerich"], "Zürich"),
+        ] {
+            for query in queries {
+                let found = super::search(query, 5);
+                assert!(
+                    found.iter().any(|place| place.city == expected),
+                    "{query} should find {expected}"
+                );
+            }
+        }
+    }
+
+    /// Every timezone is still reachable by hand.
+    ///
+    /// 62 of the 448 zones have no city over 15,000 people, so the switch from
+    /// the zone table to the city list silently made them unselectable - and for
+    /// somebody in one of them there is no near-enough answer, because picking a
+    /// city in a neighbouring zone changes their timezone too. Checked against
+    /// the pre-merge code: every name below returned nothing, and `nome` returned
+    /// Penonome in Panama.
+    #[test]
+    fn a_zone_with_no_large_city_is_still_findable() {
+        for (query, zone) in [
+            ("Iqaluit", "America/Iqaluit"),
+            ("Galapagos", "Pacific/Galapagos"),
+            ("Kiritimati", "Pacific/Kiritimati"),
+            ("Longyearbyen", "Arctic/Longyearbyen"),
+            ("Vostok", "Antarctica/Vostok"),
+        ] {
+            let found = super::search(query, 10);
+            assert!(
+                found.iter().any(|place| place.zone == zone),
+                "{query} should offer {zone}, got {:?}",
+                found.iter().map(|p| &p.zone).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    /// A city keeps its place ahead of a zone entry of the same name.
+    #[test]
+    fn the_precise_row_wins_where_there_is_one() {
+        let first = super::search("Kolkata", 1);
+        let first = first.first().expect("Kolkata");
+        assert_eq!(first.city, "Kolkata");
+        // The zone table's entry carries no region; the city list's does.
+        assert!(
+            first.region.is_some(),
+            "the city row should win, not the zone"
+        );
+    }
+
+    /// The budget is deliberately an order of magnitude above the measurement,
+    /// because a wall-clock assertion in a unit suite is only honest if it can
+    /// survive a busy machine. At 50 ms it could not: measured 25 ms idle, 54 to
+    /// 65 ms with parallel builds running, and 83 ms at `opt-level = 0` - so it
+    /// passed only because this workspace overrides the dev profile, and failed
+    /// whenever anything else was compiling. This catches "the scan now needs an
+    /// index" and nothing finer.
     #[test]
     fn one_search_is_well_inside_a_keystroke() {
         use std::time::Instant;
@@ -145,8 +215,8 @@ mod tests {
         let each = started.elapsed() / queries.len() as u32;
 
         assert!(
-            each.as_millis() < 50,
-            "one search took {each:?}, which is long enough to be felt"
+            each.as_millis() < 400,
+            "one search took {each:?}, which is an index's worth of work"
         );
     }
 

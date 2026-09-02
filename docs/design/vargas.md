@@ -1,7 +1,8 @@
 # Vargas — the sixteen divisional charts
 
-Status: **research.** Nothing here is built. This is the specification the
-implementation will be written against.
+Status: **the specification.** D1, D3, D7, D9 and D12 are built against it
+(`crates/almanac/src/varga.rs`, whose tests are the worked examples in §7). The
+other eleven are not built. D-032 records the three choices §8 left open.
 
 Scope: **D1, D3, D7, D9 and D12 are approved for the first pass.** All sixteen
 of the Shodasavarga are documented here, because the rules are a single family
@@ -848,6 +849,7 @@ under the Parashari rule. A chart format designed for a spread of bodies will
 look broken. That, plus six live variants of which the two best-argued are not
 the standard one, is a reason to decide *whether* to offer D2 before deciding
 how.
+
 ---
 
 ### 7.3 D3 — Drekkana
@@ -1076,8 +1078,8 @@ second is the verse's form; they agree for every `s`.
 | 4.28583° | Mesha 4°17′09″ | 2 of 7 | **Vrishabha** |
 
 The last two are the reason §6.6 exists: the first boundary is at
-4.285714285…°, and it is the only one of the sixteen vargas whose boundaries are
-not exactly representable.
+4.285714285…°. It is one of four whose boundaries are not exactly representable
+in decimal — D7, D9, D27 and D45, listed in §6.6.
 
 Narasimha Rao's own examples reproduce: Mithuna 10° → Simha; Kanya 19° → Karka.
 
@@ -1168,7 +1170,7 @@ some astrologers simply refer to it as 'Amsa' (division)."
 | 95.0000° | Karka 5°00′00″ | movable, watery | 2 of 9 | **Simha** |
 | 229.0000° | Vrishchika 19°00′00″ | fixed, watery | 6 of 9 | **Dhanu** |
 | 3.33306° | Mesha 3°19′59″ | | 1 of 9 | **Mesha** |
-| 3.33333° | Mesha 3°20′00″ | | 2 of 9 | **Vrishabha** |
+| 3.33333…° | Mesha 3°20′00″ | | 2 of 9 | **Vrishabha** |
 
 Rao's examples reproduce: Mithuna 11° → Makara; Vrishchika 19° → Dhanu.
 
@@ -1579,7 +1581,12 @@ Vol. I scan read here. Same content, different printing.)*
 | 95.0000° | Karka 5°00′00″ | watery → Makara | 5 of 27 | **Vrishabha** |
 | 229.0000° | Vrishchika 19°00′00″ | watery → Makara | 18 of 27 | **Mithuna** |
 | 1.11083° | Mesha 1°06′39″ | | 1 of 27 | **Mesha** |
+| 10/9° | Mesha 1°06′40″ | | 2 of 27 | **Vrishabha** |
 | 1.11139° | Mesha 1°06′41″ | | 2 of 27 | **Vrishabha** |
+
+The middle row is the boundary itself, `30/27 = 10/9`, which the pair either
+side of it skipped. It is not exactly representable in decimal, so it is written
+as the fraction — the same care D7, D9 and D45 need, per §6.6.
 
 The Mithuna 11° row is the one Rao gets wrong. It is included deliberately: a
 test asserting **Karka** there is a test that would have caught the erratum.
@@ -1655,7 +1662,7 @@ even sign (s % 2 == 1):   0 ≤ d <  5 → Vrishabha (1)
 Note the target does **not** depend on `s` at all beyond its parity. Every odd
 rashi's first 5° goes to Mesha; every even rashi's first 5° goes to Vrishabha.
 
-**Corroborated exactly, boundary for boundary, by three further sources.** The
+**Corroborated exactly, boundary for boundary, by the sources below.** The
 unequal split is the single most error-prone table in the sixteen, so it was
 checked more than the rest:
 
@@ -1901,8 +1908,8 @@ would silently mirror every even sign.
 | 0.49972° | Mesha 0°29′59″ | 1 of 60 | **Mesha** |
 | 0.50000° | Mesha 0°30′00″ | 2 of 60 | **Vrishabha** |
 
-The last two data rows are BPHS's own example and Rao's own example
-respectively, both reproducing.
+The third and fourth rows are Rao's own example and BPHS's own example
+respectively, both reproducing. The last two are the boundary pair.
 
 **Variants.** None in the classical literature, and none for the sign mapping in
 any source that states a rule. JHora's feature page lists no D-60 variations —
@@ -1946,25 +1953,27 @@ differ, the app prints the difference or prints nothing, never a winner.
 |---|---|---|
 | 11 | "Saravali gives a different D27 rule and Santhanam calls it defective" | *Saravali has no D27 rule.* The rejected rule is Santhanam's own supplementary note — `(s + p) mod 12` instead of `(3s + p) mod 12` — which he later repudiated in his BPHS. One translator, two rules, not two classics (§7.12) |
 
-**The mechanical disagreements** — the same rule with a switch flipped, per §4.4:
+**The mechanical disagreements** — the same rule with a switch flipped, per §4.4.
+Numbered `M` because the classical list above owns the bare numbers, and both are
+cited from elsewhere in this document:
 
 | # | The axis | Where it shows up |
 |---|---|---|
-| 9 | Parivritti / cyclic | offered for nearly every varga by JHora and by Maitreya ("Continuous") |
-| 10 | Even-sign reversal | JHora 7.63: "one new definition of D-2, D-3, D-12, D-16, D-20 and D-27, 2 new definitions of D-7 and D-24 and 3 new definitions of D-10 and D-60. The alternative definitions are mostly related to reversal of divisions in an even sign" |
-| 11 | Somanatha alternate | odd forward from Mesha, even backward from Meena; offered for nearly every varga |
-| 12 | D30 degree-within-sign | JHora 7.51 offers two ways to stretch an unequal segment across a sign. Maitreya silently runs even signs backwards. Only matters if a varga chart prints degrees |
+| M1 | Parivritti / cyclic | offered for nearly every varga by JHora and by Maitreya ("Continuous") |
+| M2 | Even-sign reversal | JHora 7.63: "one new definition of D-2, D-3, D-12, D-16, D-20 and D-27, 2 new definitions of D-7 and D-24 and 3 new definitions of D-10 and D-60. The alternative definitions are mostly related to reversal of divisions in an even sign" |
+| M3 | Somanatha alternate | odd forward from Mesha, even backward from Meena; offered for nearly every varga |
+| M4 | D30 degree-within-sign | JHora 7.51 offers two ways to stretch an unequal segment across a sign. Maitreya silently runs even signs backwards. Only matters if a varga chart prints degrees |
 
 **Disagreements inside a single source**, recorded because they are a caution
-about the method:
+about the method. Numbered `S`, for the same reason:
 
 | # | Where |
 |---|---|
-| 13 | JHora's feature page says three D-9 variants; its 7.4 release note adds a fourth. Its feature page lists no D-7, D-10, D-12, D-16, D-20, D-24, D-27 or D-60 variants; its 7.63 release note adds several of each |
-| 14 | BPHS ch. 6's D-27 verse and Santhanam's note to it differ in what they specify (§7.12) |
-| 14a | Santhanam's BPHS footnote attributes a D-27 rule to *Saravali*; *Saravali* has no D-27 rule, and the rule is his own supplementary note (§7.12) |
-| 15 | Narasimha Rao's D-27 worked example contradicts his own rule (§7.12) |
-| 16 | Maitreya's "Continuous" D-4 computes a D-2. Read from its source; present in both the original and a fork |
+| S1 | JHora's feature page says three D-9 variants; its 7.4 release note adds a fourth. Its feature page lists no D-7, D-10, D-12, D-16, D-20, D-24, D-27 or D-60 variants; its 7.63 release note adds several of each |
+| S2 | BPHS ch. 6's D-27 verse and Santhanam's note to it differ in what they specify (§7.12) |
+| S3 | Santhanam's BPHS footnote attributes a D-27 rule to *Saravali*; *Saravali* has no D-27 rule, and the rule is his own supplementary note (§7.12) |
+| S4 | Narasimha Rao's D-27 worked example contradicts his own rule (§7.12) |
+| S5 | Maitreya's "Continuous" D-4 computes a D-2. Read from its source; present in both the original and a fork |
 
 Position taken: **the first pass implements the Parashari rule only, and names
 it.** A varga chart should say which scheme produced it, for the same reason

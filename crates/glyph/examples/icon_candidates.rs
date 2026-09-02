@@ -10,7 +10,8 @@
 use chandra_glyph::{chart_icon, graha_icon, moon_icon, Tint};
 use tiny_skia::{Paint, Pixmap, Rect, Transform};
 
-const SLOT: u32 = 22;
+/// The menu bar slot, from the crate that draws into it rather than copied.
+const SLOT: u32 = chandra_glyph::SLOT_POINTS as u32;
 const SCALE: u32 = 2;
 const ZOOM: u32 = 6;
 
@@ -59,7 +60,13 @@ fn halved(source: &Pixmap) -> Pixmap {
 }
 
 fn main() {
-    let out = std::env::args().nth(1).expect("an output path");
+    // The first argument that is not a flag. Taking `nth(1)` blindly meant
+    // running this with `--halved` and no path wrote a PNG named `--halved` into
+    // the working directory.
+    let out = std::env::args()
+        .skip(1)
+        .find(|arg| !arg.starts_with("--"))
+        .expect("an output path");
     let tint = Tint::Colour {
         r: 237,
         g: 237,

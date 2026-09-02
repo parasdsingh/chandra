@@ -244,7 +244,7 @@
   text-align: left;
 }
 
-.settings__toggle:hover:not(.is-locked) {
+.settings__toggle:hover {
   background: var(--surface-hover);
 }
 
@@ -253,9 +253,6 @@
   color: var(--text-primary);
 }
 
-.settings__toggle.is-locked {
-  opacity: 0.55;
-}
 
 /* A track and a knob, drawn rather than a native checkbox so it matches the
    panel; the settings window that would have used AppKit controls is gone. */

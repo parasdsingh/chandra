@@ -123,9 +123,9 @@ Legend for that column:
 
 | # | Element | Where | What it means | Explained? |
 |---|---|---|---|---|
-| 63 | Drawn switch; Chandra's row on and disabled | Menu bar section | the permanent moon item **is** Chandra's item | words (`The moon is always shown.`) |
+| 63 | ~~Drawn switch; Chandra's row on and disabled~~ | Menu bar section | **Retired by D-030.** The chart holds the permanent slot; every calendar including Chandra is switchable, so there is no locked row and no footnote | — |
 | 64 | `Rashi — Ari, Tau, Gem` / `Nakshatra — Ashw, P.Ash` | Calendar section | a sample of the abbreviations the cell will print | partially — three of thirty-nine |
-| 65 | Root row values (`Amanta`, `Moon + 2`, `Default`) | Settings root | what each section is set to now | self-evident |
+| 65 | Root row values (`Amanta`, `3 calendars`, `Default`) | Settings root | what each section is set to now | self-evident |
 
 ---
 
@@ -568,7 +568,7 @@ which day-view fields exist.
   Marks                          ← new
   Location        Bengaluru
   Astrology       Lahiri
-  Menu bar        Moon + 2
+  Menu bar        3 calendars
   Size            Default
   About
 ```
@@ -665,5 +665,6 @@ Not changed: panel size, region height, focus order, any spoken label, any exist
 
 7. **Does this warrant a decision entry?** The surface choice contends with DESIGN §9.5 and with
    §12's "a second surface is a second thing to learn". Both are resolved here in prose. If the
-   recommendation is accepted, it should probably be D-029 rather than a paragraph in a design
+   recommendation is accepted, it should get a decision record of its own rather than a paragraph in
+   a design
    document.

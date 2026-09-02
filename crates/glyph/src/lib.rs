@@ -9,4 +9,4 @@ pub mod moon;
 pub mod path;
 pub mod render;
 
-pub use render::{chart_icon, graha_icon, moon_icon, Icon, RenderError, Tint};
+pub use render::{chart_icon, graha_icon, moon_icon, Icon, RenderError, Tint, SLOT_POINTS};

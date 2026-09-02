@@ -86,10 +86,14 @@ moon-phases/
 │   │   ├── settings.rs            typed, versioned, migrated
 │   │   └── state.rs               AppState, engine handle, cache
 │   ├── resources/
-│   │   ├── ephe/                  sepl_18.se1, semo_18.se1   (1.7 MB)
-│   │   ├── zone1970.tab           timezone -> representative lat/lon
-│   │   └── cities15000.bin        city search index
+│   │   └── ephe/                  sepl_18.se1, semo_18.se1   (1.7 MB)
 │   └── tauri.conf.json
+├── crates/geo/data/                the location tables, embedded at compile time
+│   ├── zone.tab                    IANA: 448 zones -> representative lat/lon
+│   ├── iso3166.tab                 IANA: country code -> country name
+│   ├── cities.tsv                  GeoNames cities15000, trimmed (34,129 rows)
+│   ├── admin1.tsv                  GeoNames: region code -> region name
+│   └── NOTICE                      GeoNames is CC BY 4.0; the tz files are public domain
 └── src/                           front end — SolidJS + Vite + TypeScript
     ├── components/
     ├── styles/tokens.css

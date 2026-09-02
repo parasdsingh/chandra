@@ -72,6 +72,7 @@ pub fn run() {
             commands::snapshot,
             commands::update_settings,
             commands::search_cities,
+            commands::nearest_city,
             commands::request_device_location,
             commands::close_panel,
         ])

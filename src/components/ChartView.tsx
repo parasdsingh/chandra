@@ -55,7 +55,16 @@ export function ChartView(props: Props): JSX.Element {
                 It drops right to left as the line narrows, except that the
                 place is the last thing to go: if the place alone will not fit,
                 the other two come back instead. */}
-            <p class="chakra__gloss">{caption(data(), props.timeZone)}</p>
+            {/* The scheme is on the hover rather than in the line. A D9
+                computed one way looks exactly like a D9 computed another, so a
+                chart that cannot say what produced it invites the reader to
+                assume it matches whatever they last saw elsewhere (D-032) - but
+                the panel is 318 points wide, and this line already carries the
+                three things that place the chart. The caption is where the
+                chart's provenance lives, so the scheme goes on it. */}
+            <p class="chakra__gloss" title={provenance(data())}>
+              {caption(data(), props.timeZone)}
+            </p>
 
             <Chakra
               data={data()}
@@ -104,6 +113,28 @@ function caption(chart: ChakraData, timeZone: string): string {
     ].find((line) => line.length <= CAPTION_LIMIT) ?? at
   );
 }
+
+/**
+ * What produced this chart, for the hover.
+ *
+ * Spelled out rather than abbreviated: `D9` is the name of the division to
+ * somebody who already knows, and this exists for somebody who does not.
+ */
+function provenance(chart: ChakraData): string {
+  const division =
+    chart.varga === "d1"
+      ? "Rashi chart (D1)"
+      : `${VARGA_NAMES[chart.varga]} (${chart.varga.toUpperCase()})`;
+  return `${division} · ${chart.scheme} scheme`;
+}
+
+const VARGA_NAMES: Record<string, string> = {
+  d1: "Rashi",
+  d3: "Drekkana",
+  d7: "Saptamsa",
+  d9: "Navamsa",
+  d12: "Dwadasamsa",
+};
 
 /** Characters that fit the caption's 288px line at 10px uppercase.
  *

@@ -87,6 +87,11 @@ export const updateSettings = (settings: Settings) =>
 export const searchCities = (query: string, limit: number) =>
   invoke<City[]>("search_cities", { query, limit });
 
+/** What to call a pair of coordinates typed by hand. A label only: the timezone
+ *  is never taken from it (D-031). */
+export const nearestCity = (latitude: number, longitude: number) =>
+  invoke<City | null>("nearest_city", { latitude, longitude });
+
 export const requestDeviceLocation = () =>
   invoke<Resolved>("request_device_location");
 

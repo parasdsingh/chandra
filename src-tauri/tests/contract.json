@@ -1,4 +1,41 @@
 {
+  "Chakra": {
+    "lagna": {
+      "degrees_in_rashi": [
+        "integer"
+      ],
+      "longitude": "number",
+      "name": "string",
+      "rashi": "string"
+    },
+    "place": "string",
+    "rashis": [
+      {
+        "grahas": [
+          {
+            "combust": "boolean",
+            "degrees_in_rashi": [
+              "integer"
+            ],
+            "dignity": "null",
+            "graha": "string",
+            "longitude": "number",
+            "name": "string",
+            "retrograde": "boolean",
+            "short": "string"
+          }
+        ],
+        "house": "integer",
+        "name": "string",
+        "rashi": "string",
+        "short": "string"
+      }
+    ],
+    "scheme": "string",
+    "source": "string",
+    "unix_ms": "integer",
+    "varga": "string"
+  },
   "City": {
     "city": "string",
     "country": "string",
@@ -415,7 +452,8 @@
     },
     "chart": {
       "format": "string",
-      "numbered": "boolean"
+      "numbered": "boolean",
+      "varga": "string"
     },
     "location": {
       "elevation": "number",

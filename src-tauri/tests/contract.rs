@@ -13,6 +13,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::varga::Varga;
 use chandra_almanac::{Almanac, Location, MonthCursor};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig};
 use serde_json::{json, Map, Value};
@@ -215,6 +216,29 @@ fn ipc_payload_shapes_match_the_committed_contract() {
     shapes.insert(
         "City",
         shape(&serde_json::to_value(chandra_geo::search("kolkata", 1).first().unwrap()).unwrap()),
+    );
+    // The chart, in two divisions merged. It was the newest payload in the app
+    // and the one payload with no guard here, which is the wrong way round: a
+    // shape is most likely to drift while it is still being changed.
+    //
+    // Merged across a varga and D1 so a field that only one of them populates
+    // still appears - the same reason the month shape merges two systems.
+    shapes.insert(
+        "Chakra",
+        [Varga::D1, Varga::D9]
+            .into_iter()
+            .map(|varga| {
+                shape(
+                    &serde_json::to_value(
+                        almanac
+                            .chakra(1_755_000_000_000, "Bengaluru", varga)
+                            .expect("chart"),
+                    )
+                    .unwrap(),
+                )
+            })
+            .reduce(merge)
+            .expect("both divisions yield a chart"),
     );
 
     let produced = serde_json::to_value(&shapes).expect("shapes serialise");

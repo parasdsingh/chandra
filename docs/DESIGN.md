@@ -863,9 +863,8 @@ toggleable grahas. Taken literally, enabling Chandra produces a second moon item
 
 **Resolved, and built as proposed:** the permanent moon item *is* Chandra's item. Its row in
 Settings → Menu bar is present, shows the Chandra glyph and name, and its toggle is on and
-disabled; the section's footnote reads `The moon is always shown.` rather than captioning the
-row itself. The Chandra crescent is used for that row and nowhere in the menu bar — the live
-disc always wins there.
+disabled. **Superseded by D-030:** the chart holds the permanent slot now, every calendar
+including Chandra is toggleable, and the footnote claiming the moon is always shown has gone
 
 ---
 
@@ -1307,7 +1306,8 @@ Seven, including the root list:
 - **Every change applies immediately.** Nothing here needs confirming: each setting is
   reversible and its effect is visible in the calendar behind it. There is no Save, no Cancel,
   no restart.
-- Chandra's row in `menubar` is present, on, and disabled: the permanent moon item *is*
+- Chandra's row in `menubar` is present and on by default, and **switchable since D-030**. It was
+  disabled, when the permanent moon item *was*
   Chandra's item (§7.3, D-009).
 - The switch is drawn — a track and a knob — rather than a native checkbox, so it matches the
   panel. The controls that *are* native keep their platform appearance and their own focus

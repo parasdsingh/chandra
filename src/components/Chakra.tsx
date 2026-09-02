@@ -44,8 +44,15 @@ const INSET = 0.5;
 
 /** Row height and column width for the grahas clustered in one compartment.
  *
- * The row is taller than the 10px type, or consecutive lines touch. The column
- * is wide enough for the longest label - a two-letter name with `(r)` after it. */
+ * The type is 11px and its rendered box 12.64 tall, so a 12px row is a little
+ * tighter than the boxes: adjacent rows overlap by about 0.6 of a box. Nothing
+ * is visible, because a box is measured to the ascender and the ink of a
+ * two-letter capitalised name reaches about 8 - and buying that 0.6 back would
+ * cost a row of capacity in every compartment that is nearly full, which is
+ * where it would hurt.
+ *
+ * The column is the *pitch* between two labels, not the room one needs. That is
+ * `GRAHA_HALF`, and conflating the two is what once let a label cross a wall. */
 const GRAHA_ROW = 12;
 const GRAHA_COLUMN = 30;
 /** Clearance kept between a cluster and the compartment's own edges. */
@@ -117,12 +124,6 @@ function spanAt(points: Point[], y: number): { min: number; max: number } {
   return min <= max ? { min, max } : { min: 0, max: 0 };
 }
 
-/** How far a 10px label's glyphs reach above and below its baseline, plus the
- *  clearance it keeps from the compartment's own edge.
- *
- *  The clearance is the point: at 8 and 3 the labels were technically inside
- *  their compartments and visually sitting on the frame, which reads as a
- *  clipped label rather than a placed one. */
 /**
  * The narrowest the shape gets over a band of heights.
  *
@@ -226,9 +227,21 @@ const CAPTION_NUMBER_WIDTH = 13;
 const CAPTION_ABOVE = 10;
 const CAPTION_BELOW = 3;
 
+/** A compartment caption's reach from its baseline, plus the clearance it keeps
+ *  off the frame.
+ *
+ *  Larger than the measured box - `CAPTION_ABOVE`/`CAPTION_BELOW` are 10 and 3 -
+ *  because these place the caption while those reserve room around it. The
+ *  clearance is the point: at the measured figures the captions were technically
+ *  inside their compartments and visually sitting on the frame, which reads as a
+ *  clipped label rather than a placed one.
+ *
+ *  Two sets of numbers for one piece of text is a hazard, and they are kept
+ *  apart deliberately: changing what a caption *reserves* should not silently
+ *  move where it is *put*. */
 const LABEL_ASCENT = 12;
 const LABEL_DESCENT = 6;
-/** Half the width of a three-letter label at 10px, plus the same clearance. */
+/** Half the width of a three-letter caption, plus the same clearance. */
 const LABEL_HALF = 15;
 
 /**
@@ -272,6 +285,11 @@ function placeCaption(
       far(closest, point) === closest ? point : closest,
     );
     return {
+      // Three tenths of the way in from the vertex. A caption placed *on* a
+      // vertex is placed on the frame; this is far enough in to clear it and
+      // near enough to still read as belonging to that corner. Smaller than the
+      // name's 0.4 below because a one or two character number needs less room
+      // to sit clear.
       at: clampInside(points, toward(near, middle, 0.3)),
       anchor: "middle",
     };
@@ -289,6 +307,9 @@ function placeCaption(
       return {
         at: {
           x: a.x + (onLeft ? LABEL_WALL : -LABEL_WALL),
+          // A third of the ascent below the wall's midpoint. `y` is a baseline
+          // and the eye centres on the ink, which sits above it - so a caption
+          // placed at the exact midpoint reads as sitting high.
           y: (a.y + b.y) / 2 + LABEL_ASCENT / 3,
         },
         anchor: onLeft ? "start" : "end",
@@ -297,6 +318,9 @@ function placeCaption(
   }
 
   return {
+    // Four tenths in from the outermost vertex, for the same reason as the
+    // number's three: a three-letter name is wider and needs to start further
+    // from the point before it clears both walls of the wedge.
     at: clampInside(points, toward(points.reduce(far), middle, 0.4)),
     anchor: "middle",
   };
@@ -358,6 +382,14 @@ function cluster(
   count: number,
   caption: Box,
 ): Point[] {
+  // The band a baseline may sit in, so the whole label stays inside the
+  // compartment's height. Every arrangement below is placed within it rather
+  // than placed and then checked, which is what makes containment structural
+  // rather than something a search can fall through.
+  const ys = points.map((point) => point.y);
+  const top = Math.min(...ys) + GRAHA_MARGIN / 2 + GRAHA_ABOVE;
+  const bottom = Math.max(...ys) - GRAHA_MARGIN / 2 - GRAHA_BELOW;
+
   const desired = count <= 1 ? 1 : count <= 4 ? 2 : 3;
 
   // Every shape the count can be laid out in, best first. More columns is a
@@ -365,61 +397,139 @@ function cluster(
   // fits depends on the compartment: a corner triangle runs out of width, and a
   // tall kite runs out of height. Neither direction is always the right one to
   // try, so both are tried and the one nearest the preferred shape wins.
-  //
-  // At most nine bodies, so this is at most nine attempts at nine positions.
   const shapes = Array.from({ length: count }, (_, index) => index + 1).sort(
     (a, b) => Math.abs(a - desired) - Math.abs(b - desired) || a - b,
   );
 
-  for (const columns of shapes) {
-    const lines = Math.ceil(count / columns);
-    const reach = ((lines - 1) / 2) * GRAHA_ROW;
+  // Pitches, loosest first. The ordinary row spacing is tried for every shape
+  // before any tighter one is, so a compartment only gets a squeezed block when
+  // no roomy arrangement of any shape would fit.
+  const pitches = [GRAHA_ROW, GRAHA_ROW * 0.85, GRAHA_ROW * 0.7];
 
-    // Centred first, then clear of the caption below it, then clear above. A
-    // block that will not fit beside the caption often fits under it: eight
-    // bodies two abreast is four rows, which a South Indian cell has room for
-    // only once the caption is not taking a bite out of the top one.
-    const shifts = [
-      0,
-      caption.bottom + GRAHA_ABOVE + reach - centre.y,
-      caption.top - GRAHA_BELOW - reach - centre.y,
-    ];
+  for (const pitch of pitches) {
+    for (const columns of shapes) {
+      const lines = Math.ceil(count / columns);
+      const reach = ((lines - 1) / 2) * pitch;
 
-    for (const shift of shifts) {
-      const laid = rows(points, centre, count, columns, caption, shift, GRAHA_ROW);
-      if (laid) return laid;
+      // The block's centre can only sit where the whole block stays in the
+      // band. If that interval is empty the block is taller than the
+      // compartment and no offset saves it.
+      const lowest = top + reach;
+      const highest = bottom - reach;
+      if (lowest > highest) continue;
+
+      // Three preferences, each clamped into the feasible interval rather than
+      // used raw. Clamping is the fix for a whole class of near misses: the
+      // South Indian eight-body block failed by an eighth of a pixel, and a
+      // shift of that much fitted it.
+      const preferences = [
+        centre.y,
+        caption.bottom + GRAHA_ABOVE + reach,
+        caption.top - GRAHA_BELOW - reach,
+      ];
+
+      for (const preferred of preferences) {
+        const middle = Math.min(Math.max(preferred, lowest), highest);
+        const laid = rows(points, centre.x, middle, count, columns, caption, pitch);
+        if (laid) return laid;
+      }
     }
   }
 
-  // Nothing fits at the ordinary pitch, at any shape or offset. The rows are
-  // squeezed together until the block fits the compartment's height instead.
+  // Nothing fits at any shape, offset or pitch. The compartment is genuinely
+  // too small for what is standing in it, so the labels are stacked down its
+  // middle at whatever spacing the height allows and each one is pushed inside
+  // the shape at its own row.
   //
   // Bodies may then overlap. That is the right way to lose: a graha drawn
   // outside its compartment is *wrong* - it reads as standing in a sign it is
-  // not in - and overlapping text is only hard to read. Containment first.
+  // not in - and overlapping text is only hard to read.
   //
-  // Reached by a compartment genuinely too small for what is standing in it. A
-  // South Indian cell is 79 x 60, a caption takes 13 of the height, and four
-  // rows of 11px text need about 50 in the 39 that leaves: eight bodies in one
-  // sign does not fit, and no arrangement of them does.
-  const ys = points.map((point) => point.y);
-  const room =
-    Math.max(...ys) - Math.min(...ys) - GRAHA_MARGIN - GRAHA_ABOVE - GRAHA_BELOW;
+  // This clamps rather than trusting a centroid. It used to centre the stack on
+  // the compartment's `body`, which for a triangle is a third of the way up
+  // rather than the middle of the usable band - so a four-body stack in a corner
+  // triangle started fourteen units too high and its top label left the chart
+  // entirely.
+  // Only the heights where a label fits at all. Spreading the stack over the
+  // compartment's full height puts rows where the shape is narrower than one
+  // label - and in a wall triangle, whose long edge *is* the chart's edge, a
+  // label centred in a five-unit slot hangs five units off the side of the
+  // drawing. Rows are packed into the part of the shape that can hold them
+  // instead, overlapping each other rather than leaving the chart.
+  const needed = GRAHA_HALF * 2 + GRAHA_MARGIN;
+  const fits = (y: number) => {
+    const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
+    return span.max - span.min >= needed;
+  };
 
-  for (const columns of shapes) {
-    const lines = Math.ceil(count / columns);
-    const pitch = lines > 1 ? Math.min(GRAHA_ROW, room / (lines - 1)) : GRAHA_ROW;
-    const laid = rows(points, centre, count, columns, caption, 0, pitch);
-    if (laid) return laid;
-  }
+  const step = Math.max(0.5, (bottom - top) / 200);
+  let first = top;
+  let last = bottom;
+  while (first < bottom && !fits(first)) first += step;
+  while (last > first && !fits(last)) last -= step;
 
-  // Not even one column will go: the compartment is narrower than a single
-  // label. Its middle is all that is left.
+  // Nothing anywhere holds a label. Only a compartment narrower than a single
+  // name reaches this, and then the whole shape's own middle is the least bad
+  // answer there is.
+  const usable = last > first;
+  const from = usable ? first : top;
+  const to = usable ? last : bottom;
+  const pitch = count > 1 ? (to - from) / (count - 1) : 0;
+
   return Array.from({ length: count }, (_, index) => {
-    const y = centre.y + (index - (count - 1) / 2) * (room / Math.max(1, count));
-    const span = spanAt(points, y);
-    return { x: (span.min + span.max) / 2, y };
+    const y = count > 1 ? from + index * pitch : (from + to) / 2;
+    const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
+
+    // The caption comes out of the room here too. It was reserved in `rows` and
+    // not in this path, so a squeezed stack could land on the sign's own name -
+    // which it did, in a numbered corner triangle.
+    const { min, max } = withoutCaption(span, y, caption);
+    const lowest = min + GRAHA_HALF + GRAHA_MARGIN / 2;
+    const highest = max - GRAHA_HALF - GRAHA_MARGIN / 2;
+
+    return {
+      x:
+        lowest <= highest
+          ? Math.min(Math.max(centre.x, lowest), highest)
+          : (min + max) / 2,
+      y,
+    };
   });
+}
+
+/**
+ * A row's available width, with the compartment's caption taken out of it.
+ *
+ * Only where the row runs level with the caption. The caption sits against a
+ * wall, so what is left is one interval rather than two: the side of it with
+ * more space in.
+ */
+function withoutCaption(
+  span: { min: number; max: number },
+  y: number,
+  caption: Box,
+): { min: number; max: number } {
+  const level = y + GRAHA_BELOW > caption.top && y - GRAHA_ABOVE < caption.bottom;
+  if (!level) return span;
+
+  const toTheLeft = caption.min - span.min;
+  const toTheRight = span.max - caption.max;
+  const kept =
+    toTheRight >= toTheLeft
+      ? { min: Math.max(span.min, caption.max), max: span.max }
+      : { min: span.min, max: Math.min(span.max, caption.min) };
+
+  // Unless what is left could not hold a label anyway, in which case the caption
+  // is not taken out at all. Keeping the sliver would push the label off the
+  // compartment entirely, and a body drawn outside its own sign is wrong in a
+  // way that a body sitting on the sign's number is not.
+  //
+  // A house *number* is what reaches this. A name sits against a wall so one
+  // side of it is always the whole compartment; a number is placed near the
+  // chart's middle, where the compartment is widest, so it can leave two narrow
+  // sides and no wide one.
+  const needed = GRAHA_HALF * 2 + GRAHA_MARGIN;
+  return kept.max - kept.min >= needed ? kept : span;
 }
 
 /**
@@ -434,11 +544,11 @@ function cluster(
  */
 function rows(
   points: Point[],
-  centre: Point,
+  centreX: number,
+  middleY: number,
   count: number,
   columns: number,
   caption: Box,
-  shift: number,
   pitch: number,
 ): Point[] | null {
   const lines = Math.ceil(count / columns);
@@ -449,7 +559,7 @@ function rows(
     const column = index % columns;
     const inThisRow = Math.min(columns, count - line * columns);
 
-    const y = centre.y + shift + (line - (lines - 1) / 2) * pitch;
+    const y = middleY + (line - (lines - 1) / 2) * pitch;
 
     // The narrowest the compartment gets over the label's own box, not over the
     // scanline its baseline sits on. Where a compartment has a diagonal wall the
@@ -470,25 +580,14 @@ function rows(
 
     const span = spanOver(points, y - GRAHA_ABOVE, y + GRAHA_BELOW);
 
-    // Where the row runs level with the caption, the caption's own box comes out
-    // of the room available. It is against a wall, so what is left is one
-    // interval rather than two: the side of it with more space in.
-    const level =
-      y + GRAHA_BELOW > caption.top && y - GRAHA_ABOVE < caption.bottom;
-    let { min, max } = span;
-    if (level) {
-      const toTheLeft = caption.min - span.min;
-      const toTheRight = span.max - caption.max;
-      if (toTheRight >= toTheLeft) min = Math.max(min, caption.max);
-      else max = Math.min(max, caption.min);
-    }
+    const { min, max } = withoutCaption(span, y, caption);
 
     const half = ((inThisRow - 1) * GRAHA_COLUMN) / 2 + GRAHA_HALF;
     const lowest = min + half + GRAHA_MARGIN / 2;
     const highest = max - half - GRAHA_MARGIN / 2;
     if (lowest > highest) return null;
 
-    const middle = Math.min(Math.max(centre.x, lowest), highest);
+    const middle = Math.min(Math.max(centreX, lowest), highest);
     placed.push({
       x: middle + (column - (inThisRow - 1) / 2) * GRAHA_COLUMN,
       y,
@@ -638,6 +737,9 @@ function gridCompartments(
   const step = format === "south" ? 1 : -1;
 
   return rashis.map((rashi, sign) => {
+    // `+ 144` is only there to keep the modulus positive: `step` is -1 for the
+    // anticlockwise format, and 144 is 12 twelves, comfortably past the most
+    // negative value `step * sign` can reach. It is not a quantity of anything.
     const at = (meshaAt + step * sign + 144) % 12;
     const [column, row] = ring[at]!;
     const left = INSET + column * cellWidth;
@@ -649,7 +751,11 @@ function gridCompartments(
         { x: left + cellWidth, y: top + cellHeight },
         { x: left, y: top + cellHeight },
       ],
-      label: { x: left + 4, y: top + 11 },
+      // Top left of the cell, inset by the same clearance the North Indian
+      // captions keep off their frame and dropped by one ascent so the ink sits
+      // under the top edge rather than on it. A grid cell has no vertex to
+      // choose between, so there is no rule to follow here beyond that.
+      label: { x: left + LABEL_WALL, y: top + CAPTION_ABOVE + 1 },
       labelAnchor: "start" as const,
       body: { x: left + cellWidth / 2, y: top + cellHeight / 2 + 3 },
       rashi,
@@ -668,8 +774,16 @@ export function Chakra(props: {
    *  signs and are labelled by name in both references. */
   numbered: boolean;
 }): JSX.Element {
-  const lagnaSign = () =>
-    props.data.rashis.findIndex((rashi) => rashi.house === 1);
+  // Falls back to Mesha rather than to -1. The payload always numbers the houses
+  // from the lagna so exactly one rashi is house 1, but `findIndex` returns -1
+  // when nothing matches, and -1 was fed straight into `(lagnaSign + house) % 12`
+  // and then used to index the rashi array - which hands `undefined` to a
+  // renderer that dereferences it. A chart drawn from the wrong sign is wrong;
+  // a chart that throws takes the panel with it.
+  const lagnaSign = () => {
+    const found = props.data.rashis.findIndex((rashi) => rashi.house === 1);
+    return found < 0 ? 0 : found;
+  };
 
   const compartments = (): Compartment[] =>
     props.format === "north"
@@ -802,7 +916,11 @@ function spoken(data: ChakraData, format: ChartFormat): string {
           graha.retrograde ? "retrograde" : null,
           graha.combust ? "combust" : null,
           graha.dignity ? DIGNITY_WORDS[graha.dignity] : null,
-        ].filter((state): state is string => state !== null);
+          // `!= null` rather than `!== null`, which also drops `undefined`. A
+          // dignity added in Rust but not in `DIGNITY_WORDS` looks up to
+          // `undefined`, which passed a `!== null` test and was then asserted to
+          // be a string - so the chart would have said `undefined` aloud.
+        ].filter((state): state is string => state != null);
         return `${graha.name}${states.length > 0 ? ` ${states.join(" ")}` : ""}`;
       })
       .join(", ");
@@ -830,7 +948,9 @@ function describe(graha: ChakraGraha, rashi: string): string {
     graha.retrograde ? "retrograde" : null,
     graha.combust ? "combust" : null,
     graha.dignity ? DIGNITY_WORDS[graha.dignity] : null,
-  ].filter((state): state is string => state !== null);
+    // See `spoken`: `!= null` drops `undefined` too, which a dignity with no
+    // entry in `DIGNITY_WORDS` would otherwise become.
+  ].filter((state): state is string => state != null);
 
   return (
     `${graha.name} — ${rashi} ${degrees}°${String(minutes).padStart(2, "0")}′` +

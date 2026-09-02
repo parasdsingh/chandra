@@ -13,13 +13,14 @@ use std::path::{Path, PathBuf};
 
 use chandra_almanac::day::DayOptions;
 use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::varga::Varga;
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, SiderealConfig};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 9;
+pub const SCHEMA_VERSION: u32 = 10;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -95,12 +96,19 @@ impl AppearanceSetting {
     }
 }
 
-/// The Lagna Kundali: whether it has a menu bar item, and which format it draws.
+/// The Lagna Kundali: which division it draws, and in which format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChartSetting {
-    /// No `tray` field. The chart is the one status item that is always there
-    /// (D-030), so there is nothing to switch.
+    /// Which of the three chart formats is drawn. They differ in where a rashi
+    /// is put on screen and not in what is true, so this changes the drawing and
+    /// nothing else.
+    ///
+    /// There is no `tray` field: the chart is the one status item that is always
+    /// there (D-030), so there is nothing to switch.
     pub format: ChartFormat,
+    /// Which division the chart draws. `D1` is the rashi chart, which is what
+    /// the chart has always been.
+    pub varga: Varga,
     /// Whether a North Indian compartment carries the sign's number rather than
     /// its name.
     ///
@@ -281,6 +289,7 @@ impl Default for Settings {
             chart: ChartSetting {
                 format: ChartFormat::North,
                 numbered: false,
+                varga: Varga::D1,
             },
             tray: TraySetting {
                 // The moon, which is now listed here like any other calendar and
@@ -544,7 +553,12 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
             .and_then(serde_json::Value::as_object_mut)
             .and_then(|tray| tray.get_mut("subjects"))
             .and_then(serde_json::Value::as_array_mut)
-            .ok_or_else(|| AppError::Settings("settings schema 8 has no tray subjects".into()))?;
+            .ok_or_else(|| {
+                // Named for the field rather than for a version: this step runs
+                // for a document that entered the chain at any version from 1,
+                // and saying "schema 8" of a schema 1 file names the wrong one.
+                AppError::Settings("settings have no tray subjects to migrate".into())
+            })?;
 
         let moon = serde_json::Value::from(Graha::Chandra.key());
         if !subjects.contains(&moon) {
@@ -552,6 +566,21 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         }
         value["schema_version"] = serde_json::Value::from(9u32);
         version = 9;
+    }
+
+    // 9 -> 10. The chart gained a division. A file written before it means the
+    // chart it was drawing, which is the rashi chart.
+    if version == 9 {
+        if let Some(chart) = value
+            .get_mut("chart")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            chart
+                .entry("varga")
+                .or_insert(serde_json::Value::from("d1"));
+        }
+        value["schema_version"] = serde_json::Value::from(10u32);
+        version = 10;
     }
 
     match version {

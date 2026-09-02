@@ -147,12 +147,6 @@ const MARK_POINTS: f32 = 10.0;
 /// an annotation.
 const MARK_CLEARANCE: f32 = 0.8;
 
-/// Renders a graha's template glyph, marked `℞` while it is retrograde.
-///
-/// Retrograde is the one state the menu bar carries. It is the rarest and the
-/// most watched, and at 22 points one mark is all that stays legible; everything
-/// else a graha can be doing is named in the calendar, where there is room for
-/// words.
 /// The Lagna Kundali's menu bar icon.
 ///
 /// The North Indian chart's construction reduced to what survives at 22 points:
@@ -275,9 +269,10 @@ const CHART_INSET: f32 = 0.18;
 ///
 /// Thinner, and measured rather than chosen. Optical weight is ink in a slot,
 /// not nominal size: a graha's symbol is a short path and covers 12 to 18 per
-/// cent of its slot, and the moon - the only other filled mark - covers 20. A
-/// square at a graha's own stroke weight, with a solid diamond inside it,
-/// measured 45 per cent and dominated the row.
+/// cent of its slot, and the moon - the only other filled mark - covers 20 at
+/// the crescent this was measured against and about 34 when full. A square at a
+/// graha's own stroke weight, with a solid diamond inside it, measured 45 per
+/// cent and dominated the row at every phase.
 ///
 /// The square's perimeter is the reason. It is far longer than any glyph's path,
 /// so the same stroke on it lays down several times the ink. The fill is what
@@ -300,6 +295,12 @@ fn stroke_of(width: f32) -> Stroke {
     }
 }
 
+/// Renders a graha's template glyph, marked `℞` while it is retrograde.
+///
+/// Retrograde is the one state the menu bar carries. It is the rarest and the
+/// most watched, and at 22 points one mark is all that stays legible; everything
+/// else a graha can be doing is named in the calendar, where there is room for
+/// words.
 pub fn graha_icon(
     graha: Graha,
     scale: u32,

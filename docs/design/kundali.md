@@ -828,7 +828,7 @@ no warning colour, icon or border.
 
 ### 8.2 No location
 
-**Cannot happen.** D-007 step 3 — the bundled `zone1970.tab` centroid — is offline,
+**Cannot happen.** D-007 step 3 — the bundled `zone.tab` centroid — is offline,
 deterministic and always resolves, which is why DESIGN §9.5 can say the first panel open never
 shows `LOCATION_UNRESOLVED`.
 
@@ -932,4 +932,8 @@ No new error path — this view uses the one every other view uses.
 permanent moon item is Chandra's item, so listing it here would put two moons in the menu bar".
 
 That is **D-009**. D-019 is "every state the grid draws is named in the day view". Two
-comments, one wrong reference each. Worth fixing while the tray file is open for §5.4.
+comments, one wrong reference each. Both are fixed.
+
+The sentence they cited has since gone too. **D-030** moved the permanent slot from the moon to
+the chart, so there is no permanent moon item and every calendar is toggleable; the doc comment
+that carried the wrong citation was rewritten rather than corrected.

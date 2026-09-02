@@ -40,8 +40,8 @@ const data = fixture as unknown as {
   moonMonth: MoonMonth;
   lunarMonth: MoonMonth;
   moonDay: Detail;
-  lunarDay: Detail;
   moonDayNoRise: Detail;
+  lunarGrahaDay: Detail;
   polarDay: Detail;
   grahaMonth: GrahaMonth;
   grahaDay: Detail;
@@ -49,6 +49,9 @@ const data = fixture as unknown as {
   snapshot: Snapshot;
   chakra: Chakra;
   chakraCrowded: Chakra;
+  chakraNavamsa: Chakra;
+  chakraCorner: Chakra;
+  chakraWall: Chakra;
   chakraMoshier: Chakra;
 };
 
@@ -56,7 +59,7 @@ const context: FormatContext = { timeZone: data.timeZone };
 
 const boot: Bootstrap = {
   settings: {
-    schema_version: 9,
+    schema_version: 10,
     location: {
       mode: "manual",
       place: {
@@ -71,7 +74,7 @@ const boot: Bootstrap = {
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta", ingress: "rashi" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
-    chart: { format: "north", numbered: false },
+    chart: { format: "north", varga: "d1", numbered: false },
     tray: { subjects: ["chandra", "mangala", "shani"], colour_mode: false },
     appearance: { scale: 1 },
   },
@@ -106,6 +109,13 @@ const boot: Bootstrap = {
     { key: "purnimanta", label: "Lunar, purnimanta (full moon)" },
   ],
   grahas: data.grahas,
+  vargas: [
+    { key: "d1", label: "D1 · Rashi" },
+    { key: "d3", label: "D3 · Drekkana" },
+    { key: "d7", label: "D7 · Saptamsa" },
+    { key: "d9", label: "D9 · Navamsa" },
+    { key: "d12", label: "D12 · Dwadasamsa" },
+  ],
 };
 
 /**
@@ -261,10 +271,31 @@ export function Preview(): JSX.Element {
         </div>
       </Case>
 
+      {/* The same reading with `lunar` set, which is the only thing that
+          differs: a lunar day is the same day, named by its tithi. The fixture
+          used to carry a second copy of it under another key, computed by an
+          identical call - so the harness looked like it covered two states and
+          covered one. */}
       <Case title="Moon · day view, lunar month">
         <div class="region">
           <DayDetail
-            detail={data.lunarDay}
+            detail={data.moonDay}
+            events={[]}
+            context={context}
+            isToday={false}
+            lunar={true}
+            error={undefined}
+          />
+        </div>
+      </Case>
+
+      {/* A graha in a lunar month: the one view shape nothing else here covers.
+          It was in the fixture and drawn nowhere, which is the same gap as the
+          duplicate above wearing the opposite disguise. */}
+      <Case title="Shani · day view, lunar month">
+        <div class="region">
+          <DayDetail
+            detail={data.lunarGrahaDay}
             events={[]}
             context={context}
             isToday={false}
@@ -450,6 +481,44 @@ export function Preview(): JSX.Element {
           />
         )}
       </For>
+
+      {/* The navamsa of the same instant the case above draws in D1. Side by
+          side, because what is worth checking about a division is that it is a
+          different chart - same bodies, different compartments, a different
+          rising sign - and not merely that it renders. */}
+      <ChartCase
+        title="Chart · D9 navamsa, same instant"
+        chart={data.chakraNavamsa}
+        format="north"
+        numbered={false}
+      />
+
+      {/* The same crowd in the two shapes that actually constrain the layout. A
+          kite is the roomiest compartment on the chart and the case below lands
+          in one, which is why it showed nothing wrong for so long: a corner
+          triangle runs out of width and a wall triangle has a diagonal to cross.
+          Houses rotate with the lagna, so any stellium visits all twelve over a
+          day - these are the same bodies at a different hour. */}
+      <ChartCase
+        title="Chart · crowd in a corner triangle"
+        chart={data.chakraCorner}
+        format="north"
+        numbered={false}
+      />
+
+      <ChartCase
+        title="Chart · crowd in a wall triangle"
+        chart={data.chakraWall}
+        format="north"
+        numbered={false}
+      />
+
+      <ChartCase
+        title="Chart · crowd in a corner triangle, numbered"
+        chart={data.chakraCorner}
+        format="north"
+        numbered={true}
+      />
 
       {/* The ceiling: eight bodies in one sign, found by scanning two centuries
           rather than picked by hand. Eight is the most there can ever be - the

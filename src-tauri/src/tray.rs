@@ -280,7 +280,10 @@ fn chart_tooltip(app: &AppHandle) -> String {
     let state = app.state::<AppState>();
     let now = jiff::Timestamp::now().as_millisecond();
     let place = state.location().label;
-    match state.almanac.chakra(now, &place) {
+    // The division the panel is set to, so the tooltip and the chart it opens
+    // never name two different rising signs.
+    let varga = state.settings().chart.varga;
+    match state.almanac.chakra(now, &place, varga) {
         Ok(chart) => {
             let (degrees, minutes, _) = chart.lagna.degrees_in_rashi;
             format!(

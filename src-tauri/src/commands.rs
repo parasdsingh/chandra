@@ -43,6 +43,9 @@ pub struct Bootstrap {
     pub node_types: Vec<Choice>,
     pub month_systems: Vec<Choice>,
     pub grahas: Vec<GrahaInfo>,
+    /// The divisional charts on offer. Served rather than written out in the
+    /// front end so the labels cannot drift from `Varga::label`.
+    pub vargas: Vec<Choice>,
 }
 
 #[derive(Debug, Serialize)]
@@ -109,6 +112,13 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
             })
             .collect(),
         grahas: graha_info(),
+        vargas: chandra_almanac::varga::Varga::ALL
+            .into_iter()
+            .map(|v| Choice {
+                key: v.key(),
+                label: v.label(),
+            })
+            .collect(),
     })
 }
 
@@ -226,9 +236,10 @@ pub async fn chakra(app: AppHandle, unix_ms: i64) -> Result<Chakra> {
         // The label comes from the resolution chain, which is the only layer
         // that knows what the coordinates are called.
         let place = state.location().label;
+        let varga = state.settings().chart.varga;
         state
             .almanac
-            .chakra(unix_ms, &place)
+            .chakra(unix_ms, &place, varga)
             .map_err(AppError::from)
     })
     .await
@@ -284,6 +295,21 @@ pub async fn update_settings(app: AppHandle, settings: Settings) -> Result<Boots
 
     let state = app.state::<AppState>();
     bootstrap(app.clone(), state).await
+}
+
+/// What to call a pair of coordinates.
+///
+/// For coordinates typed by hand, which no search produced and so which arrive
+/// with no name. The nearest city is a **label only** - the timezone is not
+/// taken from it, and cannot be: a zone boundary is political and is not
+/// recoverable from a point at any precision (D-031).
+///
+/// `None` for coordinates that are not coordinates. A NaN or a value off the
+/// globe has no nearest anything, and answering with the first row of the table
+/// would be as confident as a real answer.
+#[tauri::command]
+pub async fn nearest_city(latitude: f64, longitude: f64) -> Result<Option<chandra_geo::Place>> {
+    Ok(chandra_geo::nearest_place(latitude, longitude).cloned())
 }
 
 #[tauri::command]

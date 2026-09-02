@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use chandra_almanac::day::DayOptions;
 use chandra_almanac::time::DateKey;
+use chandra_almanac::varga::Varga;
 use chandra_almanac::{Almanac, Location};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig};
 
@@ -71,7 +72,7 @@ fn main() {
                 0.5,
             )) * 1000.0;
 
-            match almanac.chakra(noon as i64, place.label) {
+            match almanac.chakra(noon as i64, place.label, Varga::D1) {
                 Ok(chart) => println!(
                     "  {year}-{month:02}-{day:02} chart: lagna {} {}deg",
                     chart.lagna.name, chart.lagna.degrees_in_rashi.0

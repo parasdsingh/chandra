@@ -17,12 +17,23 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 use crate::events::combustion_from;
 use crate::standing::{dignity_of, Dignity};
+use crate::varga::varga_rashi;
+pub use crate::varga::Varga;
 use crate::zodiac::{degrees_in_rashi, Rashi};
 
 /// The whole chart at one instant.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chakra {
     pub unix_ms: i64,
+    /// Which division this is. `D1` is the rashi chart.
+    pub varga: Varga,
+    /// The scheme the division was computed by.
+    ///
+    /// Always `Parashari`, and printed anyway (D-032). A D9 computed one way
+    /// looks exactly like a D9 computed another - same twelve compartments, same
+    /// glyphs - so a chart that cannot say what produced it invites the reader to
+    /// assume it matches whatever they last saw elsewhere.
+    pub scheme: &'static str,
     /// Where the chart was cast for.
     ///
     /// Not decoration. The lagna moves a degree every four minutes, so a
@@ -120,7 +131,13 @@ const fn chart_short(graha: Graha) -> &'static str {
 /// The observer matters here in a way it does not for a position: two people
 /// reading the same minute in different cities have the same grahas in the same
 /// rashis and a different lagna.
-pub fn at(engine: &Engine, unix_ms: i64, observer: Observer, place: &str) -> Result<Chakra> {
+pub fn at(
+    engine: &Engine,
+    unix_ms: i64,
+    observer: Observer,
+    place: &str,
+    varga: Varga,
+) -> Result<Chakra> {
     let jd = chandra_ephemeris::unix_seconds_to_jd(unix_ms as f64 / 1000.0);
 
     // Positions first, then the ascendant, and the order matters less than the
@@ -133,7 +150,13 @@ pub fn at(engine: &Engine, unix_ms: i64, observer: Observer, place: &str) -> Res
     // which is what makes the pair atomic; nothing here can do it alone.
     let positions = engine.positions(jd, &Graha::ALL)?;
     let ascendant = engine.ascendant(jd, observer)?;
-    let lagna_rashi = Rashi::from_longitude(ascendant.degrees);
+
+    // The varga lagna is the ascendant's own longitude put through the same rule
+    // as a graha's. Cited five ways in `docs/design/vargas.md` §5 rather than
+    // assumed - one implementation instead divides each house midpoint, which
+    // gives divisional houses that need not be twelve consecutive signs, and is
+    // a different model rather than a different formula.
+    let lagna_rashi = varga_rashi(varga, ascendant.degrees);
 
     let mut rashis: Vec<ChakraRashi> = Rashi::ALL
         .into_iter()
@@ -157,15 +180,28 @@ pub fn at(engine: &Engine, unix_ms: i64, observer: Observer, place: &str) -> Res
     .longitude;
 
     for (graha, position) in Graha::ALL.into_iter().zip(positions.iter()) {
-        let rashi = Rashi::from_longitude(position.longitude);
+        // The rule applies to the nodes exactly as it does to everything else.
+        // There is no classical text that treats them separately in a varga and
+        // no implementation that branches on them, so there is no branch here.
+        let rashi = varga_rashi(varga, position.longitude);
         rashis[rashi.index()].grahas.push(ChakraGraha {
             graha,
             short: chart_short(graha).to_string(),
             name: graha.name().to_string(),
             longitude: position.longitude,
+            // The body's true position in its *rashi*, in every chart. A degree
+            // within a varga part would have to be stretched back across thirty
+            // degrees to be printable, and how to do that is disputed - two
+            // schemes in one application alone. The honest figure is the one
+            // actually computed, and it is the same number in every division.
             degrees_in_rashi: degrees_in_rashi(position.longitude),
             retrograde: position.is_retrograde(),
             combust: combustion_from(graha, position, sun).combust,
+            // Read in the sign the body occupies *in this chart*. Dignity is a
+            // property of a graha in a sign, and in a varga the graha is in the
+            // varga's sign - which is what "exalted in navamsa" means. Retrograde
+            // and combustion are properties of the body rather than of a sign, so
+            // they do not change between divisions.
             dignity: dignity_of(graha, rashi),
         });
     }
@@ -182,6 +218,8 @@ pub fn at(engine: &Engine, unix_ms: i64, observer: Observer, place: &str) -> Res
 
     Ok(Chakra {
         unix_ms,
+        varga,
+        scheme: "Parashari",
         place: place.to_string(),
         lagna: Lagna {
             rashi: lagna_rashi,

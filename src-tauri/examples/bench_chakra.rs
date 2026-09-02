@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
+use chandra_almanac::varga::Varga;
 use chandra_almanac::{Almanac, Location};
 use chandra_ephemeris::{Ayanamsa, NodeType, Observer, SiderealConfig};
 
@@ -27,14 +28,16 @@ fn main() {
     let base = 1_787_000_000_000i64;
     // Warm the ephemeris file cache first; the first call pays for the read.
     for i in 0..50 {
-        almanac.chakra(base + i * 1000, "Bengaluru").expect("warm");
+        almanac
+            .chakra(base + i * 1000, "Bengaluru", Varga::D1)
+            .expect("warm");
     }
 
     let runs = 2000;
     let start = Instant::now();
     for i in 0..runs {
         almanac
-            .chakra(base + i * 1000, "Bengaluru")
+            .chakra(base + i * 1000, "Bengaluru", Varga::D1)
             .expect("chakra");
     }
     let each = start.elapsed() / runs as u32;

@@ -54,10 +54,32 @@ pub struct Resolved {
 impl Resolved {
     pub fn to_location(&self) -> Location {
         Location {
-            observer: Observer::new(self.latitude, self.longitude, self.elevation),
+            observer: Observer::new(self.latitude, self.longitude, usable_metres(self.elevation)),
             zone_name: self.zone.clone(),
         }
     }
+}
+
+/// A height the ephemeris will accept.
+///
+/// Swiss Ephemeris refuses an observer outside -500 to 25000 metres and returns
+/// an error from `swe_rise_trans`, so a height beyond it does not give a wrong
+/// sunrise - it gives *no* sunrise, and none for the moon or any graha either,
+/// until the location is changed. That is too total a failure to let a number
+/// typed into a settings field cause.
+///
+/// Clamped rather than rejected. Somebody who types `-600` means "below sea
+/// level", and -500 is the nearest answer the ephemeris can give; refusing the
+/// input outright would leave them with a field that silently does nothing.
+///
+/// The city table is filtered at parse for the same bound, which is where
+/// GeoNames' `-9999` sentinel is caught. This is the second line: the user's own
+/// correction is applied on top of whatever the table said.
+fn usable_metres(metres: f64) -> f64 {
+    if metres.is_nan() {
+        return 0.0;
+    }
+    metres.clamp(-500.0, 25_000.0)
 }
 
 /// Resolves without consulting CoreLocation.

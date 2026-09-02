@@ -254,11 +254,18 @@ function qualifier(label: string): { before: string; after: string } | null {
  *  survives at this size - the outer square, the midpoint diamond filled solid,
  *  and the part of each diagonal that crosses a corner triangle.
  *
- *  The same shape and the same proportions as the status item, scaled from its
- *  22pt slot onto a 16px box: 0.12 of the slot as the inset, a stroke of 1.2,
- *  the diamond held off the square by 1.15 strokes, and the stubs run half way
- *  from each corner to the centre. Drawn twice in two languages, so the numbers
- *  are written here rather than left to be re-derived. */
+ *  The same shape as the status item, and deliberately not the same weight.
+ *  The tray mark was tuned to sit evenly in a 22pt menu bar slot beside the
+ *  system's own glyphs, where it measured 45 per cent of its slot in ink against
+ *  their 12 to 18 and had to come down to 0.62 of a graha's stroke. This one
+ *  sits at 16px beside body text in the panel, where that stroke would be under
+ *  three quarters of a pixel and read as a smudge.
+ *
+ *  What is held in common is the construction and the ratios that make it
+ *  legible: the diamond held clear of the square rather than touching it, and
+ *  the stubs run half way from each corner to the centre, which is exactly where
+ *  the diamond's edge crosses the diagonal. Drawn twice in two languages, so the
+ *  numbers are written down rather than left to be re-derived from the other. */
 function ChartMark(): JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">

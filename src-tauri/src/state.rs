@@ -71,9 +71,9 @@ impl AppState {
 
     /// Grahas with their own menu bar item.
     ///
-    /// Chandra is never included: the permanent moon item is Chandra's item, so
-    /// listing it here would put two moons in the menu bar
-    /// (`docs/DECISIONS.md` D-009).
+    /// Chandra is in here like any other calendar since D-030, which moved the
+    /// permanent slot to the chart. Its item keeps the id `MOON_ID`, because it
+    /// draws a phase rather than a glyph.
     pub fn tray_subjects(&self) -> Vec<Graha> {
         let chosen = self.settings().tray.subjects;
 

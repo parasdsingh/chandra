@@ -30,6 +30,9 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-023](#d-023) | Colour may depict, never encode; `--text-tertiary` carries no text | accepted |
 | [D-024](#d-024) | One mark vocabulary for both calendars: no underlines, a combustion wash, a retrograde bracket | accepted |
 | [D-025](#d-025) | The day view is one field stack for all nine subjects | accepted |
+| [D-026](#d-026) | The nodes are not a special case for retrograde motion | accepted, amended by D-027 |
+| [D-027](#d-027) | A fresh install computes Rahu and Ketu the way a panchanga does | accepted, amends D-026 |
+| [D-028](#d-028) | The menu bar is redrawn on the hour, its tooltip when you point at it | accepted |
 | [D-029](#d-029) | A location is required before the app will draw anything | accepted, amends D-007 |
 | [D-030](#d-030) | The chart is the permanent status item; every calendar is toggleable | accepted, amends D-009 |
 | [D-031](#d-031) | Two location tables: GeoNames for places, the tz table for zones | accepted, amends D-007 |
@@ -102,7 +105,7 @@ blocking pool.**
 
 1. Manual override, if the user has set one. Authoritative, never overridden.
 2. CoreLocation via `tauri-plugin-geolocation`, resolved asynchronously and cached to disk.
-3. IANA timezone → representative coordinates from the bundled `zone1970.tab`
+3. IANA timezone → representative coordinates from the bundled `zone.tab`
    (~450 zones, each with lat/lon). Offline and deterministic.
 
 - Manual selection searches a bundled GeoNames `cities15000` dataset (~25k cities, CC-BY).
@@ -438,7 +441,9 @@ that.
   more precisely.
 - Amends D-010's field list and D-021's Sunrise row. Amends DESIGN.md §5.6, §6.4.
 
-## D-026 — The nodes are not a special case for retrograde motion
+### D-026
+**The nodes are not a special case for retrograde motion**
+
 
 **Decision.** Rahu and Ketu draw the retrograde bracket in the grid and the retrograde rail in
 the day view on exactly the same condition as every other graha: `retrograde`, and nothing else.
@@ -478,7 +483,9 @@ user has chosen a model in which the nodes never turn, and drawing that is truth
 The lesson is the one at the top of `AUDIT.md` in another form: a number written into a comment to
 justify a behaviour is a claim, and a claim with no test is a guess.
 
-## D-027 — A fresh install computes Rahu and Ketu the way a panchanga does
+### D-027
+**A fresh install computes Rahu and Ketu the way a panchanga does**
+
 
 **Decision.** `Settings::default().sidereal.node_type` is `Mean`. The picker lists the mean node
 first. Existing settings files are untouched.
@@ -506,7 +513,9 @@ correction to a case somebody did. Anyone who wants the change makes it in
 rather than a constant and nothing else in the code asserts it — and it shipped wrong once.
 `changing_the_default_does_not_rewrite_a_file_that_names_one` pins the other half.
 
-## D-028 — The menu bar is redrawn on the hour, and its tooltip when you point at it
+### D-028
+**The menu bar is redrawn on the hour, and its tooltip when you point at it**
+
 
 **Decision.** The tray icons are redrawn when the local hour changes, not when the local date does.
 The tooltip is rebuilt from the current instant when the pointer enters the item.
@@ -546,7 +555,9 @@ that it woke when it meant to, because a sleep does not advance while the machin
 
 ---
 
-## D-029 — A location is required before the app will draw anything
+### D-029
+**A location is required before the app will draw anything**
+
 
 **The panel opens on a location gate until a location has actually been set, and there is no way
 past it.** "Set" means the provenance is not `time_zone`.
@@ -577,7 +588,9 @@ commits before it was written. That was the gap, not the decision.
 
 ---
 
-## D-030 — The chart is the permanent status item; every calendar is toggleable
+### D-030
+**The chart is the permanent status item; every calendar is toggleable**
+
 
 **The Lagna Kundali is always in the menu bar and has no switch. Every calendar, Chandra
 included, is toggleable. Chandra is the one on by default.** Amends D-009, under which the moon
@@ -616,7 +629,9 @@ chart off gets it back, which is the change rather than a side effect of it.
 
 ---
 
-## D-031 — Two location tables: GeoNames for places, the tz table for zones
+### D-031
+**Two location tables: GeoNames for places, the tz table for zones**
+
 
 **The city list is GeoNames `cities15000`, trimmed and embedded. `zone.tab` stays, for the one
 question it is the right answer to.** Amends D-007, which promised this dataset from the first
@@ -666,7 +681,9 @@ public domain.
 
 ---
 
-## D-032 — One varga scheme, Parashari, named on the chart
+### D-032
+**One varga scheme, Parashari, named on the chart**
+
 
 **The divisional charts compute the Parashari rule and nothing else. No variant setting.** The
 scheme is named on the chart, on hover over the line that already places it.

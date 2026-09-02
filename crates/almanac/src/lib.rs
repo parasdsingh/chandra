@@ -22,6 +22,7 @@ pub mod spans;
 pub mod standing;
 pub mod time;
 pub mod tithi;
+pub mod varga;
 pub mod zodiac;
 
 pub use almanac::{Almanac, Location, MonthCursor, Snapshot, SnapshotGraha};

@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use chandra_almanac::day::DayOptions;
 use chandra_almanac::lunar::MonthSystem;
+use chandra_almanac::varga::Varga;
 use chandra_almanac::{Almanac, Location, MonthCursor};
 use chandra_ephemeris::{Ayanamsa, Graha, NodeType, Observer, SiderealConfig};
 use serde_json::json;
@@ -32,7 +33,10 @@ fn limbs() -> DayOptions {
 /// with another would be the exact defect the caption exists to prevent.
 const PLACE: &str = "Bengaluru";
 
-/// A local-clock instant as the milliseconds the front end is served.
+/// An instant as the milliseconds the front end is served.
+///
+/// `day_fraction` is a fraction of a *UT* day, not of a local one: 0.72 is 17:16
+/// UT, which is 22:46 in Kolkata.
 fn instant(year: i32, month: u32, day: u32, day_fraction: f64) -> i64 {
     (chandra_ephemeris::jd_to_unix_seconds(chandra_ephemeris::julian_day(
         year,
@@ -61,7 +65,11 @@ fn crowded(almanac: &Almanac) -> chandra_almanac::chakra::Chakra {
     (0..73_000)
         .map(|day| {
             almanac
-                .chakra(instant(1950, 1, 1, 0.5) + day * 86_400_000, PLACE)
+                .chakra(
+                    instant(1950, 1, 1, 0.5) + day * 86_400_000,
+                    PLACE,
+                    Varga::D1,
+                )
                 .expect("crowded scan")
         })
         .max_by_key(|chart| {
@@ -73,6 +81,42 @@ fn crowded(almanac: &Almanac) -> chandra_almanac::chakra::Chakra {
                 .unwrap_or(0)
         })
         .expect("a chart in the scan")
+}
+
+/// The same conjunction, at the hour that puts it in a given house.
+///
+/// Which *compartment* a crowd lands in is the whole of the layout problem, and
+/// the house is what decides it: in the North Indian chart house 1 is the top
+/// kite, houses 2, 6, 8 and 12 are corner triangles, and 3, 5, 9 and 11 are
+/// triangles against a wall. A kite is the roomiest shape on the chart and a
+/// corner triangle the tightest.
+///
+/// The harness drew its crowd in house 7 - a kite - and called it the worst
+/// case. It is the best one. Everything that later turned out to be broken about
+/// crowded triangles was invisible for exactly that reason, so the hard shapes
+/// are now asked for by name.
+///
+/// Houses rotate with the lagna, so the same instant's grahas visit every
+/// compartment over a day: this scans the minutes of the conjunction's own day
+/// for the one that puts the crowd where it is wanted.
+fn crowded_in_house(almanac: &Almanac, wanted: u8) -> chandra_almanac::chakra::Chakra {
+    let day = crowded(almanac).unix_ms;
+    let midnight = day - day.rem_euclid(86_400_000);
+
+    (0..1440)
+        .map(|minute| {
+            almanac
+                .chakra(midnight + minute * 60_000, PLACE, Varga::D1)
+                .expect("house scan")
+        })
+        .find(|chart| {
+            chart
+                .rashis
+                .iter()
+                .max_by_key(|rashi| rashi.grahas.len())
+                .is_some_and(|rashi| rashi.house == wanted)
+        })
+        .expect("every house is reached over a day")
 }
 
 fn main() {
@@ -143,10 +187,6 @@ fn main() {
         "moonDay": almanac
             .day_detail(Graha::Chandra, date(20), limbs())
             .expect("moon day"),
-        // The same day in a lunar month, which carries the panchanga block.
-        "lunarDay": almanac
-            .day_detail(Graha::Chandra, date(20), limbs())
-            .expect("lunar day"),
         // The Moon rises about 50 minutes later each day, so roughly one civil
         // day a month contains no moonrise at all. Found rather than hardcoded,
         // so the harness always has a real example of the degraded state.
@@ -199,17 +239,28 @@ fn main() {
         // three formats differ in where a rashi is put on screen and not in
         // what is true.
         "chakra": almanac
-            .chakra(instant(2026, 8, 20, 0.72), PLACE)
+            .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D1)
             .expect("chakra"),
-        // The layout's worst case, searched for rather than chosen: `cluster`
+        // The layout's worst case over two centuries, searched for rather than
+        // chosen: `cluster`
         // has a branch for a row that will not fit its compartment at any width,
         // and a chart with the grahas spread evenly never reaches it. Whatever
         // the densest conjunction of the year is, the harness draws it.
         "chakraCrowded": crowded(&almanac),
+        // The same eight bodies in a corner triangle and in a wall triangle,
+        // which are the two shapes that actually constrain the layout.
+        "chakraCorner": crowded_in_house(&almanac, 2),
+        "chakraWall": crowded_in_house(&almanac, 3),
+        // The same instant as `chakra`, in the navamsa. Drawn beside the rashi
+        // chart in the harness, because the thing worth checking about a varga
+        // is that it is a *different* chart from D1 and not that it renders.
+        "chakraNavamsa": almanac
+            .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D9)
+            .expect("navamsa"),
         // Before 1800, where the ephemeris falls back to the analytic model and
         // the pane has to say so.
         "chakraMoshier": almanac
-            .chakra(instant(1650, 8, 20, 0.72), PLACE)
+            .chakra(instant(1650, 8, 20, 0.72), PLACE, Varga::D1)
             .expect("moshier chakra"),
     });
 

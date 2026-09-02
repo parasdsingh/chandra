@@ -11,15 +11,21 @@
 # Source: https://download.geonames.org/export/dump/
 # Licence: CC BY 4.0. The attribution this obliges is in the app's About pane
 # and in data/NOTICE.
+# `pipefail` matters here specifically: every write below is `awk ... | sort >
+# file`, and `sort` exits 0 on empty input. Without it, awk dying leaves the
+# committed 2.3 MB table truncated to nothing and the script reports success.
 set -eu
+if (set -o pipefail) 2>/dev/null; then set -o pipefail; fi
 
 out="crates/geo/data"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 echo "==> downloading"
-curl -sSL -o "$work/cities.zip" https://download.geonames.org/export/dump/cities15000.zip
-curl -sSL -o "$work/admin1.txt" https://download.geonames.org/export/dump/admin1CodesASCII.txt
+# `--fail` so an HTTP error page is an error rather than a file. Without it the
+# body flows into awk and overwrites the tables with nothing.
+curl -sSL --fail -o "$work/cities.zip" https://download.geonames.org/export/dump/cities15000.zip
+curl -sSL --fail -o "$work/admin1.txt" https://download.geonames.org/export/dump/admin1CodesASCII.txt
 unzip -o -q "$work/cities.zip" -d "$work"
 
 # cities15000: every place with more than 15000 inhabitants. The columns kept,
@@ -46,14 +52,29 @@ unzip -o -q "$work/cities.zip" -d "$work"
 #                   list had no elevation at all, which is why every city
 #                   reported 0 m (W-07)
 echo "==> trimming cities"
-awk -F'\t' 'NF >= 18 { printf "%s\t%s\t%s\t%s\t%s\t%.4f\t%.4f\t%s\t%s\n", $2, $3, $9, $11, $18, $5, $6, $15, $17 }' \
-  "$work/cities15000.txt" | LC_ALL=C sort > "$out/cities.tsv"
+# `LC_ALL=C` on awk as well as on sort. `printf "%.4f"` follows the locale's
+# decimal separator, so under a comma-decimal locale this would write `36,9101`
+# and the parser would drop every row.
+#
+# Written to a temporary file and moved into place, so a failure leaves the
+# committed table as it was rather than half of one.
+LC_ALL=C awk -F'\t' 'NF >= 18 { printf "%s\t%s\t%s\t%s\t%s\t%.4f\t%.4f\t%s\t%s\n", $2, $3, $9, $11, $18, $5, $6, $15, $17 }' \
+  "$work/cities15000.txt" | LC_ALL=C sort > "$work/cities.tsv"
 
 # admin1: the region code to its name. Only the two columns are kept.
 echo "==> trimming regions"
-awk -F'\t' 'NF >= 2 { printf "%s\t%s\n", $1, $2 }' "$work/admin1.txt" \
-  | LC_ALL=C sort > "$out/admin1.tsv"
+LC_ALL=C awk -F'\t' 'NF >= 2 { printf "%s\t%s\n", $1, $2 }' "$work/admin1.txt" \
+  | LC_ALL=C sort > "$work/admin1.tsv"
 
+# Both parsed before either is committed.
+test -s "$work/cities.tsv" || { echo "cities.tsv came out empty" >&2; exit 1; }
+test -s "$work/admin1.tsv" || { echo "admin1.tsv came out empty" >&2; exit 1; }
+mv "$work/cities.tsv" "$out/cities.tsv"
+mv "$work/admin1.tsv" "$out/admin1.tsv"
+
+# GeoNames publishes a new dump daily, so these counts move. Several comments
+# and one decision record quote them; when this number changes, they are what to
+# check.
 printf "==> %s cities, %s regions\n" \
   "$(wc -l < "$out/cities.tsv" | tr -d ' ')" \
   "$(wc -l < "$out/admin1.tsv" | tr -d ' ')"

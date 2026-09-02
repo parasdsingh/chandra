@@ -70,6 +70,9 @@ golden: swetest ## Regenerate the ephemeris golden vectors
 	@echo "Only do this for a deliberate change, never to make a failing test pass."
 	python3 tools/gen_golden.py > crates/ephemeris/tests/golden.json
 
+geonames: ## Rebuild the bundled city list from GeoNames (needs the network)
+	sh tools/geonames.sh
+
 preview: ## Regenerate the fixture behind the front-end visual harness
 	cargo run -q -p chandra --example preview_data > src/dev/fixture.json
 	@echo "Open http://localhost:5273/?preview with 'npm run dev' running."
