@@ -59,7 +59,10 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   compartments: "Compartments",
   location: "Location",
   astrology: "Astrology",
-  menubar: "Menu bar",
+  // Not "Menu bar". Two sections put items in the menu bar now - this one and
+  // the chart's - so naming one of them after the menu bar says nothing about
+  // which. This section is the nine calendars; the other is the divisions.
+  menubar: "Calendars",
   size: "Size",
   about: "About",
 };
@@ -146,10 +149,12 @@ function Root(props: {
     },
     {
       id: "menubar",
+      // How many are on, not what they are. The section is named `Calendars`, so
+      // the row does not have to repeat the word - and `None` is a real state
+      // here since D-030, which is why it is not `Chart only`: that named the
+      // other section's business.
       value: () =>
-        trayCount() === 0
-          ? "Chart only"
-          : `${trayCount()} calendar${trayCount() === 1 ? "" : "s"}`,
+        trayCount() === 0 ? "None" : `${trayCount()} of 9`,
     },
     { id: "size", value: () => sizeLabel(settings().appearance.scale) },
     { id: "advanced", value: () => "" },
@@ -773,7 +778,7 @@ function Chart(props: SectionProps): JSX.Element {
             settings().chart.vargas.includes(choice.key as VargaKey);
           return (
             <button
-              class="settings__toggle"
+              class="settings__toggle settings__toggle--division"
               classList={{ "is-on": on() }}
               disabled={permanent}
               aria-pressed={on()}
@@ -788,13 +793,22 @@ function Chart(props: SectionProps): JSX.Element {
                 });
               }}
             >
-              <span class="settings__toggle-name">{choice.label}</span>
-              {/* What the division is read for, cited to BPHS ch. 7. Sixteen
-                  numbered rows is a wall a reader cannot choose from; this is
-                  the classical answer to "which one do I want", and it is the
-                  same shape as the graha rows, which carry an English name in
-                  the same slot. */}
-              <span class="settings__hint">{choice.reads}</span>
+              {/* Four cells, the same four the graha rows use: a mark, a name,
+                  what it is, and the switch. `D9` takes the glyph's place, which
+                  is what makes the two lists read as one kind of thing. The row
+                  carried three children against a four-column grid before, so
+                  everything slid one column left and the switch landed in the
+                  hint's place. */}
+              <span class="settings__division">
+                D{choice.division}
+              </span>
+              <span class="settings__toggle-name">{choice.name}</span>
+              {/* What the division is read for, cited to BPHS ch. 7 vv. 1-8.
+                  Sixteen numbered rows is a wall a reader cannot choose from;
+                  this is the classical answer to "which one do I want". */}
+              <span class="settings__hint settings__hint--clipped">
+                {choice.reads}
+              </span>
               <span class="settings__switch" aria-hidden="true" />
             </button>
           );

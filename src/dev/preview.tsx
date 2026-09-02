@@ -425,12 +425,17 @@ export function Preview(): JSX.Element {
 
       <For
         each={
+          // Every section the pane can show. `chart` was missing, which is how
+          // its division rows shipped with three children against a four-column
+          // grid: the surface was not drawn here, so nothing showed it.
           [
             "root",
             "calendar",
             "location",
             "astrology",
+            "chart",
             "menubar",
+            "advanced",
             "size",
             "about",
           ] as const
