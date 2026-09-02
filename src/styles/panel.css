@@ -113,9 +113,12 @@
 /* The division's number, inside the chart mark. Small caps-height digits that
    read as part of the frame rather than as a label on it: the mark is 16px and
    the numeral has to live inside a 12px square without touching its walls. */
+/* The division's number, which is the whole of the mark for D2 and up. Large
+   enough to be read rather than decoded: the frame that used to be around it was
+   dropped for exactly that reason. */
 .header__division {
-  font: 600 8px / 1 var(--font-stack);
-  letter-spacing: -0.3px;
+  font: 600 12px / 1 var(--font-stack);
+  letter-spacing: -0.4px;
 }
 
 .header__label {

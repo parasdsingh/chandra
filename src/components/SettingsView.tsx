@@ -789,6 +789,12 @@ function Chart(props: SectionProps): JSX.Element {
               }}
             >
               <span class="settings__toggle-name">{choice.label}</span>
+              {/* What the division is read for, cited to BPHS ch. 7. Sixteen
+                  numbered rows is a wall a reader cannot choose from; this is
+                  the classical answer to "which one do I want", and it is the
+                  same shape as the graha rows, which carry an English name in
+                  the same slot. */}
+              <span class="settings__hint">{choice.reads}</span>
               <span class="settings__switch" aria-hidden="true" />
             </button>
           );

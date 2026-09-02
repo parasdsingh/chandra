@@ -202,22 +202,24 @@ pub fn chart_icon(division: u32, scale: u32, tint: Tint) -> Result<Icon, RenderE
     let far = size as f32 - inset;
     let middle = size as f32 / 2.0;
 
-    let mut square = tiny_skia::PathBuilder::new();
-    square.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
-        RenderError::Allocation {
-            width: size,
-            height: size,
-        },
-    )?);
-    pixmap.stroke_path(
-        &square
-            .finish()
-            .ok_or(RenderError::EmptyPath("chart square"))?,
-        &paint,
-        &stroke_of(weight),
-        Transform::identity(),
-        None,
-    );
+    if division <= 1 {
+        let mut square = tiny_skia::PathBuilder::new();
+        square.push_rect(tiny_skia::Rect::from_xywh(inset, inset, edge, edge).ok_or(
+            RenderError::Allocation {
+                width: size,
+                height: size,
+            },
+        )?);
+        pixmap.stroke_path(
+            &square
+                .finish()
+                .ok_or(RenderError::EmptyPath("chart square"))?,
+            &paint,
+            &stroke_of(weight),
+            Transform::identity(),
+            None,
+        );
+    }
 
     // The middle says which division this is. Several charts sit in the row at
     // once and they are the same shape otherwise, so without it the reader has a

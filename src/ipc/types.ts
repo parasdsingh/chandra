@@ -575,9 +575,21 @@ export interface Bootstrap {
   node_types: Choice[];
   month_systems: Choice[];
   grahas: GrahaInfo[];
-  /** The divisional charts on offer. Served rather than written out here so the
-   *  labels cannot drift from the Rust `Varga::label`. */
-  vargas: Choice[];
+  /** The divisional charts on offer. Served rather than written out here so
+   *  nothing can drift from the Rust `Varga`'s own answers. */
+  vargas: VargaInfo[];
+}
+
+export interface VargaInfo {
+  key: VargaKey;
+  /** `D9 · Navamsa`, for a list. */
+  label: string;
+  /** `Navamsa`, for a title that has room for little else. */
+  name: string;
+  /** The number in the name, which is what the menu bar icon draws. */
+  division: number;
+  /** What the division is read for, per BPHS ch. 7 vv. 1–8. */
+  reads: string;
 }
 
 export interface City {

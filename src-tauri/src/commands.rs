@@ -45,14 +45,33 @@ pub struct Bootstrap {
     pub month_systems: Vec<Choice>,
     pub grahas: Vec<GrahaInfo>,
     /// The divisional charts on offer. Served rather than written out in the
-    /// front end so the labels cannot drift from `Varga::label`.
-    pub vargas: Vec<Choice>,
+    /// front end so nothing here can drift from `Varga`'s own answers.
+    pub vargas: Vec<VargaInfo>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct Choice {
     pub key: &'static str,
     pub label: &'static str,
+}
+
+/// A divisional chart, as the front end needs it.
+///
+/// More than a `Choice` because three surfaces need different parts: the menu
+/// bar draws the number, the panel's title names the division, and the settings
+/// list says what each is read for - which is what makes sixteen numbered rows
+/// choosable rather than a wall of them.
+#[derive(Debug, Serialize)]
+pub struct VargaInfo {
+    pub key: &'static str,
+    /// `D9 · Navamsa`, for a list.
+    pub label: &'static str,
+    /// `Navamsa`, for a title that already has room for little else.
+    pub name: &'static str,
+    /// The number in the name, which is what the menu bar icon draws.
+    pub division: u32,
+    /// What the division is read for, per BPHS ch. 7 vv. 1-8.
+    pub reads: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -115,9 +134,12 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
         grahas: graha_info(),
         vargas: chandra_almanac::varga::Varga::ALL
             .into_iter()
-            .map(|v| Choice {
+            .map(|v| VargaInfo {
                 key: v.key(),
                 label: v.label(),
+                name: v.name(),
+                division: v.division(),
+                reads: v.reads(),
             })
             .collect(),
     })

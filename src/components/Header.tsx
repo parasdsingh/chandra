@@ -67,6 +67,17 @@ export function Header(props: Props): JSX.Element {
   // what tells a Mangala calendar from a Chandra one, and losing it leaves two
   // panels that read identically. The year goes first, then the name.
   const withoutYear = () => props.title.replace(/\s+\d{1,4}$/, "");
+  // The chart's title names the division *and* what is rising, which is more
+  // than the line always holds - `Chaturvimsamsa · Vrishchika Lagna` is
+  // thirty-three characters in a two-hundred-point slot. It drops `Lagna` first,
+  // then the division, because the rising sign is the reading and the division is
+  // also on the mark beside it.
+  const chartRungs = () => {
+    const parts = label().split(" · ");
+    if (parts.length < 2) return [label()];
+    return [label(), label().replace(" Lagna", ""), parts[1]!];
+  };
+
   const candidates = () =>
     isCalendar()
       ? [
@@ -75,7 +86,9 @@ export function Header(props: Props): JSX.Element {
           props.title,
           withoutYear(),
         ]
-      : [label()];
+      : props.view === "chart"
+        ? chartRungs()
+        : [label()];
   const fitted = () => candidates()[level()] ?? full();
 
   createEffect(
@@ -272,38 +285,43 @@ function qualifier(label: string): { before: string; after: string } | null {
 function ChartMark(props: { division: number }): JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      <rect
-        x="1.92"
-        y="1.92"
-        width="12.16"
-        height="12.16"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.2"
-      />
       <Show
         when={props.division > 1}
         fallback={
           <>
+            <rect
+              x="1.92"
+              y="1.92"
+              width="12.16"
+              height="12.16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
             <path d="M 8 3.3 L 12.7 8 L 8 12.7 L 3.3 8 Z" fill="currentColor" />
             <path
               d="M 1.92 1.92 L 4.96 4.96 M 14.08 1.92 L 11.04 4.96 M 14.08 14.08 L 11.04 11.04 M 1.92 14.08 L 4.96 11.04"
               fill="none"
               stroke="currentColor"
-              stroke-width="0.96"
               stroke-linecap="round"
+              stroke-width="0.96"
             />
           </>
         }
       >
-        {/* Real type here, where the tray icon has to draw seven segments by
-            hand: this is a web view with a font in it, and at 16px a numeral set
-            in the panel's own face is both more legible and more obviously the
-            same number as the one in the menu bar. */}
+        {/* The numeral alone, as the status item draws it. The frame was here
+            too and had to go for the same reason it went there: with it, two
+            digits are too small to read. D1 keeps it, and D1 is always in the
+            row, so one mark in the menu bar still says what the numbers beside
+            it are counting.
+
+            Real type rather than the tray's seven segments, because this is a
+            web view with a font in it - and a numeral set in the panel's own
+            face is more legible at 16px than segments would be. */}
         <text
           class="header__division"
           x="8"
-          y="11.6"
+          y="12.4"
           text-anchor="middle"
           fill="currentColor"
         >

@@ -651,7 +651,18 @@ export function Panel(props: Props): JSX.Element {
     // section and its tray tooltip.
     if (view() === "chart") {
       const rising = chart()?.lagna.name;
-      return rising ? `${rising} Lagna` : "";
+      if (!rising) return "";
+      // The division first, then the reading. With sixteen charts and several of
+      // them in the menu bar at once, a window that says only what is rising
+      // does not say which chart it is - and the two can differ: D1 and D9 had
+      // different rising signs in the same minute the first time this was
+      // opened, which is the whole point of reading them together.
+      //
+      // `Rashi` is named too, rather than left implied for D1. Sixteen titles
+      // that name their chart and one that does not would make the odd one out
+      // look like a bug.
+      const division = props.boot.vargas.find((v) => v.key === varga())?.name;
+      return division ? `${division} · ${rising} Lagna` : `${rising} Lagna`;
     }
     // A lunar day is called by its tithi, so that is what the header says, and
     // the civil date it also has moves to the line below. In solar mode the

@@ -159,6 +159,58 @@ impl Varga {
         }
     }
 
+    /// What the division is read for.
+    ///
+    /// BPHS ch. 7 vv. 1-8 (Santhanam), via `docs/design/vargas.md` §2. Carried
+    /// because a settings list of sixteen numbered charts tells a reader nothing
+    /// about which they want, and this is the classical answer to that question.
+    ///
+    /// D45 and D60 are both given as general indications by the source, and both
+    /// are written so here rather than one of them being given something more
+    /// specific to tell them apart.
+    pub const fn reads(self) -> &'static str {
+        match self {
+            Varga::D1 => "the physique",
+            Varga::D2 => "wealth",
+            Varga::D3 => "happiness through coborn",
+            Varga::D4 => "fortunes",
+            Varga::D7 => "sons and grandsons",
+            Varga::D9 => "the spouse",
+            Varga::D10 => "power and position",
+            Varga::D12 => "parents",
+            Varga::D16 => "conveyances",
+            Varga::D20 => "worship, spiritual progress",
+            Varga::D24 => "learning",
+            Varga::D27 => "strength and weakness",
+            Varga::D30 => "evils",
+            Varga::D40 => "auspicious and inauspicious effects",
+            Varga::D45 => "all general indications",
+            Varga::D60 => "all general indications",
+        }
+    }
+
+    /// The division's own name, without its number.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Varga::D1 => "Rashi",
+            Varga::D2 => "Hora",
+            Varga::D3 => "Drekkana",
+            Varga::D4 => "Chaturthamsa",
+            Varga::D7 => "Saptamsa",
+            Varga::D9 => "Navamsa",
+            Varga::D10 => "Dasamsa",
+            Varga::D12 => "Dwadasamsa",
+            Varga::D16 => "Shodasamsa",
+            Varga::D20 => "Vimsamsa",
+            Varga::D24 => "Chaturvimsamsa",
+            Varga::D27 => "Bhamsa",
+            Varga::D30 => "Trimsamsa",
+            Varga::D40 => "Khavedamsa",
+            Varga::D45 => "Akshavedamsa",
+            Varga::D60 => "Shashtiamsa",
+        }
+    }
+
     /// The number in the name: D9's is 9, D30's is 30.
     ///
     /// Not [`parts`](Self::parts), which they agree with in fifteen of sixteen
