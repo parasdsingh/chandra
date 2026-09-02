@@ -11,7 +11,7 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-004](#d-004) | Geocentric for panchanga, topocentric for rise/set | accepted |
 | [D-005](#d-005) | Engine is a `Mutex`-guarded singleton on a blocking pool | accepted |
 | [D-006](#d-006) | Ephemeris provenance is reported per result, never silent | accepted |
-| [D-007](#d-007) | Location resolves through an ordered fallback chain | accepted, amended by D-029 |
+| [D-007](#d-007) | Location resolves through an ordered fallback chain | accepted, amended by D-029, D-031 |
 | [D-008](#d-008) | Tray icons rendered as macOS template images by default | accepted |
 | [D-009](#d-009) | Moon permanent in menu bar; each graha its own toggleable item | accepted, amended by D-030 |
 | [D-010](#d-010) | v1 day detail is minimal; panchanga fields are not computed yet | accepted, amended by D-019, D-025 |
@@ -32,6 +32,8 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-025](#d-025) | The day view is one field stack for all nine subjects | accepted |
 | [D-029](#d-029) | A location is required before the app will draw anything | accepted, amends D-007 |
 | [D-030](#d-030) | The chart is the permanent status item; every calendar is toggleable | accepted, amends D-009 |
+| [D-031](#d-031) | Two location tables: GeoNames for places, the tz table for zones | accepted, amends D-007 |
+| [D-032](#d-032) | One varga scheme, Parashari, named on the chart | accepted |
 
 ---
 
@@ -111,8 +113,12 @@ blocking pool.**
 
 **Amended by D-029.** Step 3 still runs, but it no longer resolves the app into a working state:
 a timezone centroid is not an answer to where the observer is, and the panel does not draw on
-one. The bundled dataset named above has also never existed — what ships is `zone.tab`, 418
-places at arcminute precision. That is tracked as **E5**, not as part of this record.
+one.
+
+**Amended by D-031.** The bundled dataset named above did not exist for the first three
+releases: what shipped was `zone.tab`, 448 places at arcminute precision, which is a list of
+*zones* rather than a list of *places*. It is now built, and it is `cities15000` as promised —
+34,129 places at about 11 metres.
 
 ### D-008
 **Tray glyphs are macOS template images by default.**
@@ -607,3 +613,82 @@ would have silently removed the moon from every existing install, so the step in
 pins this and fails against the old code. `chart.tray` is dropped and needs no clause — serde
 ignores a field that is no longer declared — but its meaning does: an install that had turned the
 chart off gets it back, which is the change rather than a side effect of it.
+
+---
+
+## D-031 — Two location tables: GeoNames for places, the tz table for zones
+
+**The city list is GeoNames `cities15000`, trimmed and embedded. `zone.tab` stays, for the one
+question it is the right answer to.** Amends D-007, which promised this dataset from the first
+release and never had it.
+
+What shipped for three releases was `zone.tab` alone: 448 entries, one representative city per
+IANA zone, coordinates at arcminute precision. That is a **list of zones**, and it was being
+asked to be a list of places. The gap showed in two ways:
+
+- **Coverage.** 448 cities for the world. Most people could not find where they live, and the
+  nearest entry to Bengaluru was Colombo, 700 km away in another country — which is what the
+  panel called it.
+- **Precision.** Arcminutes, about 1.9 km. Fine for a sunrise, which moves by under a second
+  over that. The limit for a lagna, which moves about a degree per degree of longitude.
+
+Now 34,129 places at four decimal places, about 11 metres.
+
+**The two tables answer different questions and neither replaces the other.**
+
+| Table | Answers |
+|---|---|
+| `zone.tab` (448) | which place stands for `Asia/Kolkata` — D-007's third step, and all the app has before a location is chosen |
+| `cities.tsv` (34,129) | where the user lives, and what to call the coordinates a location service reports |
+
+**The timezone still never comes from the city list**, and the better data does not change that.
+A zone boundary is political and is not recoverable from a point at any precision. Cieszyn and
+Český Těšín are one town split down the Olza in 1920; they are 0.7 km apart, in different
+countries and different IANA zones. Four more pairs in the list are under a kilometre apart
+across a zone boundary. A test pins this, and it replaced one that asserted the old defect —
+that Bengaluru resolved to Colombo — as though it were the rule.
+
+**Reproducible, not a blob.** `tools/geonames.sh` downloads and trims, and names every column it
+keeps and why. The trimmed file is committed so a build needs no network.
+
+**Two columns earn their place beyond the obvious.** The region, because 1309 of the 34,129 city
+names are not unique and `Springfield · United States` eight times is a list with nothing to
+choose from. And the **ASCII name**, because search folds case but not diacritics: without it,
+typing `Cesky Tesin` or `Zurich` finds nothing. That was found by a test, not by inspection.
+
+**Elevation arrives with it.** The old table had no elevation column, which is the whole of W-07:
+every city in the world reported `0 m`. GeoNames carries a figure from a digital elevation model,
+so a picked city now brings its own height.
+
+**Licence.** GeoNames is CC BY 4.0. Its one condition is that the credit appears where the work
+is used, so it is in the About pane as well as in `crates/geo/data/NOTICE`. The tz files remain
+public domain.
+
+---
+
+## D-032 — One varga scheme, Parashari, named on the chart
+
+**The divisional charts compute the Parashari rule and nothing else. No variant setting.** The
+scheme is named on the chart, on hover over the line that already places it.
+
+`docs/design/vargas.md` is the specification: every rule cited, corroborated against at least two
+sources, with worked examples, and with the disagreements collected rather than resolved. Three
+of them needed a decision that research could not make:
+
+| | Decision |
+|---|---|
+| **D2** | The Cancer–Leo reading, which is what every implementation does. The classics assign the two halves to the Sun and the Moon *as lords* and never name a sign; the step to Karka and Simha is a modern completion, and this is the common one |
+| **D30** | The classical unequal 5/5/8/7/5, which BPHS, Brihat Jataka, Phaladeepika and Jataka Parijata agree on boundary for boundary. The equal thirty-part division argued for by Ernst Wilhelm is not used |
+| **D27** | The element rule from Santhanam's note — fiery from Mesha, earthy from Karka, airy from Tula, watery from Makara. The verse alone says only "from Aries and other movable signs", which is not computable, and this is the reading everything else follows |
+
+**Why name the scheme at all.** A D2 computed one way looks exactly like a D2 computed another —
+same twelve compartments, same glyphs, nothing on the face to tell them apart. It is the same
+reason `Chakra` carries `place`: a chart that cannot say what produced it invites the reader to
+assume it matches whatever they last saw elsewhere. On hover rather than in a line, because the
+panel is 318 points wide and the caption under the title is already the place the chart's
+provenance lives.
+
+**Rahu and Ketu get no special rule**, and that is a finding rather than an omission. It was
+searched for specifically: no classical text addresses the nodes in vargas at all, and four
+independent implementations have no node branch in any varga function. A node reversal is exactly
+the kind of rule that sounds plausible enough to write without a source.

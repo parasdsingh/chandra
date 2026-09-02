@@ -373,8 +373,9 @@ export interface PlaceSetting {
   latitude: number;
   longitude: number;
   /** Metres above sea level, where the step that resolved this place knew.
-   * `null` is not zero: the city table has no elevation column, so a place
-   * picked from search has none. */
+   * `null` is not zero: it means nobody supplied a height, and rise and set are
+   * then computed at sea level. A place picked from search now carries one,
+   * which it could not before E5. */
   elevation: number | null;
 }
 
@@ -550,10 +551,19 @@ export interface Bootstrap {
 export interface City {
   zone: string;
   city: string;
+  /** The state or province, where the source names one. 1309 of the 34,129
+   *  city names are not unique, so this is what tells two Springfields apart.
+   *  `null` for an entry that came from the timezone table, which has no
+   *  regions in it. */
+  region: string | null;
   country: string;
   country_code: string;
   latitude: number;
   longitude: number;
+  /** Metres, from a digital elevation model. `null` where the source has none.
+   *  Before E5 there was no elevation column at all, which is why every city in
+   *  the world reported 0 m (W-07). */
+  elevation: number | null;
 }
 
 /** Every failure carries a stable code; there is no generic fallback. */

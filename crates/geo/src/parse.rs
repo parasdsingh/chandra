@@ -8,26 +8,68 @@ use serde::{Deserialize, Serialize};
 const ZONE_TAB: &str = include_str!("../data/zone.tab");
 const ISO3166_TAB: &str = include_str!("../data/iso3166.tab");
 
+/// The GeoNames city list and its region names, trimmed by `tools/geonames.sh`
+/// and embedded the same way.
+///
+/// 34,129 places against `zone.tab`'s 448, and coordinates to four decimal
+/// places - about 11 metres - against its arcminutes, which are about 1.9 km.
+/// D-007 promised this dataset from the beginning and it had never been built:
+/// what shipped was one representative city per timezone, which is a list of
+/// zones rather than a list of places (E5).
+const CITIES_TSV: &str = include_str!("../data/cities.tsv");
+const ADMIN1_TSV: &str = include_str!("../data/admin1.tsv");
+
 /// A place the user can pick: an IANA zone with the coordinates of its
 /// representative location.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Place {
     /// IANA zone name, for example `Asia/Kolkata`.
     pub zone: String,
-    /// Representative city, derived from the last segment of the zone name.
     pub city: String,
+    /// The region the city is in, where the source names one.
+    ///
+    /// Not decoration: 1309 of the 34,129 city names in the list are not unique,
+    /// so without it a search for Springfield offers the same word eight times
+    /// with nothing to choose between them.
+    pub region: Option<String>,
     pub country: String,
     pub country_code: String,
     /// Degrees north, negative south.
     pub latitude: f64,
     /// Degrees east, negative west.
     pub longitude: f64,
+    /// Metres, from GeoNames' digital elevation model, where the source has one.
+    ///
+    /// `None` for a zone-table entry, which carries no height. Rise and set are
+    /// computed at sea level without it, and the settings pane says so rather
+    /// than reporting the assumption as a measurement (W-07).
+    pub elevation: Option<f64>,
 }
 
-/// Every place, parsed once and sorted by city name for stable ordering.
-pub fn places() -> &'static [Place] {
-    static PLACES: OnceLock<Vec<Place>> = OnceLock::new();
-    PLACES.get_or_init(|| {
+/// A city, with what is needed to find it but not to display it.
+///
+/// The lowercased name is held rather than made: `search` runs on every
+/// keystroke, and lowercasing 34,129 names each time allocates 34,129 strings to
+/// answer one letter.
+pub(crate) struct City {
+    pub(crate) place: Place,
+    /// Ranks equal matches. A search for `york` should offer New York before
+    /// York, Nebraska, and population is what says so.
+    pub(crate) population: u64,
+    /// The lowercased local name, and its lowercased ASCII form where the two
+    /// differ. Both are searched: a reader who types `Cesky Tesin` means Cesky
+    /// Tesin, and matching only `Ceský Tesín` finds nothing.
+    pub(crate) folded: Vec<String>,
+}
+
+/// Every timezone's representative place, parsed once.
+///
+/// This is the zone table, not the city list. It is what answers "which place
+/// stands for `Asia/Kolkata`", which is D-007's last step and the only thing the
+/// app has before a location has been chosen. It is not what a search runs over.
+pub fn zones() -> &'static [Place] {
+    static ZONES: OnceLock<Vec<Place>> = OnceLock::new();
+    ZONES.get_or_init(|| {
         let countries = parse_countries();
         let mut parsed: Vec<Place> = ZONE_TAB
             .lines()
@@ -35,6 +77,85 @@ pub fn places() -> &'static [Place] {
             .collect();
         parsed.sort_by(|a, b| a.city.cmp(&b.city).then_with(|| a.zone.cmp(&b.zone)));
         parsed
+    })
+}
+
+/// Every city, parsed once.
+pub(crate) fn cities() -> &'static [City] {
+    static CITIES: OnceLock<Vec<City>> = OnceLock::new();
+    CITIES.get_or_init(|| {
+        let countries = parse_countries();
+        let regions = parse_regions();
+        CITIES_TSV
+            .lines()
+            .filter_map(|line| parse_city_line(line, &countries, &regions))
+            .collect()
+    })
+}
+
+/// Region code to region name, `IN.16` to `Maharashtra`.
+fn parse_regions() -> Vec<(String, String)> {
+    ADMIN1_TSV
+        .lines()
+        .filter_map(|line| {
+            let (code, name) = line.split_once('\t')?;
+            Some((code.to_string(), name.to_string()))
+        })
+        .collect()
+}
+
+/// One line of the trimmed GeoNames export.
+///
+/// The columns are named in `tools/geonames.sh`, which produced them.
+fn parse_city_line(
+    line: &str,
+    countries: &[(String, String)],
+    regions: &[(String, String)],
+) -> Option<City> {
+    let mut fields = line.split('\t');
+    let city = fields.next()?;
+    let ascii = fields.next()?;
+    let country_code = fields.next()?;
+    let region_code = fields.next()?;
+    let zone = fields.next()?;
+    let latitude: f64 = fields.next()?.parse().ok()?;
+    let longitude: f64 = fields.next()?.parse().ok()?;
+    let population: u64 = fields.next()?.parse().unwrap_or(0);
+    let elevation = fields.next()?.parse::<f64>().ok();
+
+    if city.is_empty() || zone.is_empty() {
+        return None;
+    }
+
+    let key = format!("{country_code}.{region_code}");
+    let region = regions
+        .iter()
+        .find(|(code, _)| *code == key)
+        .map(|(_, name)| name.clone());
+
+    let mut folded = vec![city.to_lowercase()];
+    let plain = ascii.to_lowercase();
+    if !plain.is_empty() && plain != folded[0] {
+        folded.push(plain);
+    }
+
+    Some(City {
+        folded,
+        population,
+        place: Place {
+            zone: zone.to_string(),
+            city: city.to_string(),
+            region,
+            country: countries
+                .iter()
+                .find(|(code, _)| code == country_code)
+                .map(|(_, name)| name.clone())
+                .unwrap_or_else(|| country_code.to_string()),
+            country_code: country_code.to_string(),
+            latitude,
+            longitude,
+            elevation,
+        },
     })
 }
 
@@ -63,6 +184,11 @@ fn parse_zone_line(line: &str, countries: &[(String, String)]) -> Option<Place> 
 
     Some(Place {
         city: city_from_zone(zone),
+        // The zone table names neither. A zone is not in a region, and it
+        // carries no height - which is the whole of W-07: every city in the
+        // world reported 0 m because this table has no column to report.
+        region: None,
+        elevation: None,
         zone: zone.to_string(),
         country: countries
             .iter()
@@ -130,7 +256,7 @@ mod tests {
 
     #[test]
     fn the_table_parses_completely() {
-        let parsed = places();
+        let parsed = zones();
         // zone.tab carries a little over 400 zones; a large drop would mean the
         // parser is silently skipping lines.
         assert!(
@@ -152,7 +278,7 @@ mod tests {
 
     #[test]
     fn coordinates_are_within_range() {
-        for place in places() {
+        for place in zones() {
             assert!(
                 (-90.0..=90.0).contains(&place.latitude),
                 "{} latitude {}",
@@ -170,7 +296,7 @@ mod tests {
 
     #[test]
     fn known_places_decode_correctly() {
-        let kolkata = places().iter().find(|p| p.zone == "Asia/Kolkata").unwrap();
+        let kolkata = zones().iter().find(|p| p.zone == "Asia/Kolkata").unwrap();
         // +2232+08822 is 22 deg 32' N, 88 deg 22' E.
         assert!((kolkata.latitude - 22.533_333).abs() < 1e-5);
         assert!((kolkata.longitude - 88.366_666).abs() < 1e-5);
@@ -178,7 +304,7 @@ mod tests {
         assert_eq!(kolkata.country, "India");
 
         // A western, southern place, to check both signs.
-        let santiago = places()
+        let santiago = zones()
             .iter()
             .find(|p| p.zone == "America/Santiago")
             .unwrap();

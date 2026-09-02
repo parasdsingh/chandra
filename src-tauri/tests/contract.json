@@ -3,8 +3,10 @@
     "city": "string",
     "country": "string",
     "country_code": "string",
+    "elevation": "number",
     "latitude": "number",
     "longitude": "number",
+    "region": "string",
     "zone": "string"
   },
   "GrahaDay": {

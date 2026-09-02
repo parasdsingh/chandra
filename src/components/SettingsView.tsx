@@ -390,7 +390,15 @@ export function CitySearch(props: {
                 <li>
                   <button class="settings__result" onClick={() => pick(city)}>
                     <span>{city.city}</span>
-                    <span class="settings__hint">{city.country}</span>
+                    {/* The region first, then the country. 1309 of the 34,129
+                        city names are not unique, so `Springfield · United
+                        States` eight times over is a list with nothing to
+                        choose from; `Springfield · Illinois · United States`
+                        is an answer. */}
+                    <span class="settings__hint">
+                      {city.region ? `${city.region} · ` : ""}
+                      {city.country}
+                    </span>
                   </button>
                 </li>
               )}
@@ -414,11 +422,14 @@ export function placeFromCity(settings: Settings, city: City): Settings {
         zone: city.zone,
         latitude: city.latitude,
         longitude: city.longitude,
-        // The table carries no elevation column, so this place has none - which
-        // is `null` and not zero. Written as zero it claimed sea level for every
-        // city in the world. The user's own correction lives beside the place
-        // and still applies, so it is not copied here.
-        elevation: null,
+        // A height, at last. The old table had no elevation column, so this was
+        // always `null` - which was the honest answer then, because writing zero
+        // would have claimed sea level for every city in the world. GeoNames
+        // carries one from a digital elevation model, so a picked city now
+        // brings its own. Still `null` where even that has none, which is not
+        // zero. The user's own correction lives beside the place and continues
+        // to apply, so it is not copied here.
+        elevation: city.elevation,
       },
     },
   };
@@ -879,6 +890,14 @@ function About(props: { boot: Bootstrap }): JSX.Element {
       <div class="settings__row">
         <span class="settings__label">Licence</span>
         <span class="settings__value">AGPL-3.0</span>
+      </div>
+      {/* Required, not courtesy. The city list is GeoNames under CC BY 4.0,
+          whose one condition is that the credit appears where the work is used -
+          so it is on a pane a reader can reach and not only in a file in the
+          repository. */}
+      <div class="settings__row">
+        <span class="settings__label">Cities</span>
+        <span class="settings__value">GeoNames, CC BY 4.0</span>
       </div>
       <p class="settings__hint settings__hint--foot">
         Positions are computed on this Mac. Nothing is sent anywhere.

@@ -1,18 +1,27 @@
 //! Offline location resolution.
 //!
-//! The whole city list is the tz database's own `zone.tab`, embedded at compile
-//! time. That gives roughly 450 places, each already paired with the IANA zone
-//! that governs it, with no network call, no location permission and no
-//! third-party dataset to keep in sync. It is also the only list where the
-//! coordinate and the timezone are guaranteed to agree with each other, which is
-//! what rise and set times depend on.
+//! Two tables, because they answer two different questions.
 //!
-//! Both files are in the public domain.
+//! **The zone table** is the tz database's own `zone.tab`: one representative
+//! place per IANA zone, 448 of them, each guaranteed to agree with the zone that
+//! governs it. It answers "where does `Asia/Kolkata` stand for", which is
+//! D-007's last step and all the app has before a location has been chosen.
+//!
+//! **The city table** is GeoNames' `cities15000`, trimmed by
+//! `tools/geonames.sh`: 34,129 places at about 11 metres. It answers "where does
+//! the user live", which the zone table never could - it is a list of zones, and
+//! picking the nearest one to Bengaluru returns Colombo, 700 km away. D-007
+//! promised this dataset from the first release and it had never been built
+//! (E5).
+//!
+//! No network call and no location permission for either; both are embedded at
+//! compile time. The tz files are public domain. GeoNames is CC BY 4.0, and the
+//! credit that obliges is in `data/NOTICE` and in the app's About pane.
 
 mod parse;
 mod search;
 
-pub use parse::{places, Place};
+pub use parse::{zones, Place};
 pub use search::{nearest_place, place_for_zone, search};
 
 /// Angular distance in kilometres, used to pick the closest known place to a

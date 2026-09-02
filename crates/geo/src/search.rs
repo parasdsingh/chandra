@@ -1,19 +1,27 @@
 use crate::distance_km;
-use crate::parse::{places, Place};
+use crate::parse::{cities, zones, Place};
 
 /// Exact zone lookup.
+///
+/// The zone table, not the city list: this is asked which place stands for a
+/// zone, and only that table is guaranteed to have exactly one answer per zone.
 pub fn place_for_zone(zone: &str) -> Option<&'static Place> {
-    places().iter().find(|place| place.zone == zone)
+    zones().iter().find(|place| place.zone == zone)
 }
 
 /// The known place closest to a pair of coordinates.
 ///
-/// This is a **labelling aid only**. It must never be used to derive a timezone.
-/// `zone.tab` lists one representative city per zone, so the nearest entry can
-/// easily sit in another country: Bengaluru is 700 km from Asia/Colombo and
-/// 1560 km from Asia/Kolkata, so this returns Colombo. The timezone comes from
-/// the operating system, which knows the answer, and only the coordinates come
-/// from the location service.
+/// This is a **labelling aid only**. It must never be used to derive a timezone:
+/// a zone boundary is political and cannot be recovered from a point, however
+/// close the nearest city is. The timezone comes from the operating system,
+/// which knows the answer, and only the coordinates come from the location
+/// service.
+///
+/// It searches the city list now. Against the zone table it was answering with
+/// the nearest *zone's* representative city, which is a different question and
+/// gave a famously bad answer: Bengaluru is 700 km from Asia/Colombo and 1560 km
+/// from Asia/Kolkata, so CoreLocation reporting Bengaluru was labelled Colombo.
+/// With 34,129 cities the nearest one is nearly always the right name.
 ///
 /// Never returns `None` for real coordinates: the table covers every inhabited
 /// zone, so there is always a nearest entry. `None` means the coordinates were
@@ -26,7 +34,7 @@ pub fn nearest_place(latitude: f64, longitude: f64) -> Option<&'static Place> {
         return None;
     }
 
-    places().iter().min_by(|a, b| {
+    cities().iter().map(|city| &city.place).min_by(|a, b| {
         distance_km(latitude, longitude, a.latitude, a.longitude).total_cmp(&distance_km(
             latitude,
             longitude,
@@ -48,47 +56,100 @@ pub fn search(query: &str, limit: usize) -> Vec<&'static Place> {
         return Vec::new();
     }
 
-    let mut ranked: Vec<(u8, &'static Place)> = places()
+    // Population breaks the tie, largest first, before the name does. Every
+    // entry that matched matched the same way, so what is left to decide is
+    // which of them the user is more likely to have meant - and "york" almost
+    // always means New York rather than York, Nebraska.
+    let mut ranked: Vec<(u8, &'static crate::parse::City)> = cities()
         .iter()
-        .filter_map(|place| rank(place, &needle).map(|score| (score, place)))
+        .filter_map(|city| rank(city, &needle).map(|score| (score, city)))
         .collect();
 
-    ranked.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.city.cmp(&b.1.city)));
+    ranked.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then_with(|| b.1.population.cmp(&a.1.population))
+            .then_with(|| a.1.place.city.cmp(&b.1.place.city))
+    });
     ranked
         .into_iter()
         .take(limit)
-        .map(|(_, place)| place)
+        .map(|(_, city)| &city.place)
         .collect()
 }
 
 /// Lower is better.
-fn rank(place: &Place, needle: &str) -> Option<u8> {
-    let city = place.city.to_lowercase();
-    if city == needle {
+fn rank(entry: &crate::parse::City, needle: &str) -> Option<u8> {
+    let names = &entry.folded;
+    if names.iter().any(|name| name == needle) {
         return Some(0);
     }
-    if city.starts_with(needle) {
+    if names.iter().any(|name| name.starts_with(needle)) {
         return Some(1);
     }
 
-    let country = place.country.to_lowercase();
-    if country.starts_with(needle) {
+    // The region before the country. Someone who types a state or province name
+    // is naming somewhere narrower than a country and should be answered with
+    // it: `maharashtra` should not rank behind a country whose name happens to
+    // contain the same letters.
+    if entry
+        .place
+        .region
+        .as_deref()
+        .is_some_and(|region| region.to_lowercase().starts_with(needle))
+    {
         return Some(2);
     }
-    if city.contains(needle) {
+
+    let country = entry.place.country.to_lowercase();
+    if country.starts_with(needle) {
         return Some(3);
     }
-    if place.zone.to_lowercase().contains(needle) {
+    if names.iter().any(|name| name.contains(needle)) {
         return Some(4);
     }
-    if country.contains(needle) {
+    if entry.place.zone.to_lowercase().contains(needle) {
         return Some(5);
+    }
+    if country.contains(needle) {
+        return Some(6);
     }
     None
 }
 
 #[cfg(test)]
 mod tests {
+    /// The search is fast enough to run on every keystroke.
+    ///
+    /// It is a linear scan of 34,129 places, and it is wired to a debounced
+    /// field, so the question is whether one pass is cheap enough that the
+    /// debounce is a courtesy rather than a necessity. Measured rather than
+    /// assumed - the list grew by a factor of 76 in E5, and the scan that was
+    /// obviously fine over 448 entries is not obviously fine over 34,129.
+    ///
+    /// The budget is generous on purpose: this asserts the scan has not become
+    /// something that needs an index, not that it hits a particular number on a
+    /// particular machine.
+    #[test]
+    fn one_search_is_well_inside_a_keystroke() {
+        use std::time::Instant;
+
+        // Warm the list, which is parsed once on first use. That cost is real
+        // but it is paid at the first keystroke, not at every one.
+        let _ = super::search("a", 1);
+
+        let queries = ["b", "ba", "ban", "bang", "bangal", "new", "york", "z"];
+        let started = Instant::now();
+        for query in queries {
+            let _ = super::search(query, 20);
+        }
+        let each = started.elapsed() / queries.len() as u32;
+
+        assert!(
+            each.as_millis() < 50,
+            "one search took {each:?}, which is long enough to be felt"
+        );
+    }
+
     use super::*;
 
     #[test]
@@ -146,15 +207,51 @@ mod tests {
     }
 
     #[test]
-    fn nearest_place_can_cross_a_border_and_must_not_set_the_timezone() {
-        // zone.tab holds one representative city per zone, so a place far from
-        // its own zone's representative resolves to a nearer foreign one.
-        // Bengaluru is 700 km from Colombo and 1560 km from Kolkata. This is
-        // asserted rather than worked around, because it is the reason the
-        // timezone is taken from the operating system instead of from here.
+    fn the_nearest_city_names_the_place_it_is_actually_at() {
+        // What this used to assert was Colombo. `zone.tab` held one
+        // representative city per zone, so Bengaluru - 700 km from Asia/Colombo
+        // and 1560 km from Asia/Kolkata - resolved to the wrong country. The
+        // city list answers the question that was actually being asked.
         let found = nearest_place(12.9716, 77.5946).unwrap();
-        assert_eq!(found.zone, "Asia/Colombo");
-        assert_ne!(found.country_code, "IN");
+        assert_eq!(found.city, "Bengaluru");
+        assert_eq!(found.country_code, "IN");
+        assert_eq!(found.region.as_deref(), Some("Karnataka"));
+    }
+
+    #[test]
+    fn the_nearest_city_still_cannot_be_trusted_for_a_timezone() {
+        // The rule survives the better data, and this is why. Cieszyn and Cesky
+        // Tesin are one town, split down the Olza in 1920. They are 0.7 km apart
+        // and in different countries and different IANA zones - so a coordinate
+        // between them has a nearest city whose zone is a coin toss, and no
+        // amount of precision in the city list can fix that. A zone boundary is
+        // political and is not recoverable from a point.
+        //
+        // Found by scanning the list for the closest pair of cities in different
+        // zones, rather than chosen from memory. The next four pairs are all
+        // under a kilometre too.
+        let poland = search("Cieszyn", 20)
+            .into_iter()
+            .find(|place| place.country_code == "PL")
+            .expect("Cieszyn");
+        // Typed the way somebody without a Czech keyboard types it, which is
+        // the other half of what this test is for: the local spelling is
+        // `Ceský Tesín` and an exact match on the ASCII form has to find it.
+        let czechia = search("Cesky Tesin", 5)
+            .into_iter()
+            .find(|place| place.country_code == "CZ")
+            .expect("Cesky Tesin");
+
+        assert_ne!(poland.zone, czechia.zone);
+        assert!(
+            distance_km(
+                poland.latitude,
+                poland.longitude,
+                czechia.latitude,
+                czechia.longitude
+            ) < 1.5,
+            "the two halves of one town should be within a kilometre or so"
+        );
     }
 
     #[test]
