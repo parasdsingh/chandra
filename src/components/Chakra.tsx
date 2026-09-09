@@ -881,10 +881,20 @@ function northCompartments(
   // than from a compartment's own edges, so twelve slides read as one rotation
   // and no edge has to be named the entry or the exit.
   return built.map((compartment, house) => {
-    const before = centroid(built[(house + 11) % 12]!.points);
-    const after = centroid(built[(house + 1) % 12]!.points);
-    const dx = after.x - before.x;
-    const dy = after.y - before.y;
+    // Toward the *previous* house, which is where the sign is going.
+    //
+    // A house is `(rashi - lagna) mod 12 + 1`, so when the lagna advances a sign
+    // every rashi's house number goes *down*: Mesha sits in house 1 with Mesha
+    // rising and in house 12 with Vrishabha rising. Content travels backwards
+    // around the ring.
+    //
+    // This pointed forwards, which crept each compartment's contents away from
+    // the wall they were about to cross - the exact opposite of the one thing
+    // the drift exists to show.
+    const ahead = centroid(built[(house + 11) % 12]!.points);
+    const behind = centroid(built[(house + 1) % 12]!.points);
+    const dx = ahead.x - behind.x;
+    const dy = ahead.y - behind.y;
     const length = Math.hypot(dx, dy);
     return {
       ...compartment,
