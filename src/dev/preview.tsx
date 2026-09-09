@@ -61,7 +61,7 @@ const context: FormatContext = { timeZone: data.timeZone };
 
 const boot: Bootstrap = {
   settings: {
-    schema_version: 11,
+    schema_version: 12,
     location: {
       mode: "manual",
       place: {
@@ -76,7 +76,7 @@ const boot: Bootstrap = {
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta", ingress: "rashi" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
-    chart: { format: "north", vargas: ["d1", "d9"], numbered: false },
+    chart: { format: "north", vargas: ["d1", "d9"], numbered: false, animate: true },
     tray: { subjects: ["chandra", "mangala", "shani"], colour_mode: false },
     appearance: { scale: 1 },
   },
@@ -135,6 +135,7 @@ function ChartCase(props: {
   format: ChartFormat;
   numbered: boolean;
   error?: { code: string; message: string };
+  animate?: boolean;
 }): JSX.Element {
   return (
     <Case title={props.title}>
@@ -162,6 +163,10 @@ function ChartCase(props: {
           format={props.format}
           numbered={props.numbered}
           timeZone={data.timeZone}
+          // The harness draws every chart at the position the static layout
+          // gives it. The drift is stepped by its own case below, where it can
+          // be checked at more than one instant.
+          animate={props.animate ?? false}
         />
       </div>
     </Case>
@@ -506,6 +511,45 @@ export function Preview(): JSX.Element {
         format="north"
         numbered={false}
       />
+
+      {/* The drift, stepped. An arrangement that is legal where the sign is
+          entered and legal where it is left can be illegal in between, so the
+          harness draws the same chart at points across the run and the
+          geometric check walks all of them. This is the acceptance test for
+          `docs/design/animation.md`, and the reason it is drawn rather than
+          asserted in a unit test: the invariants are about rendered boxes. */}
+      <For each={[0, 0.25, 0.5, 0.75, 1]}>
+        {(at) => (
+          <ChartCase
+            title={`Chart · drift at ${Math.round(at * 100)}%`}
+            chart={{
+              ...data.chakra,
+              lagna: { ...data.chakra.lagna, progress: at },
+            }}
+            format="north"
+            numbered={false}
+            animate
+          />
+        )}
+      </For>
+
+      {/* The same, in the compartment shapes that constrain it most: a crowd in
+          a corner triangle has almost no room to move, which is the design
+          working rather than the design failing. */}
+      <For each={[0, 0.5, 1]}>
+        {(at) => (
+          <ChartCase
+            title={`Chart · crowded drift at ${Math.round(at * 100)}%`}
+            chart={{
+              ...data.chakraCorner,
+              lagna: { ...data.chakraCorner.lagna, progress: at },
+            }}
+            format="north"
+            numbered={false}
+            animate
+          />
+        )}
+      </For>
 
       {/* D2 is the crowding ceiling, and unlike the 1962 conjunction it is not
           a once-a-century event: every chart looks like this in D2, because the

@@ -76,6 +76,10 @@ interface Compartment {
   rashi: ChakraRashi;
   /** Zero-based sign index, for the number the North Indian chart writes. */
   sign: number;
+  /** The unit direction the sign travels as the lagna crosses it: from the
+   *  previous house's middle toward the next one's. Absent where nothing
+   *  travels, which is both grid formats. */
+  along?: { x: number; y: number };
 }
 
 function centroid(points: Point[]): Point {
@@ -550,6 +554,123 @@ function squeezed(
 }
 
 /**
+ * Where a compartment's contents sit, for a given progress through the sign.
+ *
+ * Zero at 0.5, so a chart drawn without animation is drawn exactly where it was
+ * before this existed.
+ *
+ * The direction follows the house order: the vector from the previous house's
+ * middle to the next one's. That makes twelve compartments read as one rotation
+ * rather than as twelve unrelated slides, and it needs no compartment's edges
+ * named - the ring's own geometry gives it.
+ *
+ * Only the North Indian chart has a rotation to foreshadow. In the other two the
+ * compartments *are* the signs and do not move, so nothing drifts.
+ */
+function drift(
+  compartment: Compartment,
+  laid: Cluster,
+  caption: Box,
+  progress: number,
+  format: ChartFormat,
+): Point {
+  if (format !== "north") return { x: 0, y: 0 };
+
+  const along = compartment.along;
+  if (!along) return { x: 0, y: 0 };
+
+  const boxes = [caption, ...laid.at.map((at) => labelBox(at, laid.scale))];
+  const room = travel(compartment.points, boxes, along);
+
+  // Centred on where the layout put it, so the drift is symmetric about the
+  // static position rather than starting there.
+  const from = -room.back;
+  const to = room.forward;
+  const at = from + (to - from) * progress;
+
+  return { x: along.x * at, y: along.y * at };
+}
+
+/** A graha label's box at a placed position, for the travel test. */
+function labelBox(at: Point, scale: number): Box {
+  const half = GRAHA_HALF * scale;
+  return {
+    min: at.x - half,
+    max: at.x + half,
+    top: at.y - GRAHA_ABOVE * scale,
+    bottom: at.y + GRAHA_BELOW * scale,
+  };
+}
+
+/**
+ * How far a compartment's contents may slide, and which way.
+ *
+ * The layout is computed first and asked afterwards how much room it left. That
+ * ordering is the whole design: the drift takes only slack that already exists,
+ * so every invariant the static layout holds is still held at every point of the
+ * motion, and nothing has to be clipped or special-cased.
+ *
+ * A compartment with one graha in it has a lot of room. The eight-body case in
+ * D2 has almost none, and moves almost not at all - which is right. A crowded
+ * house has less space to move in.
+ */
+function travel(
+  points: Point[],
+  boxes: Box[],
+  along: { x: number; y: number },
+): { back: number; forward: number } {
+  const fits = (distance: number) =>
+    boxes.every((box) => {
+      const dx = along.x * distance;
+      const dy = along.y * distance;
+      return (
+        inside(points, box.min + dx, box.top + dy) &&
+        inside(points, box.max + dx, box.top + dy) &&
+        inside(points, box.min + dx, box.bottom + dy) &&
+        inside(points, box.max + dx, box.bottom + dy)
+      );
+    });
+
+  // Nothing fits even where it is. A compartment too small for what stands in it
+  // reaches this, and it does not move at all rather than moving badly.
+  if (!fits(0)) return { back: 0, forward: 0 };
+
+  // Bisect rather than step: the reachable distance is bounded by the chart, and
+  // ten halvings of it resolve to well under a pixel.
+  const reach = (sign: number) => {
+    let low = 0;
+    let high = WIDTH;
+    for (let i = 0; i < 10; i++) {
+      const mid = (low + high) / 2;
+      if (fits(sign * mid)) low = mid;
+      else high = mid;
+    }
+    return low;
+  };
+
+  return { back: reach(-1), forward: reach(1) };
+}
+
+/**
+ * Whether a point is inside the compartment.
+ *
+ * Ray casting, counting crossings to the right. The polygons here are simple and
+ * closed, which is the only case this has to be right for.
+ */
+function inside(points: Point[], x: number, y: number): boolean {
+  let within = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = points[i]!;
+    const b = points[j]!;
+    const straddles = a.y > y !== b.y > y;
+    if (!straddles) continue;
+    const crossing = a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x);
+    if (x < crossing) within = !within;
+  }
+  return within;
+}
+
+/**
  * A row's available width, with the compartment's caption taken out of it.
  *
  * Only where the row runs level with the caption. The caption sits against a
@@ -724,7 +845,7 @@ function northCompartments(
     [TR, NE, N], //    12  top right
   ];
 
-  return shapes.map((points, house) => {
+  const built = shapes.map((points, house) => {
     const sign = (lagnaSign + house) % 12;
     const middle = centroid(points);
 
@@ -752,6 +873,22 @@ function northCompartments(
       body,
       rashi: rashis[sign]!,
       sign,
+    };
+  });
+
+  // The direction each sign travels, added once the ring exists: from the
+  // previous house's middle toward the next one's. Taken from the ring rather
+  // than from a compartment's own edges, so twelve slides read as one rotation
+  // and no edge has to be named the entry or the exit.
+  return built.map((compartment, house) => {
+    const before = centroid(built[(house + 11) % 12]!.points);
+    const after = centroid(built[(house + 1) % 12]!.points);
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const length = Math.hypot(dx, dy);
+    return {
+      ...compartment,
+      along: length > 0 ? { x: dx / length, y: dy / length } : undefined,
     };
   });
 }
@@ -837,6 +974,13 @@ export function Chakra(props: {
    *  setting. Ignored by the other two formats, whose compartments *are* the
    *  signs and are labelled by name in both references. */
   numbered: boolean;
+  /** How far this chart is from changing, 0 to 1. The compartments' contents
+   *  slide across the room the layout left them as it runs, so a compartment
+   *  hard against its exit wall is one about to hand over.
+   *
+   *  Left at 0.5 — the middle, where the static layout puts things — when the
+   *  chart is not animating, so the same code draws both. */
+  progress: number;
 }): JSX.Element {
   // Falls back to Mesha rather than to -1. The payload always numbers the houses
   // from the lagna so exactly one rashi is house 1, but `findIndex` returns -1
@@ -864,116 +1008,127 @@ export function Chakra(props: {
       aria-label={spoken(props.data, props.format)}
     >
       <For each={compartments()}>
-        {(compartment) => (
-          <>
-            <polygon
-              class="chakra__cell"
-              classList={{ "is-lagna": compartment.rashi.house === 1 }}
-              points={polygon(compartment.points)}
-            />
+        {(compartment) => {
+          // Laid out once, then slid as one. Everything the compartment draws
+          // takes the same offset, because the sign is what carries the bodies
+          // standing in it - a name that moves and leaves its grahas behind is
+          // drawing something that is not true.
+          const caption = captionBox(
+            compartment.label,
+            compartment.labelAnchor,
+            props.format === "north" && props.numbered,
+          );
+          const laid = cluster(
+            compartment.points,
+            compartment.body,
+            compartment.rashi.grahas.length,
+            caption,
+          );
+          const shift = drift(
+            compartment,
+            laid,
+            caption,
+            props.progress,
+            props.format,
+          );
 
-            {/* The sign's name, in all three formats. North Indian conventionally
+          return (
+            <>
+              <polygon
+                class="chakra__cell"
+                classList={{ "is-lagna": compartment.rashi.house === 1 }}
+                points={polygon(compartment.points)}
+              />
+
+              {/* The sign's name, in all three formats. North Indian conventionally
                 writes a number here because its compartments are houses and the
                 sign is what moves through them - but a number is a lookup, and
                 the three letters cost the same room. The label is set in its own
                 colour so it stays the compartment's caption rather than
                 competing with the bodies standing in it. */}
-            <text
-              class="chakra__label"
-              x={compartment.label.x}
-              y={compartment.label.y}
-              text-anchor={compartment.labelAnchor}
-            >
-              {props.format === "north" && props.numbered
-                ? compartment.sign + 1
-                : compartment.rashi.short}
-              <title>
-                {compartment.rashi.name} · house {compartment.rashi.house}
-              </title>
-            </text>
+              <text
+                class="chakra__label"
+                x={compartment.label.x + shift.x}
+                y={compartment.label.y + shift.y}
+                text-anchor={compartment.labelAnchor}
+              >
+                {props.format === "north" && props.numbered
+                  ? compartment.sign + 1
+                  : compartment.rashi.short}
+                <title>
+                  {compartment.rashi.name} · house {compartment.rashi.house}
+                </title>
+              </text>
 
-            {/* South and East mark the rising sign, because nothing else in
+              {/* South and East mark the rising sign, because nothing else in
                 those formats says which it is. North does not need to: the
                 lagna is house 1 and house 1 is always the top kite. */}
-            <Show
-              when={props.format !== "north" && compartment.rashi.house === 1}
-            >
-              <line
-                class="chakra__lagna-stroke"
-                x1={compartment.points[0]!.x}
-                y1={compartment.points[0]!.y}
-                x2={compartment.points[2]!.x}
-                y2={compartment.points[2]!.y}
-              />
-            </Show>
+              <Show
+                when={props.format !== "north" && compartment.rashi.house === 1}
+              >
+                <line
+                  class="chakra__lagna-stroke"
+                  x1={compartment.points[0]!.x}
+                  y1={compartment.points[0]!.y}
+                  x2={compartment.points[2]!.x}
+                  y2={compartment.points[2]!.y}
+                />
+              </Show>
 
-            {(() => {
-              const laid = cluster(
-                compartment.points,
-                compartment.body,
-                compartment.rashi.grahas.length,
-                captionBox(
-                  compartment.label,
-                  compartment.labelAnchor,
-                  props.format === "north" && props.numbered,
-                ),
-              );
-              return (
-                <For each={laid.at}>
-                  {(at_, at) => {
-                    const graha = () => compartment.rashi.grahas[at()]!;
-                    return (
-                      <>
-                        <text
-                          class="chakra__graha"
-                          classList={{
-                            "is-combust": graha().combust,
-                          }}
-                          x={at_.x}
-                          y={at_.y}
-                          text-anchor="middle"
-                          // Smaller type where the compartment could not hold
-                          // the bodies at full size, which is what a printed
-                          // chart does.
-                          //
-                          // An inline style, not a `font-size` attribute. A
-                          // presentation attribute loses to any stylesheet rule
-                          // and `.chakra__graha` sets the `font` shorthand, so
-                          // the attribute was silently overridden - every
-                          // measurement came back at the full size while the
-                          // code believed it had shrunk.
-                          style={
-                            laid.scale === 1
-                              ? undefined
-                              : {
-                                  "font-size": `${(11 * laid.scale).toFixed(2)}px`,
-                                }
-                          }
-                        >
-                          {/* Brackets are the retrograde mark. `Sa(r)` put a second
+              <For each={laid.at}>
+                {(at_, at) => {
+                  const graha = () => compartment.rashi.grahas[at()]!;
+                  return (
+                    <>
+                      <text
+                        class="chakra__graha"
+                        classList={{
+                          "is-combust": graha().combust,
+                        }}
+                        x={at_.x + shift.x}
+                        y={at_.y + shift.y}
+                        text-anchor="middle"
+                        // Smaller type where the compartment could not hold
+                        // the bodies at full size, which is what a printed
+                        // chart does.
+                        //
+                        // An inline style, not a `font-size` attribute. A
+                        // presentation attribute loses to any stylesheet rule
+                        // and `.chakra__graha` sets the `font` shorthand, so
+                        // the attribute was silently overridden - every
+                        // measurement came back at the full size while the
+                        // code believed it had shrunk.
+                        style={
+                          laid.scale === 1
+                            ? undefined
+                            : {
+                                "font-size": `${(11 * laid.scale).toFixed(2)}px`,
+                              }
+                        }
+                      >
+                        {/* Brackets are the retrograde mark. `Sa(r)` put a second
                           token beside the name and made the cluster read as
                           five things rather than four; `(Sa)` marks the name
                           itself and costs no width the compartment has to find.
                           The bracket is also what a printed chart uses. */}
-                          {graha().retrograde
-                            ? `(${graha().short})`
-                            : graha().short}
-                          {/* The hover says everything the abbreviation cannot: the
+                        {graha().retrograde
+                          ? `(${graha().short})`
+                          : graha().short}
+                        {/* The hover says everything the abbreviation cannot: the
                           full name, where it stands, and what it is doing
                           there. A native SVG title, so it needs no positioning
                           and cannot be clipped by the panel's own edges. */}
-                          <title>
-                            {describe(graha(), compartment.rashi.name)}
-                          </title>
-                        </text>
-                      </>
-                    );
-                  }}
-                </For>
-              );
-            })()}
-          </>
-        )}
+                        <title>
+                          {describe(graha(), compartment.rashi.name)}
+                        </title>
+                      </text>
+                    </>
+                  );
+                }}
+              </For>
+            </>
+          );
+        }}
       </For>
     </svg>
   );

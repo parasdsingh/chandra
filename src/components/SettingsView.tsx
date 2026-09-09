@@ -40,6 +40,7 @@ export type SettingsSection =
   | "calendar"
   | "panchanga"
   | "chart"
+  | "motion"
   | "advanced"
   | "ingress"
   | "compartments"
@@ -54,6 +55,7 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   calendar: "Calendar",
   panchanga: "Panchanga",
   chart: "Lagna Kundali",
+  motion: "Motion",
   advanced: "Advanced",
   ingress: "Ingress labels",
   compartments: "Compartments",
@@ -89,6 +91,10 @@ export function SettingsView(props: Props): JSX.Element {
       <Show when={props.section === "chart"}>
         <Chart boot={props.boot} apply={props.apply} />
       </Show>
+      <Show when={props.section === "motion"}>
+        <Motion boot={props.boot} apply={props.apply} />
+      </Show>
+
       <Show when={props.section === "advanced"}>
         <Advanced boot={props.boot} onOpen={props.onOpen} />
       </Show>
@@ -853,6 +859,38 @@ const CHART_FORMATS: { key: ChartFormat; label: string }[] = [
  * app by up to a whole rashi, and they sat between "Menu bar" and "Size" as
  * though they were a preference about the interface.
  */
+/**
+ * Whether the chart moves.
+ *
+ * Its own pane rather than a row in the chart's, because it is about how the
+ * chart behaves and not about what it draws - and because a reader who wants it
+ * off wants to find it once and never again.
+ */
+function Motion(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <Toggle
+        label="Follow the lagna"
+        on={settings().chart.animate}
+        onToggle={() =>
+          props.apply({
+            ...settings(),
+            chart: { ...settings().chart, animate: !settings().chart.animate },
+          })
+        }
+      />
+
+      <p class="settings__hint settings__hint--foot">
+        The compartments' contents slide as the lagna crosses its sign, so a
+        compartment against its far wall is one about to hand over. A system
+        setting asking for reduced motion turns this off whatever is chosen here.
+      </p>
+    </div>
+  );
+}
+
 function Advanced(props: {
   boot: Bootstrap;
   onOpen: (section: SettingsSection) => void;
@@ -876,6 +914,10 @@ function Advanced(props: {
     {
       id: "compartments",
       value: () => (settings().chart.numbered ? "Numbers" : "Names"),
+    },
+    {
+      id: "motion",
+      value: () => (settings().chart.animate ? "On" : "Off"),
     },
   ];
 

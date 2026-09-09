@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 11;
+pub const SCHEMA_VERSION: u32 = 12;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -99,6 +99,13 @@ impl AppearanceSetting {
 /// The Lagna Kundali: which division it draws, and in which format.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChartSetting {
+    /// Whether the compartments' contents slide as the lagna crosses its sign.
+    ///
+    /// On by default. The chart is a reading of now and did not look like one:
+    /// redrawn every minute, every redraw identical to the last. Off leaves
+    /// everything where the static layout puts it, and the caption still carries
+    /// the degree, so nothing is lost but the motion.
+    pub animate: bool,
     /// Which of the three chart formats is drawn. They differ in where a rashi
     /// is put on screen and not in what is true, so this changes the drawing and
     /// nothing else.
@@ -296,6 +303,7 @@ impl Default for Settings {
             chart: ChartSetting {
                 format: ChartFormat::North,
                 numbered: false,
+                animate: true,
                 vargas: vec![Varga::D1],
             },
             tray: TraySetting {
@@ -614,6 +622,22 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         }
         value["schema_version"] = serde_json::Value::from(11u32);
         version = 11;
+    }
+
+    // 11 -> 12. The chart gained motion. A file written before it was drawn
+    // still, but the feature ships on: a reader who wants it off can say so, and
+    // one who has never seen it cannot ask for it.
+    if version == 11 {
+        if let Some(chart) = value
+            .get_mut("chart")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            chart
+                .entry("animate")
+                .or_insert(serde_json::Value::Bool(true));
+        }
+        value["schema_version"] = serde_json::Value::from(12u32);
+        version = 12;
     }
 
     match version {

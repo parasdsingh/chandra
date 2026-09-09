@@ -6,6 +6,7 @@
       ],
       "longitude": "number",
       "name": "string",
+      "progress": "number",
       "rashi": "string"
     },
     "place": "string",
@@ -451,6 +452,7 @@
       "month_system": "string"
     },
     "chart": {
+      "animate": "boolean",
       "format": "string",
       "numbered": "boolean",
       "vargas": [

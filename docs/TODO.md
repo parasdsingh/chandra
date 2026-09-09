@@ -255,7 +255,9 @@ none yet.
 | 6.4 | ~~The other eleven~~ | done | All sixteen. D2 and D30 have their own shapes as expected; the other nine are the same arithmetic with a different multiplier. 95 worked examples from the specification, plus the occupancy property (D2 reaches 2 signs, D30 reaches 10 and never Karka or Simha) and the node property (together in seven divisions, opposite in nine) |
 | 6.4a | ~~Several divisions at once~~ | done | **D-033.** Each is a switch with its own status item, its own panel and its own numbered icon. Crowded compartments set smaller type, which D2 forced: it puts eight bodies in one compartment every day |
 | 6.5 | Graha placement by degree within the sign | queued | Moved here from E1. It is the animation's own mapping, so solving it separately would be solving it twice |
-| 6.6 | The animation | **specified** | `docs/design/animation.md`. Five open questions in §5 need answering before code |
+| 6.6a | ~~The drift~~ | done | The compartments' contents slide across the slack the layout leaves them, so every containment invariant holds at every instant with nothing clipped. Schema 12; **Advanced › Motion**, on by default, `prefers-reduced-motion` over it. The harness draws the run at 0, 25, 50, 75 and 100 per cent and the geometric check walks all of them |
+| 6.6b | The handover slide | ready | What happens as one sign leaves and the next arrives. Needs the compartment clip paths, and it is the only part of §5 not built |
+| 6.6c | Does South Indian move at all? | open | Its lagna mark is a diagonal stroke across a cell. §6 question 1 |
 
 **Measured, for 6.6.** One chart costs 47 µs (`bench_chakra`), so recomputing at
 1 Hz is 0.005% of one core. Interpolating between fetches would buy nothing and

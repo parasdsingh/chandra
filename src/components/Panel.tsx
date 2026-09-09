@@ -104,10 +104,27 @@ export function Panel(props: Props): JSX.Element {
    * wrong within the hour. A minute is finer than the arcminute it prints and
    * coarser than anything a reader would notice moving.
    */
+  // A system asking for reduced motion is asked once, and asked again if it
+  // changes: somebody who turns it on while the panel is open has asked now.
+  const stillness = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const [stillPreferred, setStillPreferred] = createSignal(stillness.matches);
+  onMount(() => {
+    const listen = (event: MediaQueryListEvent) => setStillPreferred(event.matches);
+    stillness.addEventListener("change", listen);
+    onCleanup(() => stillness.removeEventListener("change", listen));
+  });
+
+  const animating = () => props.boot.settings.chart.animate && !stillPreferred();
+
   const [chartAt, setChartAt] = createSignal(Date.now());
   createEffect(() => {
     if (view() !== "chart") return;
-    const timer = window.setInterval(() => setChartAt(Date.now()), 60_000);
+    // One second while it moves, a minute while it does not. A chart costs 47
+    // microseconds, so a second is 0.005% of a core - and the slowest division
+    // takes two hours to cross a compartment, which is 7,200 steps at this rate.
+    // Nothing is gained by asking the ephemeris faster than the eye resolves.
+    const every = animating() ? 1_000 : 60_000;
+    const timer = window.setInterval(() => setChartAt(Date.now()), every);
     onCleanup(() => window.clearInterval(timer));
   });
 
@@ -830,6 +847,7 @@ export function Panel(props: Props): JSX.Element {
               format={props.boot.settings.chart.format}
               numbered={props.boot.settings.chart.numbered}
               timeZone={timeZone()}
+              animate={animating()}
             />
           </Show>
 
@@ -885,6 +903,7 @@ const SETTINGS_PARENT: Partial<Record<SettingsSection, SettingsSection>> = {
   panchanga: "advanced",
   ingress: "advanced",
   compartments: "advanced",
+  motion: "advanced",
 };
 
 /** The division a tray key names, or `undefined` if the key is a graha's.

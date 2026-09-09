@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 use crate::events::combustion_from;
 use crate::standing::{dignity_of, Dignity};
-use crate::varga::varga_rashi;
 pub use crate::varga::Varga;
+use crate::varga::{part_progress, varga_rashi};
 use crate::zodiac::{degrees_in_rashi, Rashi};
 
 /// The whole chart at one instant.
@@ -63,6 +63,14 @@ pub struct Lagna {
     /// into the sign it has risen is the part that goes stale fastest - the
     /// ascendant moves about a degree every four minutes.
     pub degrees_in_rashi: (u32, u32, f64),
+    /// How far this chart is from changing, 0 to 1.
+    ///
+    /// The fraction of the way from where the rising sign was entered to where
+    /// it will be left. Not a fraction of the rashi and not of the varga part:
+    /// in D2 two consecutive parts map to the same sign, so a part boundary
+    /// passes with nothing on the chart moving. This is the interval the drift
+    /// is drawn across (`docs/design/animation.md`).
+    pub progress: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -226,6 +234,7 @@ pub fn at(
             name: lagna_rashi.name().to_string(),
             longitude: ascendant.degrees,
             degrees_in_rashi: degrees_in_rashi(ascendant.degrees),
+            progress: part_progress(varga, ascendant.degrees),
         },
         rashis,
         source: Source::weakest(

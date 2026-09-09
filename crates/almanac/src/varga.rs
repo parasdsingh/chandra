@@ -306,6 +306,78 @@ pub fn varga_rashi(varga: Varga, longitude: f64) -> Rashi {
     Rashi::ALL[index % 12]
 }
 
+/// How far this chart is from changing, from 0 to 1.
+///
+/// Not progress through the part. A part boundary is not always a handover: in
+/// D2 the second half of Mesha and the first half of Vrishabha are both Karka,
+/// so the lagna crosses from one part to the next and *nothing on the chart
+/// moves*. Measuring the part would reset the drift there, sliding everything
+/// back to the start of a compartment while the reader watched no change at all.
+///
+/// So this measures the run of longitudes that map to the same rashi: from where
+/// the current sign was entered to where it will be left. That run is one part
+/// in most divisions and two in D2, and it is exactly the interval the animation
+/// is drawn across (`docs/design/animation.md`).
+pub fn part_progress(varga: Varga, longitude: f64) -> f64 {
+    let longitude = longitude.rem_euclid(360.0);
+    let here = varga_rashi(varga, longitude);
+
+    let (mut from, mut to) = part_bounds(varga, longitude);
+
+    // Extend across neighbouring parts that map to the same rashi. Bounded: the
+    // longest run any division produces is D2's two halves, and a runaway would
+    // be a mapping bug rather than a chart.
+    for _ in 0..4 {
+        let next = to + STEP_IN;
+        if next >= 360.0 || varga_rashi(varga, next) != here {
+            break;
+        }
+        to = part_bounds(varga, next).1;
+    }
+    for _ in 0..4 {
+        let previous = from - STEP_IN;
+        if previous < 0.0 || varga_rashi(varga, previous) != here {
+            break;
+        }
+        from = part_bounds(varga, previous).0;
+    }
+
+    if to <= from {
+        return 0.0;
+    }
+    ((longitude - from) / (to - from)).clamp(0.0, 1.0)
+}
+
+/// Far enough inside the neighbouring part to be unambiguously in it, and far
+/// smaller than the narrowest part there is - D60's half a degree.
+const STEP_IN: f64 = 0.001;
+
+/// The part containing `longitude`, in absolute longitude.
+fn part_bounds(varga: Varga, longitude: f64) -> (f64, f64) {
+    let sign = (longitude / RASHI_ARC) as usize % 12;
+    let base = sign as f64 * RASHI_ARC;
+    let within = longitude - base;
+
+    if varga == Varga::D30 {
+        // The one division whose parts are not evenly spaced.
+        let edges: [f64; 6] = if sign % 2 == 0 {
+            [0.0, 5.0, 10.0, 18.0, 25.0, 30.0]
+        } else {
+            [0.0, 5.0, 12.0, 20.0, 25.0, 30.0]
+        };
+        for pair in edges.windows(2) {
+            if within < pair[1] {
+                return (base + pair[0], base + pair[1]);
+            }
+        }
+        return (base + edges[4], base + edges[5]);
+    }
+
+    let arc = RASHI_ARC / f64::from(varga.parts());
+    let index = (within / arc).floor();
+    (base + index * arc, base + (index + 1.0) * arc)
+}
+
 /// D2, the hora.
 ///
 /// The classical texts give the two halves to the Sun and the Moon **as lords**
@@ -496,6 +568,44 @@ mod tests {
                 "{} at {longitude}",
                 varga.label()
             );
+        }
+    }
+
+    /// Progress runs 0 to 1 inside every part, and resets where the chart hands
+    /// over.
+    ///
+    /// Checked against the mapping rather than against itself: wherever
+    /// `part_progress` returns to zero, `varga_rashi` must have changed. The
+    /// drift has to hand over exactly when the chart does, or the animation is
+    /// describing a different event from the one it is drawn on.
+    #[test]
+    fn progress_resets_exactly_where_the_division_changes() {
+        for varga in Varga::ALL {
+            let mut last_rashi = varga_rashi(varga, 0.0);
+            let mut last_progress = part_progress(varga, 0.0);
+
+            for step in 1..3600 {
+                let longitude = f64::from(step) / 10.0;
+                let rashi = varga_rashi(varga, longitude);
+                let progress = part_progress(varga, longitude);
+
+                assert!(
+                    (0.0..=1.0).contains(&progress),
+                    "{} at {longitude}: {progress}",
+                    varga.label()
+                );
+
+                if progress < last_progress - 0.5 {
+                    assert_ne!(
+                        rashi,
+                        last_rashi,
+                        "{} at {longitude}: progress reset without the division changing",
+                        varga.label()
+                    );
+                }
+                last_rashi = rashi;
+                last_progress = progress;
+            }
         }
     }
 

@@ -27,6 +27,9 @@ interface Props {
   format: ChartFormat;
   numbered: boolean;
   timeZone: string;
+  /** Whether the compartments' contents slide as the lagna crosses its sign.
+   *  Off leaves them where the static layout puts them. */
+  animate: boolean;
 }
 
 export function ChartView(props: Props): JSX.Element {
@@ -70,6 +73,11 @@ export function ChartView(props: Props): JSX.Element {
               data={data()}
               format={props.format}
               numbered={props.numbered}
+              // Where the sign sits between where it was entered and where it
+              // will be left. Held at the middle when the chart is not
+              // animating, which is where the static layout puts everything, so
+              // one code path draws both.
+              progress={props.animate ? data().lagna.progress : 0.5}
             />
 
             {/* The chart is as exact as the ephemeris behind it, and outside

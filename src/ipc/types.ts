@@ -430,6 +430,12 @@ export interface Lagna {
   /** Degrees, arcminutes, arcseconds into the rashi. The part that goes stale
    *  fastest — the ascendant moves about a degree every four minutes. */
   degrees_in_rashi: [number, number, number];
+  /** How far this chart is from changing, 0 to 1: the fraction of the way from
+   *  where the rising sign was entered to where it will be left. Not a fraction
+   *  of the rashi and not of the varga part — in D2 two consecutive parts map to
+   *  the same sign, so a part boundary passes with nothing on the chart moving.
+   *  This is what the drift is drawn across. */
+  progress: number;
 }
 
 export interface ChakraRashi {
@@ -501,6 +507,9 @@ export interface Settings {
   /** The Lagna Kundali: which format it draws. It has no menu bar switch - it
    *  is the one item that is always there (D-030). */
   chart: {
+    /** Whether the compartments' contents slide as the lagna crosses its sign.
+     *  On by default; `prefers-reduced-motion` overrides it. */
+    animate: boolean;
     format: ChartFormat;
     /** Divisions with their own menu bar item. Several at once: a practitioner
      *  reads D1 and D9 together, and switching between them to compare is not

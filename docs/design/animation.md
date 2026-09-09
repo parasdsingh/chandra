@@ -1,6 +1,7 @@
 # The chart, moving
 
-Specification for **E6.6**. Status: **proposed.** Nothing here is built.
+Specification for **E6.6**. Status: **the drift is built.** The handover slide
+is not, and §6 is what is left.
 
 The Lagna Kundali is a reading of *now*, and it does not look like one. It is
 redrawn every sixty seconds and every redraw is indistinguishable from the last,
@@ -29,7 +30,7 @@ lagna's motion needs. That is E6.5, and it is here rather than in E1 because
 solving it twice would be solving it twice.
 
 **This document proposes the lagna's motion only, and defers graha placement.**
-The reason is in §6.
+The reason is in §7.
 
 ---
 
@@ -143,37 +144,61 @@ a case that steps the lagna rather than fixing it.
 
 ---
 
-## 5. Open questions
+## 5. Decided
 
-These need answers before implementation, and none of them is settled by
-research.
+**The whole compartment's contents move, not the name alone.** The sign is what
+carries the bodies standing in it, so a sign that moves and leaves its grahas
+behind is drawing something that is not true. This is the more expensive answer
+and the correct one.
 
-1. **Does the label drift, or does the whole compartment's content?** The user's
-   description is of the sign's name moving. The grahas standing in that sign
-   move with it in reality — the sign is what carries them. Moving the name
-   alone is cheaper and safer; moving the group says something truer.
+**The handover is a slide.** The outgoing sign leaves by its exit edge as the
+incoming sign arrives at its entry edge.
 
-2. **What happens at the handover?** A cut, or a slide? A slide across a
-   compartment wall crosses a line that means something. A cut is honest and
-   abrupt. There is a third option: the label fades at the exit edge and
-   reappears at the entry edge, which is neither.
+### What those two answers force
 
-3. **How far does the label actually travel?** Wall to wall looks strongest and
-   collides most: a label at 0% and one at 100% are at opposite ends of the
-   compartment, and the caption reservation was built for a label that does not
-   move. A shorter travel — say the middle two thirds — costs some of the effect
-   and most of the risk.
+A group that moves will leave its compartment, and a group that leaves its
+compartment breaks the invariant the layout exists to hold. Two rules follow, and
+between them they are the whole design.
 
-4. **Does South Indian animate at all?** Its lagna mark is a diagonal stroke
-   across a cell. Moving it means either drawing a different stroke each frame or
-   moving something else, and neither is obviously right.
+**The drift travels only as far as the slack the layout already leaves.** The
+group is laid out exactly as it is now — rows, columns, caption reserved, type
+shrunk if it must be — and *then* asked how far it can translate before any label
+touches a wall or the caption. That distance is the travel. A compartment holding
+one graha has a lot of it; the eight-body case in D2 has almost none.
 
-5. **Does the drift show anywhere else?** The tray tooltip already rebuilds on
+This is not a compromise on the effect. It is the effect: **a crowded house moves
+less, because a crowded house has less room.** Nothing has to be clipped, no
+invariant is special-cased, and the geometric check in the harness passes at every
+instant rather than at the two ends.
+
+**Only the handover is clipped.** Each compartment gets a clip path of its own
+polygon, used *only* during the transition, so the outgoing group disappears into
+the wall rather than crossing it. The wall stays a wall. Outside the transition
+nothing is clipped, because nothing needs to be.
+
+### Direction
+
+Along the house order, so twelve compartments read as one rotation rather than
+twelve unrelated slides. The travel vector for a compartment is the direction
+from the previous house's centre to the next house's centre, normalised — which
+follows the ring without needing each compartment's edges named.
+
+## 6. Still open
+
+1. **Does South Indian animate at all?** Its lagna mark is a diagonal stroke
+   across a cell. Moving it means drawing a different stroke each frame, or
+   moving something else, and neither is obviously right. North Indian first.
+
+2. **How long is the handover?** Long enough to read as a slide, short enough
+   not to be a state the chart sits in. Somewhere near 300 ms, to be looked at
+   rather than argued about.
+
+3. **Does the drift show anywhere else?** The tray tooltip already rebuilds on
    hover and is current to the second. The calendar does not move and should not.
 
 ---
 
-## 6. Why graha placement by degree is not in this pass
+## 7. Why graha placement by degree is not in this pass
 
 It is the same mapping and it belongs here eventually. It is deferred because it
 does not compose with the layout as it stands.
@@ -192,7 +217,7 @@ ride along with the animation.
 
 ---
 
-## 7. What this does not do
+## 8. What this does not do
 
 - It does not animate the grahas. They do not move on this timescale.
 - It does not animate the calendar. A month is not a reading of now.
