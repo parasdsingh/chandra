@@ -1,5 +1,16 @@
 /* Harness chrome only. Nothing here styles the app itself. */
 
+/* The app sets `overflow: hidden` and `user-select: none` on the body, which is
+   right for a menu bar panel - it is not a document, and a stray drag that
+   highlights half the calendar looks broken. The harness *is* a document: a page
+   of thirty panels that has to scroll, and whose numbers are worth copying out
+   of. This file is loaded only at `?preview`, so it takes both back. */
+body {
+  overflow: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .preview {
   min-height: 100vh;
   background: #050506;
@@ -8,7 +19,6 @@
   flex-wrap: wrap;
   gap: 32px;
   align-items: flex-start;
-  overflow: auto;
 }
 
 .preview__case {

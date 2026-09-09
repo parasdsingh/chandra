@@ -150,10 +150,23 @@ a case that steps the lagna rather than fixing it.
 
 ## 5. Decided
 
-**The whole compartment's contents move, not the name alone.** The sign is what
-carries the bodies standing in it, so a sign that moves and leaves its grahas
-behind is drawing something that is not true. This is the more expensive answer
-and the correct one.
+**The bodies move; the caption does not.** This was the whole group at first, on
+the reasoning that a sign carries the bodies standing in it — and in a chart that
+could move freely, that would be right.
+
+It cannot. `placeCaption` puts the caption at a far vertex or hard against a
+wall, which is the convention both reference applications follow, so it *starts*
+against a wall and can travel almost nothing. Including it capped the whole group
+at the caption's own slack: a median of twelve units, which is a tenth of a pixel
+a second in the fastest division. Freeing the bodies from it raises the median to
+fifty.
+
+What is drawn is then the bodies crossing the house toward the wall they will
+leave by, under a caption that names where they are. The caption still moves at a
+handover, because at a handover the sign itself changes.
+
+The caption stays an obstacle even though it stays still. A body that moves can
+move onto a thing that does not, which is what happened the first time this ran.
 
 **The handover is a slide.** The outgoing sign leaves by its exit edge as the
 incoming sign arrives at its entry edge.
@@ -164,7 +177,7 @@ A group that moves will leave its compartment, and a group that leaves its
 compartment breaks the invariant the layout exists to hold. Two rules follow, and
 between them they are the whole design.
 
-**The drift travels only as far as the slack the layout already leaves.** The
+**The drift travels only as far as the slack the layout leaves the bodies.** The
 group is laid out exactly as it is now — rows, columns, caption reserved, type
 shrunk if it must be — and *then* asked how far it can translate before any label
 touches a wall or the caption. That distance is the travel. A compartment holding

@@ -593,8 +593,21 @@ function drift(
   const along = compartment.along;
   if (!along) return { x: 0, y: 0 };
 
-  const boxes = [caption, ...laid.at.map((at) => labelBox(at, laid.scale))];
-  const room = travel(compartment.points, boxes, along);
+  // The bodies only. The caption is not in this list and does not move.
+  //
+  // `placeCaption` puts it at a far vertex or hard against a wall on purpose,
+  // which is the convention both reference applications follow - so it starts
+  // against a wall and can travel almost nothing, and including it capped the
+  // whole group at its own tiny slack. The grahas sit near the compartment's
+  // middle and have room on both sides.
+  //
+  // What is drawn is then the bodies crossing the house toward the wall they
+  // will leave by, under a caption that names where they are. The caption still
+  // moves at a handover, because at a handover the sign itself changes.
+  const boxes = laid.at.map((at) => labelBox(at, laid.scale));
+  if (boxes.length === 0) return { x: 0, y: 0 };
+
+  const room = travel(compartment.points, boxes, caption, along);
 
   // Centred on where the layout put it, so the drift is symmetric about the
   // static position rather than starting there.
@@ -631,17 +644,31 @@ function labelBox(at: Point, scale: number): Box {
 function travel(
   points: Point[],
   boxes: Box[],
+  caption: Box,
   along: { x: number; y: number },
 ): { back: number; forward: number } {
   const fits = (distance: number) =>
     boxes.every((box) => {
       const dx = along.x * distance;
       const dy = along.y * distance;
+      const moved = {
+        min: box.min + dx,
+        max: box.max + dx,
+        top: box.top + dy,
+        bottom: box.bottom + dy,
+      };
+      // Inside the compartment, and clear of the caption.
+      //
+      // The caption is not in `boxes` because it does not move - but a body that
+      // moves can move *onto* it, which is what happened the first time this ran:
+      // `(Sa)` slid onto its own compartment's name at the end of the run. A
+      // thing that stays still is still in the way.
       return (
-        inside(points, box.min + dx, box.top + dy) &&
-        inside(points, box.max + dx, box.top + dy) &&
-        inside(points, box.min + dx, box.bottom + dy) &&
-        inside(points, box.max + dx, box.bottom + dy)
+        inside(points, moved.min, moved.top) &&
+        inside(points, moved.max, moved.top) &&
+        inside(points, moved.min, moved.bottom) &&
+        inside(points, moved.max, moved.bottom) &&
+        !overlaps(moved, caption)
       );
     });
 
@@ -663,6 +690,15 @@ function travel(
   };
 
   return { back: reach(-1), forward: reach(1) };
+}
+
+/** Whether two boxes share any area, with the same tolerances the harness's
+ *  geometric check uses: a hair of horizontal overlap is the boxes' own padding,
+ *  and only a real vertical overlap is ink on ink. */
+function overlaps(a: Box, b: Box): boolean {
+  const across = Math.min(a.max, b.max) - Math.max(a.min, b.min);
+  const down = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+  return across > 0.5 && down > 2;
 }
 
 /**
@@ -1137,8 +1173,8 @@ export function Chakra(props: {
               <g ref={group} clip-path={`url(#${id}-${house})`}>
               <text
                 class="chakra__label"
-                x={each().label.x + shift().x}
-                y={each().label.y + shift().y}
+                x={each().label.x}
+                y={each().label.y}
                 text-anchor={each().labelAnchor}
               >
                 {props.format === "north" && props.numbered
