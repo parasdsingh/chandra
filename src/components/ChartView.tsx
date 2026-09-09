@@ -78,6 +78,7 @@ export function ChartView(props: Props): JSX.Element {
               // animating, which is where the static layout puts everything, so
               // one code path draws both.
               progress={props.animate ? data().lagna.progress : 0.5}
+              animate={props.animate}
             />
 
             {/* The chart is as exact as the ephemeris behind it, and outside

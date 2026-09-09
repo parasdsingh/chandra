@@ -257,6 +257,14 @@ fn main() {
         "chakraNavamsa": almanac
             .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D9)
             .expect("navamsa"),
+        // The same chart two hours later, by which time the lagna has moved on a
+        // rashi and every sign has advanced a house. The harness alternates
+        // between this and `chakra` so the handover can be watched: it is the
+        // only event in the chart fast enough to see, and waiting for a real one
+        // means waiting two hours.
+        "chakraNext": almanac
+            .chakra(instant(2026, 8, 20, 0.72) + 2 * 3_600_000, PLACE, Varga::D1)
+            .expect("next"),
         // D2, which occupies two compartments out of twelve and can therefore
         // put all nine bodies in one. It is the hardest crowding case the app
         // can produce, and it is not rare - every chart is like this in D2.

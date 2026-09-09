@@ -8,7 +8,7 @@
  */
 
 import type { JSX } from "solid-js";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, onCleanup } from "solid-js";
 
 import fixture from "./fixture.json";
 import { DayDetail } from "../components/DayDetail";
@@ -50,6 +50,7 @@ const data = fixture as unknown as {
   chakra: Chakra;
   chakraCrowded: Chakra;
   chakraNavamsa: Chakra;
+  chakraNext: Chakra;
   chakraHora: Chakra;
   chakraTrimsamsa: Chakra;
   chakraCorner: Chakra;
@@ -129,6 +130,29 @@ const boot: Bootstrap = {
  * the reading - the rising sign, not the feature's name - so a chart whose
  * header says the wrong thing is only visible when both are on screen together.
  */
+/**
+ * The handover, repeating.
+ *
+ * Two real charts two hours apart, swapped every few seconds. Nothing else in
+ * the harness has a handover in it: every other case is one instant, and a
+ * handover is a change between two.
+ */
+function HandoverCase(): JSX.Element {
+  const [ahead, setAhead] = createSignal(false);
+  const timer = setInterval(() => setAhead((was) => !was), 2600);
+  onCleanup(() => clearInterval(timer));
+
+  return (
+    <ChartCase
+      title="Chart · the handover, every 2.6s"
+      chart={ahead() ? data.chakraNext : data.chakra}
+      format="north"
+      numbered={false}
+      animate
+    />
+  );
+}
+
 function ChartCase(props: {
   title: string;
   chart: Chakra | undefined;
@@ -511,6 +535,14 @@ export function Preview(): JSX.Element {
         format="north"
         numbered={false}
       />
+
+      {/* The handover, on a loop. It is the only motion in the chart fast enough
+          to watch - the drift is a position, not a movement - and a real one is
+          two hours away in D1, so the harness alternates between two charts two
+          hours apart and lets it run. Everything in each compartment arrives
+          through the wall it came from, clipped by the compartment's own
+          outline. */}
+      <HandoverCase />
 
       {/* The drift, stepped. An arrangement that is legal where the sign is
           entered and legal where it is left can be illegal in between, so the

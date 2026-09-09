@@ -14,7 +14,14 @@
  */
 
 import type { JSX } from "solid-js";
-import { For, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createUniqueId,
+  For,
+  Index,
+  Show,
+} from "solid-js";
 
 import type {
   Chakra as ChakraData,
@@ -247,6 +254,13 @@ const CAPTION_BELOW = 3;
  *  Two sets of numbers for one piece of text is a hazard, and they are kept
  *  apart deliberately: changing what a caption *reserves* should not silently
  *  move where it is *put*. */
+/** How far outside its compartment an arriving group starts.
+ *
+ * Far enough to be wholly behind the wall at the moment it begins - a group that
+ * fades in from just inside reads as a flicker rather than as an arrival. The
+ * clip path is what makes this safe: none of it is drawn until it is inside. */
+const HANDOVER = 26;
+
 const LABEL_ASCENT = 12;
 const LABEL_DESCENT = 6;
 /** Half the width of a three-letter caption, plus the same clearance. */
@@ -991,6 +1005,10 @@ export function Chakra(props: {
    *  Left at 0.5 — the middle, where the static layout puts things — when the
    *  chart is not animating, so the same code draws both. */
   progress: number;
+  /** Whether a handover is animated. The drift is a position and reads without
+   *  motion; the handover is the only event fast enough to watch, so this is
+   *  what the setting mostly controls. */
+  animate: boolean;
 }): JSX.Element {
   // Falls back to Mesha rather than to -1. The payload always numbers the houses
   // from the lagna so exactly one rashi is house 1, but `findIndex` returns -1
@@ -998,6 +1016,10 @@ export function Chakra(props: {
   // and then used to index the rashi array - which hands `undefined` to a
   // renderer that dereferences it. A chart drawn from the wrong sign is wrong;
   // a chart that throws takes the panel with it.
+  // Unique per chart, because the harness draws sixteen on one page and a clip
+  // path is addressed by id.
+  const id = createUniqueId();
+
   const lagnaSign = () => {
     const found = props.data.rashis.findIndex((rashi) => rashi.house === 1);
     return found < 0 ? 0 : found;
@@ -1017,37 +1039,93 @@ export function Chakra(props: {
       role="img"
       aria-label={spoken(props.data, props.format)}
     >
-      <For each={compartments()}>
-        {(compartment) => {
+      {/* One clip path per house, so a group arriving from the next compartment
+          comes *through* the wall rather than over it. The wall stays a wall. */}
+      <defs>
+        <Index each={compartments()}>
+          {(compartment, house) => (
+            <clipPath id={`${id}-${house}`}>
+              <polygon points={polygon(compartment().points)} />
+            </clipPath>
+          )}
+        </Index>
+      </defs>
+
+      {/* `Index`, not `For`. A house is a position and keeps its node; what
+          changes is the sign standing in it. Keyed by identity the whole ring
+          would be rebuilt on every refetch - once a second while the chart
+          follows the lagna - and nothing could be animated, because nothing
+          would survive long enough to animate. */}
+      <Index each={compartments()}>
+        {(each, house) => {
           // Laid out once, then slid as one. Everything the compartment draws
           // takes the same offset, because the sign is what carries the bodies
           // standing in it - a name that moves and leaves its grahas behind is
           // drawing something that is not true.
-          const caption = captionBox(
-            compartment.label,
-            compartment.labelAnchor,
-            props.format === "north" && props.numbered,
+          // Memos, not values. `Index` gives an accessor per position and runs
+          // this body once, so anything read out of it here is frozen at the
+          // first render and never changes again. That is not a subtle failure:
+          // it is the whole chart going static while the clock runs.
+          const caption = createMemo(() =>
+            captionBox(
+              each().label,
+              each().labelAnchor,
+              props.format === "north" && props.numbered,
+            ),
           );
-          const laid = cluster(
-            compartment.points,
-            compartment.body,
-            compartment.rashi.grahas.length,
-            caption,
+          const laid = createMemo(() =>
+            cluster(
+              each().points,
+              each().body,
+              each().rashi.grahas.length,
+              caption(),
+            ),
           );
-          const shift = drift(
-            compartment,
-            laid,
-            caption,
-            props.progress,
-            props.format,
+          const shift = createMemo(() =>
+            drift(each(), laid(), caption(), props.progress, props.format),
           );
+
+          // The handover. When the sign standing in this house changes, the
+          // arriving group is animated in from the wall it came through - the
+          // wall toward the next house, since a rashi moves to the *previous*
+          // house as the lagna advances.
+          //
+          // Imperative rather than a CSS class: the node is updated in place
+          // rather than replaced, so there is no mount for an enter transition
+          // to hang on.
+          let group: SVGGElement | undefined;
+          let previous: string | undefined;
+          let running: Animation | undefined;
+          createEffect(() => {
+            const sign = each().rashi.name;
+            const changed = previous !== undefined && previous !== sign;
+            previous = sign;
+            const along = each().along;
+            if (!changed || !group || !props.animate || !along) return;
+
+            // Cancelled first. A handover can arrive while the last one is
+            // still playing - in a fast division, or in a window the system has
+            // throttled - and two animations on one element compose rather than
+            // replace, so they pile up and the group crawls.
+            running?.cancel();
+            running = group.animate(
+              [
+                {
+                  transform: `translate(${-along.x * HANDOVER}px, ${-along.y * HANDOVER}px)`,
+                  opacity: 0,
+                },
+                { transform: "translate(0px, 0px)", opacity: 1 },
+              ],
+              { duration: 260, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+            );
+          });
 
           return (
             <>
               <polygon
                 class="chakra__cell"
-                classList={{ "is-lagna": compartment.rashi.house === 1 }}
-                points={polygon(compartment.points)}
+                classList={{ "is-lagna": each().rashi.house === 1 }}
+                points={polygon(each().points)}
               />
 
               {/* The sign's name, in all three formats. North Indian conventionally
@@ -1056,17 +1134,18 @@ export function Chakra(props: {
                 the three letters cost the same room. The label is set in its own
                 colour so it stays the compartment's caption rather than
                 competing with the bodies standing in it. */}
+              <g ref={group} clip-path={`url(#${id}-${house})`}>
               <text
                 class="chakra__label"
-                x={compartment.label.x + shift.x}
-                y={compartment.label.y + shift.y}
-                text-anchor={compartment.labelAnchor}
+                x={each().label.x + shift().x}
+                y={each().label.y + shift().y}
+                text-anchor={each().labelAnchor}
               >
                 {props.format === "north" && props.numbered
-                  ? compartment.sign + 1
-                  : compartment.rashi.short}
+                  ? each().sign + 1
+                  : each().rashi.short}
                 <title>
-                  {compartment.rashi.name} · house {compartment.rashi.house}
+                  {each().rashi.name} · house {each().rashi.house}
                 </title>
               </text>
 
@@ -1074,20 +1153,20 @@ export function Chakra(props: {
                 those formats says which it is. North does not need to: the
                 lagna is house 1 and house 1 is always the top kite. */}
               <Show
-                when={props.format !== "north" && compartment.rashi.house === 1}
+                when={props.format !== "north" && each().rashi.house === 1}
               >
                 <line
                   class="chakra__lagna-stroke"
-                  x1={compartment.points[0]!.x}
-                  y1={compartment.points[0]!.y}
-                  x2={compartment.points[2]!.x}
-                  y2={compartment.points[2]!.y}
+                  x1={each().points[0]!.x}
+                  y1={each().points[0]!.y}
+                  x2={each().points[2]!.x}
+                  y2={each().points[2]!.y}
                 />
               </Show>
 
-              <For each={laid.at}>
+              <For each={laid().at}>
                 {(at_, at) => {
-                  const graha = () => compartment.rashi.grahas[at()]!;
+                  const graha = () => each().rashi.grahas[at()]!;
                   return (
                     <>
                       <text
@@ -1095,8 +1174,8 @@ export function Chakra(props: {
                         classList={{
                           "is-combust": graha().combust,
                         }}
-                        x={at_.x + shift.x}
-                        y={at_.y + shift.y}
+                        x={at_.x + shift().x}
+                        y={at_.y + shift().y}
                         text-anchor="middle"
                         // Smaller type where the compartment could not hold
                         // the bodies at full size, which is what a printed
@@ -1109,10 +1188,10 @@ export function Chakra(props: {
                         // measurement came back at the full size while the
                         // code believed it had shrunk.
                         style={
-                          laid.scale === 1
+                          laid().scale === 1
                             ? undefined
                             : {
-                                "font-size": `${(11 * laid.scale).toFixed(2)}px`,
+                                "font-size": `${(11 * laid().scale).toFixed(2)}px`,
                               }
                         }
                       >
@@ -1129,17 +1208,18 @@ export function Chakra(props: {
                           there. A native SVG title, so it needs no positioning
                           and cannot be clipped by the panel's own edges. */}
                         <title>
-                          {describe(graha(), compartment.rashi.name)}
+                          {describe(graha(), each().rashi.name)}
                         </title>
                       </text>
                     </>
                   );
                 }}
               </For>
+              </g>
             </>
           );
         }}
-      </For>
+      </Index>
     </svg>
   );
 }

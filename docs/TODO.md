@@ -256,7 +256,7 @@ none yet.
 | 6.4a | ~~Several divisions at once~~ | done | **D-033.** Each is a switch with its own status item, its own panel and its own numbered icon. Crowded compartments set smaller type, which D2 forced: it puts eight bodies in one compartment every day |
 | 6.5 | Graha placement by degree within the sign | queued | Moved here from E1. It is the animation's own mapping, so solving it separately would be solving it twice |
 | 6.6a | ~~The drift~~ | done | The compartments' contents slide across the slack the layout leaves them, so every containment invariant holds at every instant with nothing clipped. Schema 12; **Advanced › Motion**, on by default, `prefers-reduced-motion` over it. The harness draws the run at 0, 25, 50, 75 and 100 per cent and the geometric check walks all of them |
-| 6.6b | The handover slide | ready | What happens as one sign leaves and the next arrives. Needs the compartment clip paths, and it is the only part of §5 not built |
+| 6.6b | ~~The handover slide~~ | done | The arriving group comes through the wall it came from, clipped by the compartment's own outline, over 260 ms. This is the only motion in the chart anyone can see - the drift is a position, at a pixel per ten seconds in D60. The harness alternates two charts two hours apart so it can be watched without waiting |
 | 6.6c | Does South Indian move at all? | open | Its lagna mark is a diagonal stroke across a cell. §6 question 1 |
 
 **Measured, for 6.6.** One chart costs 47 µs (`bench_chakra`), so recomputing at

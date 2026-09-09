@@ -1,7 +1,11 @@
 # The chart, moving
 
-Specification for **E6.6**. Status: **the drift is built.** The handover slide
-is not, and §6 is what is left.
+Specification for **E6.6**. Status: **built.** The drift and the handover slide
+are in; §6 is what is left.
+
+**Read §1 first.** The drift is a *position*, not a motion — at one pixel per ten
+seconds in the fastest division, nothing about it is visible as movement. The
+handover is the only thing in the chart a person can watch.
 
 The Lagna Kundali is a reading of *now*, and it does not look like one. It is
 redrawn every sixty seconds and every redraw is indistinguishable from the last,
