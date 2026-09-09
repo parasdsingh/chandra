@@ -255,12 +255,12 @@ none yet.
 | 6.4 | ~~The other eleven~~ | done | All sixteen. D2 and D30 have their own shapes as expected; the other nine are the same arithmetic with a different multiplier. 95 worked examples from the specification, plus the occupancy property (D2 reaches 2 signs, D30 reaches 10 and never Karka or Simha) and the node property (together in seven divisions, opposite in nine) |
 | 6.4a | ~~Several divisions at once~~ | done | **D-033.** Each is a switch with its own status item, its own panel and its own numbered icon. Crowded compartments set smaller type, which D2 forced: it puts eight bodies in one compartment every day |
 | 6.5 | Graha placement by degree within the sign | queued | Moved here from E1. It is the animation's own mapping, so solving it separately would be solving it twice |
-| 6.6 | The animation | queued | Rashi names drifting across a compartment, handing over as the lagna crosses. Needs a specification before anything is built |
+| 6.6 | The animation | **specified** | `docs/design/animation.md`. Five open questions in §5 need answering before code |
 
 **Measured, for 6.6.** One chart costs 47 µs (`bench_chakra`), so recomputing at
-10 Hz is 0.047% of one core. Interpolating between fetches would buy nothing and
-would mean drawing a lagna the app never computed. Gated on the panel being
-open, and a toggle in Advanced, on by default.
+1 Hz is 0.005% of one core. Interpolating between fetches would buy nothing and
+would mean drawing a lagna the app never computed. Gated on the panel being open,
+a toggle in Advanced on by default, and `prefers-reduced-motion` over both.
 
 **A drawing constraint the research turned up.** Rahu and Ketu land in the *same*
 rashi in D2, D16, D20, D24, D30, D40 and D45, because a sign and the sign

@@ -80,8 +80,18 @@ export function tithiLabel(tithi: CellTithi): {
   if (tithi.number === 15) {
     return { prefix: "", value: tithi.paksha === "shukla" ? "P" : "A" };
   }
+  // Lowercase. The prefix is a qualifier on the number, not a word of its own,
+  // and a lowercase letter is both narrower and visually lighter than a capital
+  // - which is the whole complaint: at full height `K14` spent 37% of its width
+  // and 21% of the cell on one letter.
+  //
+  // A letter rather than a colour. Krishna as dark text was measured at 1.51:1
+  // against the panel's darkest composited ground and 2.60:1 against its
+  // lightest, where the app's floor is 4.5:1 and `--text-tertiary` was retired
+  // at 2.21. The glow that would have carried it is thicker than the letterform
+  // at this size, and would have made the *dark* fortnight the heavier mark.
   return {
-    prefix: tithi.paksha === "shukla" ? "S" : "K",
+    prefix: tithi.paksha === "shukla" ? "s" : "k",
     value: String(tithi.number),
   };
 }
