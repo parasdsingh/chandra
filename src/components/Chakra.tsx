@@ -1408,11 +1408,20 @@ function planFor(
   const widest = Math.max(...bodies.map((body) => body.half), GRAHA_HALF_PLAIN);
   const narrowest = Math.min(...bodies.map((body) => body.half), GRAHA_HALF);
 
-  for (const [spill, strict] of [
-    [0, true],
-    [PATH_SPILL_DEGREES, true],
-  ] as const) {
-    for (const scale of PATH_SIZES) {
+  // Type size outside, spill inside, and the order is the whole point. The
+  // other way round exhausted every size at zero spill before trying the three
+  // degrees of spill this design already declares, so a compartment needing one
+  // degree of it was set at 86% instead - and a routine chart came out with two
+  // type sizes in it, which reads as a mistake rather than as a measurement.
+  //
+  // The type size is the thing a reader compares across houses, so it is the
+  // last thing to give way. The spill is already bounded and already disclosed;
+  // spending it first is spending the cheaper resource.
+  for (const scale of PATH_SIZES) {
+    for (const [spill, strict] of [
+      [0, true],
+      [PATH_SPILL_DEGREES, true],
+    ] as const) {
       const band = reach(points, path, caption, scale, narrowest);
       if (!band) continue;
       const laid = assign(
