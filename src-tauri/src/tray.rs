@@ -217,7 +217,7 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
             // otherwise show a mark and a title at once.
             item.set_icon(None)
                 .map_err(|e| AppError::Engine(format!("cannot clear the chart icon: {e}")))?;
-            item.set_title(Some(varga.key()))
+            item.set_title(Some(varga.mark()))
                 .map_err(|e| AppError::Engine(format!("cannot set the chart title: {e}")))?;
         }
         // The tooltip is rebuilt on hover, which is what makes the lagna in it

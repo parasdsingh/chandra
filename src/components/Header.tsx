@@ -321,11 +321,32 @@ function ChartMark(props: { division: number }): JSX.Element {
         <text
           class="header__division"
           x="8"
-          y="12.4"
+          y="11.9"
           text-anchor="middle"
           fill="currentColor"
+          // The mark names its division: `D9`, not `9`. A bare numeral in the
+          // header is a number with nothing saying what it counts - and the
+          // status item beside it says `D9`, so the two were disagreeing about
+          // the same chart.
+          //
+          // The size follows the string because the box does not grow. `D60` is
+          // three characters where `D1` is two, and one size that fits three
+          // wastes a third of the box on every other division. `textLength` is
+          // the guarantee rather than the mechanism: the size is chosen to fit
+          // and the length only holds it there if a face measures wider than
+          // the stack this was set against.
+          //
+          // An inline style, not a `font-size` attribute. `.header__division`
+          // sets the `font` shorthand, which resets `font-size` and beats any
+          // presentation attribute - the same trap that made every graha label
+          // in the chart measure unshrunk while the code believed otherwise.
+          style={{
+            "font-size": props.division >= 10 ? "7.6px" : "10.4px",
+          }}
+          textLength={props.division >= 10 ? "14.4" : "11.2"}
+          lengthAdjust="spacingAndGlyphs"
         >
-          {props.division}
+          D{props.division}
         </text>
       </Show>
     </svg>
