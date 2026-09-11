@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 12;
+pub const SCHEMA_VERSION: u32 = 13;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -131,6 +131,21 @@ pub struct ChartSetting {
     /// reader do one - so the name is the default and the number is the choice.
     /// Drik Panchang offers the same switch the other way round.
     pub numbered: bool,
+    /// Whether the North Indian chart draws the degree lines a compartment is
+    /// laid out on.
+    ///
+    /// Off by default, and it is the only setting in the app that turns
+    /// something *on* rather than choosing between two readings: it draws a
+    /// construction line, and a chart is not improved for most readers by
+    /// showing its own scaffolding. It is here because the construction is a
+    /// real answer to a real question - why two bodies in the same sign are
+    /// drawn where they are, and why a crowded house has to crowd - and that
+    /// question is asked by exactly the reader who would go looking in
+    /// Advanced.
+    ///
+    /// `docs/design/traversal.md`. Ignored by the two grid formats, whose
+    /// compartments are the signs and have no route through them.
+    pub grid: bool,
 }
 
 /// The three chart formats in common use.
@@ -304,6 +319,7 @@ impl Default for Settings {
                 format: ChartFormat::North,
                 numbered: false,
                 animate: true,
+                grid: false,
                 vargas: vec![Varga::D1],
             },
             tray: TraySetting {
@@ -640,6 +656,25 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         version = 12;
     }
 
+    // 12 -> 13. The chart gained the degree grid, off by default. A file
+    // written before it existed keeps the chart it already had: this one is not
+    // like `animate`, which shipped on because a reader who has never seen a
+    // thing cannot ask for it. The grid is scaffolding, and scaffolding that
+    // appeared unasked over an existing reader's chart would be a change to
+    // what their chart looks like, not an addition to what it can do.
+    if version == 12 {
+        if let Some(chart) = value
+            .get_mut("chart")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            chart
+                .entry("grid")
+                .or_insert(serde_json::Value::Bool(false));
+        }
+        value["schema_version"] = serde_json::Value::from(13u32);
+        version = 13;
+    }
+
     match version {
         SCHEMA_VERSION => Ok(value),
         newer if newer > SCHEMA_VERSION => Err(AppError::Settings(format!(
@@ -852,6 +887,55 @@ mod tests {
             ChartFormat::East,
             "and the choices they did make survive"
         );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// The degree grid arrives switched off, and a file written before it
+    /// existed still loads.
+    ///
+    /// The same shape as the two tests above and for the same reason: schema 12
+    /// is what every existing install is at, its chart block has four fields,
+    /// and a fifth added without a migration is `missing field grid` on the
+    /// next launch. Checked against the old code: without the 12 -> 13 step
+    /// this document fails to load at all.
+    ///
+    /// It also pins the default. `animate` shipped *on*, because a reader who
+    /// has never seen the chart move cannot ask for it; the grid ships off,
+    /// because it draws the chart's own scaffolding over a chart the reader
+    /// already has.
+    #[test]
+    fn the_degree_grid_arrives_off_and_a_schema_twelve_file_still_loads() {
+        let dir = temp_dir("schema-thirteen");
+
+        let mut document = serde_json::to_value(Settings::default()).expect("serialise");
+        document["schema_version"] = serde_json::Value::from(12u32);
+        document["chart"] = serde_json::json!({
+            "format": "south",
+            "numbered": true,
+            "animate": false,
+            "vargas": ["d1", "d9"]
+        });
+        fs::write(
+            Settings::path(&dir),
+            serde_json::to_string(&document).expect("json"),
+        )
+        .expect("write");
+
+        let settings = Settings::load(&dir).expect("a version 12 document must migrate");
+        assert_eq!(settings.schema_version, SCHEMA_VERSION);
+        assert!(
+            !settings.chart.grid,
+            "the grid draws scaffolding; it cannot appear over a chart nobody asked to change"
+        );
+        assert_eq!(
+            settings.chart.format,
+            ChartFormat::South,
+            "and every choice the reader did make survives"
+        );
+        assert!(settings.chart.numbered);
+        assert!(!settings.chart.animate);
+        assert_eq!(settings.chart.vargas, vec![Varga::D1, Varga::D9]);
 
         let _ = fs::remove_dir_all(&dir);
     }

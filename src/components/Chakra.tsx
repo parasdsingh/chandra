@@ -87,6 +87,10 @@ interface Compartment {
    *  previous house's middle toward the next one's. Absent where nothing
    *  travels, which is both grid formats. */
   along?: { x: number; y: number };
+  /** The route the sign's contents take across this compartment, from the edge
+   *  they arrive through to the edge they leave by. Absent in both grid
+   *  formats, whose compartments are the signs and do not hand anything on. */
+  path?: Pathway;
 }
 
 function centroid(points: Point[]): Point {
@@ -226,6 +230,17 @@ const GRAHA_BELOW = 3;
  * number by coincidence and neither was measured. */
 const GRAHA_HALF = 13;
 
+/** Half a graha label that is *not* retrograde.
+ *
+ * `Mo` measures 16.4 against `(Ke)`'s 25.0, so clamping every label by the
+ * widest throws away eight units of width on eight labels in nine. The packed
+ * layout can afford that - it places positions and never sees the text - and
+ * the pathway cannot: a wall triangle is 79 units across at its widest and its
+ * caption takes 25 of them, so the difference between 26 and 18 is the
+ * difference between a route with a usable band and one without. Measured at
+ * scale 1 in the harness and rounded outwards, like its neighbour. */
+const GRAHA_HALF_PLAIN = 9;
+
 /** The compartment's caption, as a box to keep grahas out of.
  *
  * Measured from the rendered labels: a three-letter name is 24 wide and a house
@@ -260,6 +275,22 @@ const CAPTION_BELOW = 3;
  * fades in from just inside reads as a flicker rather than as an arrival. The
  * clip path is what makes this safe: none of it is drawn until it is inside. */
 const HANDOVER = 26;
+
+/** How long a body takes to reach its next computed position, in milliseconds,
+ * before any gap has been measured. The panel's animating tick.
+ *
+ * After the first move the duration is the measured gap between positions, so
+ * each slide ends as the next arrives and the motion is continuous rather than
+ * a step followed by a wait. The renderer is not told how often it is fed -
+ * the panel's second and the harness's tenth of a second both work. */
+const SETTLE = 1_000;
+
+/** The gap is clamped before it becomes a duration. Below the floor a slide is
+ * shorter than a frame and buys nothing; above the ceiling a stalled feed - a
+ * throttled background window, a slow round trip - would leave a body crawling
+ * toward a position the chart has long since moved past. */
+const SETTLE_LEAST = 80;
+const SETTLE_MOST = 2_000;
 
 const LABEL_ASCENT = 12;
 const LABEL_DESCENT = 6;
@@ -319,22 +350,69 @@ function placeCaption(
 
   const wallHouse = house === 3 || house === 5 || house === 9 || house === 11;
   if (wallHouse) {
-    // The one edge that lies on the chart's left or right wall, and its middle.
+    // The one edge that lies on the chart's left or right wall.
     const wall = edges(points).find(
       ([a, b]) => a.x === b.x && (a.x === INSET || a.x === WIDTH - INSET),
     );
     if (wall) {
       const [a, b] = wall;
       const onLeft = a.x === INSET;
+      const anchor = onLeft ? "start" : "end";
+      const x = a.x + (onLeft ? LABEL_WALL : -LABEL_WALL);
+
+      // **Where the compartment is too narrow to hold a body**, walking from
+      // the chart's corner along the wall until the caption itself fits.
+      //
+      // It used to sit at the wall's midpoint, which is the widest part of the
+      // shape and the only part of it a graha can stand in. That put the one
+      // fixed obstacle in a wall triangle exactly where its degree scale wanted
+      // to be, and it cost more than it looked: the band a body can stand on
+      // came out at twelve to twenty-four units against a kite's hundred and
+      // thirty, and two of the twelve compartments could not hold their degrees
+      // at all.
+      //
+      // The other eight compartments have always put their caption at a far
+      // vertex, which is the narrowest part of *their* shape. So this is not a
+      // new rule for the wall triangles; it is the rule the rest of the chart
+      // already follows, applied to the four that were the exception. The
+      // convention both reference applications show - the caption against the
+      // long side - is kept; only where along it changes.
+      //
+      // Toward the chart's corner rather than toward the middle of the side.
+      // Both ends of the wall are narrow, and the corner end leaves the longer
+      // run of route: a wall triangle's two gates sit either side of its apex,
+      // so blocking the end nearest a gate costs less than blocking the middle.
+      const corner = Math.abs(a.y - INSET) < Math.abs(b.y - INSET) ? a : b;
+      const inward = corner === a ? b : a;
+
+      const fits = (y: number) => {
+        const box = captionBox({ x, y }, anchor, false);
+        return (
+          inside(points, box.min, box.top) &&
+          inside(points, box.max, box.top) &&
+          inside(points, box.min, box.bottom) &&
+          inside(points, box.max, box.bottom)
+        );
+      };
+
+      // A shallow scan rather than an interval: the wall is at most 120 units
+      // and half a unit of resolution is finer than the caption can be placed.
+      const span = inward.y - corner.y;
+      const steps = 240;
+      for (let i = 0; i <= steps; i++) {
+        const y = corner.y + (span * i) / steps;
+        // Two units further in than the first position that fits, so the
+        // caption is not sitting exactly on the limit of its own room.
+        if (fits(y) && fits(y + Math.sign(span) * 2)) {
+          return { at: { x, y: y + Math.sign(span) * 2 }, anchor };
+        }
+      }
+
+      // Nothing along the wall holds it, which no compartment in this
+      // construction reaches. The midpoint is the least bad answer there is.
       return {
-        at: {
-          x: a.x + (onLeft ? LABEL_WALL : -LABEL_WALL),
-          // A third of the ascent below the wall's midpoint. `y` is a baseline
-          // and the eye centres on the ink, which sits above it - so a caption
-          // placed at the exact midpoint reads as sitting high.
-          y: (a.y + b.y) / 2 + LABEL_ASCENT / 3,
-        },
-        anchor: onLeft ? "start" : "end",
+        at: { x, y: (a.y + b.y) / 2 + LABEL_ASCENT / 3 },
+        anchor,
       };
     }
   }
@@ -432,6 +510,15 @@ function cluster(
 interface Cluster {
   at: Point[];
   scale: number;
+  /** The stretch of the route a label may stand on, as two fractions of its
+   *  length. Only the pathway layout produces one; the development grid draws
+   *  it, and nothing else reads it. */
+  band?: [number, number];
+  /** How the arrangement was arrived at. Written onto the group as a data
+   *  attribute when the pathway is on, so the harness can say which
+   *  compartments held their degrees and which had to spend something -
+   *  measuring that from rendered positions alone is guesswork. */
+  how?: "exact" | "spilled" | "stacked" | "packed";
 }
 
 /**
@@ -553,7 +640,15 @@ function squeezed(
   return Array.from({ length: count }, (_, index) => {
     const y = count > 1 ? from + index * pitch : (from + to) / 2;
     const span = spanOver(points, y - above, y + below);
-    const { min, max } = withoutCaption(span, y, caption, above, below, half);
+    const { min, max } = withoutCaption(
+      span,
+      y,
+      caption,
+      above,
+      below,
+      half,
+      true,
+    );
     const lowest = min + half + GRAHA_MARGIN / 2;
     const highest = max - half - GRAHA_MARGIN / 2;
 
@@ -618,12 +713,15 @@ function drift(
   return { x: along.x * at, y: along.y * at };
 }
 
-/** A graha label's box at a placed position, for the travel test. */
-function labelBox(at: Point, scale: number): Box {
-  const half = GRAHA_HALF * scale;
+/** A graha label's box at a placed position, for the travel test.
+ *
+ * `half` defaults to the widest label there can be, which is what the packed
+ * layout has to assume. The pathway passes each body's own. */
+function labelBox(at: Point, scale: number, half = GRAHA_HALF): Box {
+  const reach = half * scale;
   return {
-    min: at.x - half,
-    max: at.x + half,
+    min: at.x - reach,
+    max: at.x + reach,
     top: at.y - GRAHA_ABOVE * scale,
     bottom: at.y + GRAHA_BELOW * scale,
   };
@@ -668,7 +766,7 @@ function travel(
         inside(points, moved.max, moved.top) &&
         inside(points, moved.min, moved.bottom) &&
         inside(points, moved.max, moved.bottom) &&
-        !overlaps(moved, caption)
+        !touches(moved, caption)
       );
     });
 
@@ -692,13 +790,37 @@ function travel(
   return { back: reach(-1), forward: reach(1) };
 }
 
-/** Whether two boxes share any area, with the same tolerances the harness's
- *  geometric check uses: a hair of horizontal overlap is the boxes' own padding,
- *  and only a real vertical overlap is ink on ink. */
-function overlaps(a: Box, b: Box): boolean {
+/** How much area two boxes share. Nothing reads it but the pathway's last
+ *  resort, which has to choose between arrangements that all overlap. */
+function shared(a: Box, b: Box): number {
   const across = Math.min(a.max, b.max) - Math.max(a.min, b.min);
   const down = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-  return across > 0.5 && down > 2;
+  return across > 0 && down > 0 ? across * down : 0;
+}
+
+/**
+ * Whether two boxes touch at all.
+ *
+ * There used to be a tolerant version of this - a hair of horizontal overlap
+ * and up to two units of vertical - and the tolerance was argued for one case:
+ * label against label, where `GRAHA_ROW` is deliberately a hair tighter than
+ * the box it carries, so adjacent rows overlap by about six tenths of a unit
+ * and nothing is visible, because the ink of a two-letter capital reaches
+ * nowhere near the ascender.
+ *
+ * **The caption never earned that.** It was getting it anyway, because the same
+ * function tested both, and the consequence only showed once the wall triangle's
+ * caption moved into the drift's path: the slide would run until it had four
+ * tenths of a unit of the caption underneath it, call that clear, and stop
+ * there. A graze rather than a collision, and an invariant that had been zero.
+ *
+ * An obstacle is cleared or it is not.
+ */
+function touches(a: Box, b: Box): boolean {
+  return (
+    Math.min(a.max, b.max) > Math.max(a.min, b.min) &&
+    Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top)
+  );
 }
 
 /**
@@ -720,6 +842,945 @@ function inside(points: Point[], x: number, y: number): boolean {
   return within;
 }
 
+/* ------------------------------------------------------------------ *
+ * The pathway.
+ *
+ * `docs/design/traversal.md` is the design; this is the whole of the
+ * implementation. It is a prototype: `Chakra` draws it only when asked, and
+ * the panel does not ask.
+ *
+ * The short form. Houses stay whole sign, so a body's compartment is fixed for
+ * as long as the lagna is in its own sign. What is continuous is the ring: over
+ * one crossing of the rising sign, every compartment's contents travel from the
+ * edge they arrived through to the edge they will leave by. A body's own
+ * progress through its part-run - its degree, in D1 - sets where it stands
+ * along that travel.
+ *
+ * Three things here were got wrong once and are worth naming, because each was
+ * a class of mistake rather than a bug:
+ *
+ * 1. **Lanes were perpendicular to the local route, so they rotated with it.**
+ *    Two bodies on different lanes could therefore swap places on screen while
+ *    their order along the route never changed. Lanes are now a family of
+ *    *parallel* lines - the route translated along one fixed direction - so the
+ *    order along the route is the order on screen, always.
+ * 2. **The layout mode was recomputed every frame.** It is a property of what
+ *    is standing in a compartment, not of an instant, and re-deciding it as the
+ *    lagna moved made compartments teleport between arrangements. It is now
+ *    decided once, against the whole crossing, and held.
+ * 3. **The split between the degree scale and the travel was taken from an
+ *    identity rather than from the layout.** Both spans are one house long in
+ *    the sky, so halves looked forced; but the halving is what the crowding
+ *    then could not afford. It is a designed number now, and it is stated.
+ * ------------------------------------------------------------------ */
+
+/**
+ * The route through one compartment, and the direction its parallel lines are
+ * offset along.
+ *
+ * The route is a quadratic Bézier from the middle of the edge the sign arrives
+ * through to the middle of the edge it leaves by, bowed through the
+ * compartment's own cluster point. The bow is not decoration: a compartment's
+ * two gates always share a vertex - the outer point of a kite, the quarter
+ * point of either triangle - so the straight chord between them cuts that
+ * corner and runs along the part of the shape with the least room in it.
+ */
+interface Pathway {
+  at: Point[];
+  /** Cumulative arclength at each sample. `run[0]` is 0. */
+  run: number[];
+  /** The unit direction of the gate-to-gate chord. Every route is built so
+   *  that its progress along this never reverses, which is what makes order
+   *  along the route the same thing as order on screen. */
+  chord: Point;
+  /** Unit normal to the chord: the one direction the parallel lines are
+   *  offset along. Fixed for the whole compartment, deliberately - a lane that
+   *  turned with the route would carry a body sideways past its neighbours. */
+  across: Point;
+}
+
+/** Samples per route. About one per unit of length on the longest route, which
+ *  is finer than the band's edges can be resolved to anyway. */
+const PATH_SAMPLES = 96;
+
+/** Parallel lines either side of the route. Seventeen of them; how many are
+ *  usable at a given station is a property of the shape, and the development
+ *  grid draws exactly that. */
+const PATH_LANES = 8;
+
+/**
+ * How much of the band the degree scale gets. The rest is the travel.
+ *
+ * A body's station, as a fraction of the band measured from the entry:
+ *
+ *     f = (1 - d) * SHARE + p * (1 - SHARE)
+ *
+ * so `d = 1, p = 0` sits at the entry and `d = 0, p = 1` at the exit, whatever
+ * the split. Both terms are one house long in the sky, which is an argument for
+ * a half each and *only* that: it makes the drawn chart a uniform half-scale of
+ * the true ring, and it spends half the compartment on a motion that moves a
+ * pixel every ten seconds. The degree scale is the reading.
+ *
+ * Measured over the seven crowding cases, across a whole crossing. `worst gap`
+ * is the widest degree separation between two labels that overlap - the number
+ * that says whether an overlap is a conjunction or a mistake:
+ *
+ * | Share | exact/spilled/stacked/packed | Worst gap | Travel, median | Travel, slowest |
+ * |---|---|---|---|---|
+ * | 0.65 | 24 / 1 / 4 / 1 | 6.8° | 22.2 | 11.5 |
+ * | 0.75 | 25 / 0 / 4 / 1 | 6.8° | 15.6 | 7.5 |
+ * | **0.80** | **25 / 1 / 3 / 1** | **3.1°** | **12.3** | **5.8** |
+ *
+ * **0.80 is a knee, not a preference.** It is the point at which every pair of
+ * labels that overlap is inside the three degrees the spill is allowed to move
+ * a body - that is, the point at which every overlap on the chart is a
+ * conjunction. A twentieth less doubles the worst overlap to nearly seven
+ * degrees, which is two bodies a fifth of a sign apart drawn on top of each
+ * other, for three units of extra travel.
+ *
+ * The travel it costs is real and is stated in §9 rather than hidden: no body
+ * moves fast enough to see moving, and this is why.
+ */
+const PATH_DEGREE_SHARE = 0.8;
+const PATH_TRAVEL_SHARE = 1 - PATH_DEGREE_SHARE;
+
+/** Progress samples a plan is tested at. The stations sweep rigidly, so
+ *  containment is checked exactly - over every sample of the route the sweep
+ *  covers - and only label-against-label needs sampling in time. */
+const PATH_STEPS = 9;
+
+/** How far along the degree axis a body may be pushed, in degrees, and only
+ *  after every type size has been tried without pushing it at all.
+ *
+ * The degree is the one thing on this axis that means anything, so it is not
+ * negotiable and it does not shrink: a conjunction stacks *across* the route,
+ * and two bodies three degrees apart stay three degrees apart. This is the
+ * stated exception, and it is in degrees rather than pixels so that the size of
+ * the lie is the same figure a reader would be misled by. Three degrees is a
+ * tenth of a sign. It is a constant per body for the whole crossing, so it
+ * costs fidelity and never costs continuity.
+ */
+const PATH_SPILL_DEGREES = 3;
+
+/** Clearance a label on a line keeps from the compartment's walls. Smaller
+ *  than `GRAHA_MARGIN`, because the route already avoids the corners and the
+ *  band is measured rather than assumed. */
+const PATH_CLEARANCE = 2;
+
+/**
+ * How far a route may bow past its compartment's cluster point, as a multiple
+ * of the distance from the straight gate-to-gate chord to that point.
+ *
+ * Measured rather than declared, per compartment, because the three shapes want
+ * different answers and the caption moves the answer again. A candidate is
+ * rejected outright unless its progress along the chord is monotonic; the rest
+ * are scored by the length of the band they leave.
+ */
+const PATH_BOWS = [0, 0.5, 1, 1.5, 2, 2.5, 3];
+
+/** How much band a route may give up to be flatter.
+ *
+ * Curvature is what makes a pair of bodies shear - their separation vector
+ * follows the tangent - and it is also what makes the band exist at all: both
+ * gates lie on edges meeting at one vertex, so a straight route runs through
+ * the tightest part of the shape. Measured, with every route forced straight:
+ * shear falls to zero and a kite's band falls from about 125 units to about 25,
+ * which is the degree scale from 3.3 units per degree to 0.7. The bow is not a
+ * luxury; it is the reading.
+ *
+ * So only the curvature that buys nothing is given up. Measured over the twelve
+ * compartments, a tenth of tolerance takes the median pair's shear from 9.2
+ * degrees to 5.7 - and it is not paid for out of the reading: it puts one more
+ * compartment on `exact` and takes one off `stacked`, because the flatter route
+ * in a wall triangle is also the one whose parallel lines survive furthest. A
+ * twentieth was tried first and recovers none of it once the caption is cleared
+ * strictly rather than grazed. */
+const PATH_BAND_TOLERANCE = 0.9;
+
+/** Samples used while comparing candidate routes. Half the real sampling, and
+ *  not less: at a quarter of it the ranking came apart on the wall triangles,
+ *  and houses 3 and 5 - the same triangle translated down the same wall - were
+ *  given routes with bands of 75 and 31 units. */
+const PATH_PROBE = 48;
+
+/** The type sizes a compartment steps down through, largest first. The packed
+ *  layout's own ladder (D-033): 11px, then 86, 74 and 62 per cent of it. */
+const PATH_SIZES = [1, 0.86, 0.74, 0.62];
+
+function midpoint(a: Point, b: Point): Point {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/** The middle of the edge two compartments share, or nothing if they touch at
+ *  a point or not at all.
+ *
+ * By coordinate rather than by naming the edges: the twelve shapes are built
+ * from nine shared vertices, so which edge two houses have in common is
+ * already written down in the construction and does not need saying twice. */
+function gate(a: Point[], b: Point[]): Point | undefined {
+  const shared = a.filter((p) => b.some((q) => q.x === p.x && q.y === p.y));
+  return shared.length === 2 ? midpoint(shared[0]!, shared[1]!) : undefined;
+}
+
+/** The control point of the quadratic whose midpoint is `via`. */
+function control(entry: Point, via: Point, exit: Point): Point {
+  return {
+    x: 2 * via.x - (entry.x + exit.x) / 2,
+    y: 2 * via.y - (entry.y + exit.y) / 2,
+  };
+}
+
+/**
+ * Whether a candidate route's progress along its own chord ever reverses.
+ *
+ * This is the whole guarantee against bodies swapping places. A quadratic's
+ * speed along the chord is a linear blend of `(C - E) . u` and `(X - C) . u`,
+ * so it keeps its sign exactly when both do. A route that fails this doubles
+ * back in screen space, and two bodies at fixed stations on it exchange
+ * positions as the group slides past the turn - which is what a reader sees as
+ * one graha jumping across another.
+ */
+function forwardOnly(entry: Point, via: Point, exit: Point, chord: Point) {
+  const middle = control(entry, via, exit);
+  const first = (middle.x - entry.x) * chord.x + (middle.y - entry.y) * chord.y;
+  const last = (exit.x - middle.x) * chord.x + (exit.y - middle.y) * chord.y;
+  return first > 0 && last > 0;
+}
+
+/**
+ * The best route between two gates.
+ *
+ * Candidates that double back are rejected before anything else is asked of
+ * them; among the rest the winner is the one with the longest unbroken band at
+ * full size. Length rather than fraction: the band is what the thirty degrees
+ * are laid across, so a long band in a long route beats a short one that
+ * happens to be all of a short route.
+ *
+ * Scored at full size only. Scoring it across the whole type ladder was tried
+ * and is worse: the small sizes fit almost anywhere, so summing over them let a
+ * route generous at 62% win over one generous at 11px, and the top kite's band
+ * fell from 111 units to 49.
+ */
+function bestRoute(
+  points: Point[],
+  entry: Point,
+  exit: Point,
+  towards: Point,
+  caption: Box,
+  half: number,
+): Pathway {
+  const middle = midpoint(entry, exit);
+  const length = Math.hypot(exit.x - entry.x, exit.y - entry.y) || 1;
+  const chord = {
+    x: (exit.x - entry.x) / length,
+    y: (exit.y - entry.y) / length,
+  };
+
+  const viaAt = (bow: number) => ({
+    x: middle.x + (towards.x - middle.x) * bow,
+    y: middle.y + (towards.y - middle.y) * bow,
+  });
+
+  const candidates: { bow: number; band: number; turn: number }[] = [];
+  for (const bow of PATH_BOWS) {
+    const via = viaAt(bow);
+    if (!forwardOnly(entry, via, exit, chord)) continue;
+    const probe = route(entry, via, exit, PATH_PROBE, chord);
+    const band = reach(points, probe, caption, 1, half);
+    if (!band) continue;
+    const total = probe.run[probe.run.length - 1]!;
+    candidates.push({
+      bow,
+      band: (band[1] - band[0]) * total,
+      turn: turning(probe),
+    });
+  }
+  if (candidates.length === 0) {
+    return route(entry, viaAt(0), exit, PATH_SAMPLES, chord);
+  }
+
+  // Longest band first, then flattest.
+  //
+  // Curvature is not free. Two bodies at fixed stations keep a fixed distance -
+  // they are rigid in the sky - but the *direction* between them follows the
+  // route's tangent, so as the group slides along a bend their separation
+  // vector turns. Nothing can remove that while the route bends; what can be
+  // removed is the part of it that was bought for nothing, and a route within a
+  // twentieth of the best band is bought for nothing.
+  //
+  // `PATH_BAND_TOLERANCE` is how much band that is worth.
+  const widest = Math.max(...candidates.map((c) => c.band));
+  const flattest = candidates
+    .filter((c) => c.band >= widest * PATH_BAND_TOLERANCE)
+    .reduce((a, b) => (b.turn < a.turn ? b : a));
+
+  return route(entry, viaAt(flattest.bow), exit, PATH_SAMPLES, chord);
+}
+
+/** How far a route's direction turns, end to end, in radians.
+ *
+ * The measure of how much a pair of bodies will shear as the group slides along
+ * it: their separation vector follows the tangent, so the turning of the
+ * tangent over the stretch they travel is the angle they will appear to rotate
+ * through. */
+function turning(path: Pathway): number {
+  let total = 0;
+  for (let i = 1; i < path.at.length; i++) {
+    const a = heading(path, i - 1);
+    const b = heading(path, i);
+    total += Math.abs(Math.atan2(a.x * b.y - a.y * b.x, a.x * b.x + a.y * b.y));
+  }
+  return total;
+}
+
+function route(
+  entry: Point,
+  via: Point,
+  exit: Point,
+  samples: number,
+  chord: Point,
+): Pathway {
+  const middle = control(entry, via, exit);
+
+  const at: Point[] = [];
+  const run: number[] = [];
+  let length = 0;
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const u = 1 - t;
+    const point = {
+      x: u * u * entry.x + 2 * u * t * middle.x + t * t * exit.x,
+      y: u * u * entry.y + 2 * u * t * middle.y + t * t * exit.y,
+    };
+    if (i > 0) {
+      const last = at[i - 1]!;
+      length += Math.hypot(point.x - last.x, point.y - last.y);
+    }
+    at.push(point);
+    run.push(length);
+  }
+
+  return { at, run, chord, across: { x: -chord.y, y: chord.x } };
+}
+
+/**
+ * The sample nearest a fraction of the route's *length*.
+ *
+ * By arclength rather than by the curve's own parameter. A quadratic moves
+ * faster near its control point, so a degree scale laid out in `t` would be a
+ * degree scale whose divisions are not equal - which is exactly the bunching
+ * the shape of a triangle already threatens.
+ *
+ * The answer is fractional. Snapping to the nearest sample quantises the degree
+ * to about half a degree on a kite's band, and the caption beside the chart
+ * prints arcminutes.
+ */
+function atFraction(path: Pathway, fraction: number): number {
+  const total = path.run[path.run.length - 1]!;
+  const wanted = Math.min(Math.max(fraction, 0), 1) * total;
+  let low = 0;
+  let high = path.run.length - 1;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (path.run[mid]! < wanted) low = mid + 1;
+    else high = mid;
+  }
+
+  if (low === 0) return 0;
+  const before = path.run[low - 1]!;
+  const step = path.run[low]! - before;
+  return step > 0 ? low - 1 + (wanted - before) / step : low;
+}
+
+/** The point at a fractional sample. */
+function alongRoute(path: Pathway, index: number): Point {
+  const last = path.at.length - 1;
+  const clamped = Math.min(Math.max(index, 0), last);
+  const low = Math.floor(clamped);
+  const high = Math.min(low + 1, last);
+  const t = clamped - low;
+  const a = path.at[low]!;
+  const b = path.at[high]!;
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+/** The route's direction at a sample, for the handover's arrival vector. */
+function heading(path: Pathway, index: number): Point {
+  const a = path.at[Math.max(0, index - 1)]!;
+  const b = path.at[Math.min(path.at.length - 1, index + 1)]!;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: dx / length, y: dy / length };
+}
+
+/**
+ * How far apart two parallel lines have to be before labels on them miss.
+ *
+ * The boxes are axis-aligned and the family's direction is not, so the answer
+ * depends on that direction: lines separated vertically need the box's height,
+ * horizontally its width, and a diagonal whichever it reaches first. One number
+ * for the whole compartment, because the direction is fixed.
+ */
+function lanePitch(across: Point, scale: number, half: number): number {
+  const sideways =
+    Math.abs(across.x) > 1e-6
+      ? (2 * half * scale) / Math.abs(across.x)
+      : Infinity;
+  const down =
+    Math.abs(across.y) > 1e-6
+      ? ((GRAHA_ABOVE + GRAHA_BELOW) * scale) / Math.abs(across.y)
+      : Infinity;
+  return Math.min(sideways, down);
+}
+
+/** Where a station on one of the parallel lines is. */
+function laneAt(
+  path: Pathway,
+  index: number,
+  lane: number,
+  pitch: number,
+): Point {
+  const at = alongRoute(path, index);
+  if (lane === 0) return at;
+  return {
+    x: at.x + path.across.x * pitch * lane,
+    y: at.y + path.across.y * pitch * lane,
+  };
+}
+
+/** Whether a label's box is wholly inside the compartment and off its caption. */
+function standable(points: Point[], caption: Box, box: Box): boolean {
+  const c = PATH_CLEARANCE;
+  return (
+    inside(points, box.min - c, box.top - c) &&
+    inside(points, box.max + c, box.top - c) &&
+    inside(points, box.min - c, box.bottom + c) &&
+    inside(points, box.max + c, box.bottom + c) &&
+    !touches(box, caption)
+  );
+}
+
+/**
+ * The stretch of the route a label of this size can stand on, on the route
+ * itself.
+ *
+ * The gates are on the compartment's boundary, so a label centred on one is
+ * half outside it by construction: the band is always shorter than the route.
+ *
+ * **Measured on the base line, not across the lanes.** It was measured across
+ * them first and that was wrong in a way worth recording: a station counted as
+ * usable if a label could stand anywhere across from it, so a route hugging a
+ * triangle's apex scored a long band that could only be reached by leaning
+ * every label off it. A wall triangle's single graha then travelled five units
+ * across a whole crossing instead of thirty-seven. The route is where the
+ * degrees are; the lanes are for what has to stack on them.
+ *
+ * The band is the longest *unbroken* run, so a caption that splits the route
+ * truncates the scale to the longer piece rather than holing it. Every degree
+ * still has a station; the scale is compressed.
+ */
+function reach(
+  points: Point[],
+  path: Pathway,
+  caption: Box,
+  scale: number,
+  half: number,
+): [number, number] | null {
+  const usable = path.at.map((at) =>
+    standable(points, caption, labelBox(at, scale, half)),
+  );
+
+  let bestFrom = -1;
+  let bestTo = -1;
+  let from = -1;
+  for (let i = 0; i <= usable.length; i++) {
+    if (i < usable.length && usable[i]) {
+      if (from < 0) from = i;
+      continue;
+    }
+    if (from >= 0) {
+      if (i - from > bestTo - bestFrom) {
+        bestFrom = from;
+        bestTo = i - 1;
+      }
+      from = -1;
+    }
+  }
+  if (bestFrom < 0) return null;
+
+  const total = path.run[path.run.length - 1]!;
+  if (total <= 0) return null;
+  return [path.run[bestFrom]! / total, path.run[bestTo]! / total];
+}
+
+/**
+ * A compartment's arrangement, decided once and held for the whole crossing.
+ *
+ * **This is a plan, not a position.** Which type size, which parallel line each
+ * body stands on, and how much of the degree axis was spent are properties of
+ * what is standing in the compartment; the lagna's progress is not one of them.
+ * Deciding them per frame is what made compartments teleport: the mode flipped
+ * between `stacked` and `packed` as the group slid, and `packed` has no
+ * progress term at all, so a compartment would freeze for thirty steps and then
+ * jump sixty units. A plan is computed from the bodies alone and evaluated
+ * against every instant of the crossing before it is accepted.
+ */
+interface Plan {
+  scale: number;
+  band: [number, number];
+  pitch: number;
+  /** Each body's station at `p = 0`, as a fraction of the band. Constant. */
+  station: number[];
+  /** Which parallel line each body stands on. Constant. */
+  lane: number[];
+  how: "exact" | "spilled" | "stacked" | "packed";
+  /** The most any one label is covered, as a fraction of its own box, at the
+   *  worst instant. Written onto the group as a data attribute when the pathway
+   *  is on: it is the number the last two rungs are chosen between, and reading
+   *  it back out of rendered positions is guesswork. */
+  cover?: number;
+  /** The packed last resort: positions that do not follow the route, plus the
+   *  slide the shipped layout gives them, so that nothing is ever frozen. */
+  packed?: { at: Point[]; back: number; forward: number };
+}
+
+/** Where the plan puts the bodies at one instant. */
+function place(
+  plan: Plan,
+  path: Pathway,
+  along: { x: number; y: number } | undefined,
+  progress: number,
+): Point[] {
+  if (plan.packed) {
+    const room = plan.packed;
+    const at = -room.back + (room.back + room.forward) * progress;
+    const dx = along ? along.x * at : 0;
+    const dy = along ? along.y * at : 0;
+    return room.at.map((point) => ({ x: point.x + dx, y: point.y + dy }));
+  }
+
+  const [from, to] = plan.band;
+  return plan.station.map((station, index) => {
+    const fraction = station + progress * PATH_TRAVEL_SHARE;
+    return laneAt(
+      path,
+      atFraction(path, from + (to - from) * fraction),
+      plan.lane[index]!,
+      plan.pitch,
+    );
+  });
+}
+
+/**
+ * The plan for one compartment.
+ *
+ * The compartment has two axes and they are not interchangeable. Along the
+ * route is the degree, which is the reading; across it is nothing, which is
+ * where a conjunction goes. So a body's station is fixed by its own progress
+ * and the packing gets the parallel lines and only that.
+ *
+ * Four rungs, in the order things are given up. Overlapping type is given up
+ * after the degree and not before, because the degree is the reading: a chart
+ * that has moved a body to keep its type clean is saying something untrue
+ * quietly, and overlapping type is at least visibly hard to read. The packed
+ * layout makes the same call for the same reason (D-033).
+ */
+function planFor(
+  points: Point[],
+  path: Pathway,
+  caption: Box,
+  bodies: { progress: number; half: number }[],
+  centre: Point,
+  along: { x: number; y: number } | undefined,
+): Plan {
+  // Two widths, and they answer different questions. The **band** is the
+  // degree scale's own extent - a ruler, not a slot - so it is measured with
+  // the narrowest label standing here: a wide label that cannot stand at one
+  // end of the ruler takes a lane where it can, and only that body is
+  // constrained by its own width. The **pitch** between lanes has to clear the
+  // widest, or a stack would not be evenly spaced.
+  //
+  // Measuring both with the widest is what put a routine D1 chart's wall
+  // triangle into the packed fallback: one retrograde bracket, twenty-five
+  // units wide instead of sixteen, halved the compartment's whole scale for the
+  // benefit of one of the two bodies in it.
+  const widest = Math.max(...bodies.map((body) => body.half), GRAHA_HALF_PLAIN);
+  const narrowest = Math.min(...bodies.map((body) => body.half), GRAHA_HALF);
+
+  for (const [spill, strict] of [
+    [0, true],
+    [PATH_SPILL_DEGREES, true],
+  ] as const) {
+    for (const scale of PATH_SIZES) {
+      const band = reach(points, path, caption, scale, narrowest);
+      if (!band) continue;
+      const laid = assign(
+        points,
+        path,
+        caption,
+        bodies,
+        scale,
+        widest,
+        band,
+        spill,
+        strict,
+      );
+      if (laid) {
+        return { ...laid, scale, band, how: spill === 0 ? "exact" : "spilled" };
+      }
+    }
+  }
+
+  // The third rung is not first-that-fits, because every size succeeds once
+  // labels may overlap: the question is no longer whether an arrangement exists
+  // but which one costs the least ink.
+  let best: Plan | null = null;
+  let least = Infinity;
+  for (const scale of PATH_SIZES) {
+    const band = reach(points, path, caption, scale, narrowest);
+    if (!band) continue;
+    const laid = assign(
+      points,
+      path,
+      caption,
+      bodies,
+      scale,
+      widest,
+      band,
+      PATH_SPILL_DEGREES,
+      false,
+    );
+    if (!laid) continue;
+    const plan: Plan = { ...laid, scale, band, how: "stacked" };
+    const cost = worstCover(plan, path, bodies);
+    plan.cover = cost;
+
+    if (cost < least) {
+      least = cost;
+      best = plan;
+    }
+  }
+
+  // The degrees are kept unless they have become unreadable. Holding them is
+  // the point of all of this, so the packed rows take over only where a label
+  // has lost more than half of itself - at which point the compartment is not
+  // *showing* degrees by stacking them anyway. Five labels three units apart do
+  // not say "sixteen degrees"; they say nothing, and they say it illegibly.
+  // The packed rung, with the one thing the packed layout cannot know: each
+  // label's own width. `travel` is the shipped slide and it clamps every label
+  // by the widest there can be, because `cluster` never sees the text. Here the
+  // text is in hand, and eight labels in nine are eight units narrower than
+  // that - which in a wall triangle is the difference between a group that
+  // slides and a group that cannot move at all.
+  // The shipped packer, at whichever of its own type sizes can still move.
+  //
+  // Two mistakes were made here in turn and both are worth keeping. It first
+  // called `squeezed` directly, which is not the shipped layout but the shipped
+  // layout's *last resort*: `squeezed` spreads a single column across every
+  // height that can hold a label, so it fills the compartment by construction.
+  // Then it called `cluster`, which is the shipped layout - and `cluster` picks
+  // the largest type that fits, which also fills the compartment. Either way a
+  // full compartment has no slack and the group stood still for a whole
+  // crossing.
+  //
+  // So the candidates are the shipped packer's arrangements at all four of its
+  // sizes, plus its own last resort, and the choice between them is made here
+  // rather than by taking the first that fits. Legibility first - a size that
+  // covers less ink wins - and **among sizes that are equally legible, the one
+  // that leaves the group room to move**. That is not a new packing rule; it is
+  // the same arrangements, chosen inside a design whose subject is the
+  // traversal. `cluster` and the panel are untouched.
+  const options: { at: Point[]; scale: number }[] = [];
+  for (const scale of PATH_SIZES) {
+    const rows = arrange(points, centre, bodies.length, caption, scale);
+    if (rows) options.push({ at: rows, scale });
+  }
+  options.push({
+    at: squeezed(points, centre, bodies.length, caption, 0.62),
+    scale: 0.62,
+  });
+
+  const weighed = options.map((option) => {
+    const room = along
+      ? travel(
+          points,
+          option.at.map((point, index) =>
+            labelBox(point, option.scale, bodies[index]!.half),
+          ),
+          caption,
+          along,
+        )
+      : { back: 0, forward: 0 };
+    const plan: Plan = {
+      scale: option.scale,
+      band: [0, 1],
+      pitch: 0,
+      station: [],
+      lane: [],
+      how: "packed",
+      packed: { at: option.at, back: room.back, forward: room.forward },
+    };
+    // How many labels this arrangement puts on the compartment's caption.
+    // `squeezed` is allowed to do that - it is the last resort and a body
+    // outside its own sign would be worse - but it is only *allowed* to, and
+    // here there are other candidates to compare it against.
+    const onCaption = option.at.filter((point, index) =>
+      touches(labelBox(point, option.scale, bodies[index]!.half), caption),
+    ).length;
+
+    return {
+      plan,
+      room: room.back + room.forward,
+      cover: worstCover(plan, path, bodies),
+      onCaption,
+    };
+  });
+
+  // Off the caption first, then least covered, then whichever of those can
+  // still move. The order is the order of the invariants: a label on the
+  // caption is a broken one, overlapping labels are a degraded reading, and
+  // standing still is only a lost opportunity.
+  const clear = Math.min(...weighed.map((w) => w.onCaption));
+  const usable = weighed.filter((w) => w.onCaption === clear);
+  const cleanest = Math.min(...usable.map((w) => w.cover));
+  const packed = usable
+    .filter((w) => w.cover <= cleanest + PATH_SAME_COVER)
+    .reduce((a, b) => (b.room > a.room ? b : a)).plan;
+  packed.cover = worstCover(packed, path, bodies);
+
+  // Three lines, and the middle one is the one that was missing.
+  //
+  // If the degree-true arrangement is readable on its own, it wins: that is
+  // what all of this is for. If it is not, the two are compared **against each
+  // other** rather than the first being measured against a threshold and
+  // discarded - because a compartment that cannot hold seven bodies cannot hold
+  // them in rows either, and giving up the degrees buys nothing there. The
+  // seven-in-a-wall-triangle case is exactly that: the stacked arrangement
+  // buries a label, and so does the packed one, and only the stacked one still
+  // says where anything is or moves at all.
+  if (!best) return packed;
+  if (least <= PATH_LEGIBLE) return best;
+  return packed.cover < least ? packed : best;
+}
+
+/**
+ * The most any one label is covered by another, at the worst instant of the
+ * crossing, as a fraction of its own box.
+ *
+ * Not total overlapping area. Total area was tried as the measure that chose
+ * between the degree-true arrangement and the packed one, and it is the wrong
+ * question: `squeezed` spreads a single column down a tall compartment and
+ * frequently overlaps *nothing*, so a comparison on total ink discarded the
+ * degrees of eight bodies to save one unit of overlap. What matters is whether
+ * a label can still be read, and that is a property of the worst-covered label
+ * rather than of the sum.
+ *
+ * At the worst instant rather than at one of them: an arrangement that is clean
+ * at both ends of a crossing can be a pile in the middle.
+ */
+function worstCover(
+  plan: Plan,
+  path: Pathway,
+  bodies: { half: number }[],
+): number {
+  let worst = 0;
+  for (let step = 0; step < PATH_STEPS; step++) {
+    const at = place(plan, path, undefined, step / (PATH_STEPS - 1));
+    const boxes = at.map((point, index) =>
+      labelBox(point, plan.scale, bodies[index]!.half),
+    );
+    for (let i = 0; i < boxes.length; i++) {
+      const own = boxes[i]!;
+      const area = (own.max - own.min) * (own.bottom - own.top);
+      if (area <= 0) continue;
+      let covered = 0;
+      for (let j = 0; j < boxes.length; j++) {
+        if (i !== j) covered += shared(own, boxes[j]!);
+      }
+      worst = Math.max(worst, covered / area);
+    }
+  }
+  return worst;
+}
+
+/**
+ * How much of a label may be covered before its degree is not worth keeping.
+ *
+ * Half. A two-letter label with more than half its box under another label is
+ * not read as a body standing at a degree; it is read as a smudge, and the
+ * degree it was carrying is lost either way. Below that the reader still has
+ * both the name and the position, which is the whole of what the pathway is
+ * for.
+ *
+ * This is a threshold and thresholds are worth being uncomfortable about. It is
+ * here because the alternative - comparing the two last resorts on overlapping
+ * area - answers a different question from the one being asked, and answered it
+ * wrongly in exactly the case that matters.
+ */
+const PATH_LEGIBLE = 0.5;
+
+/** How close two packed arrangements have to be on covered ink before the one
+ *  that can still move is preferred. Five per cent of one label's box: below
+ *  that the difference is a rounding of where a row landed, not something a
+ *  reader could see. */
+const PATH_SAME_COVER = 0.05;
+
+/**
+ * One attempt: every body on its own station, on a parallel line that holds it
+ * for the whole crossing.
+ *
+ * Containment is exact rather than sampled. A body's station sweeps a fixed
+ * interval of the band as the lagna crosses its sign, and the sweep is rigid,
+ * so the question "does this line hold this label everywhere it goes" is asked
+ * of every sample of the route the sweep covers. Only label-against-label needs
+ * sampling in time, because two bodies on different lines do move relative to
+ * one another - the route is curved, and translating along a curve is not a
+ * rigid motion of the pair.
+ */
+function assign(
+  points: Point[],
+  path: Pathway,
+  caption: Box,
+  bodies: { progress: number; half: number }[],
+  scale: number,
+  widest: number,
+  band: [number, number],
+  spill: number,
+  strict: boolean,
+): { station: number[]; lane: number[]; pitch: number } | null {
+  const count = bodies.length;
+  const pitch = lanePitch(path.across, scale, widest);
+
+  // The station at p = 0. A body at the start of its part-run stands nearest
+  // the exit - the lagna reaches its cusp first - and the crossing carries the
+  // whole group there.
+  const base = bodies.map(
+    (body) =>
+      (1 - Math.min(Math.max(body.progress, 0), 1)) * PATH_DEGREE_SHARE,
+  );
+  const order = base.map((_, index) => index).sort((a, b) => base[a]! - base[b]!);
+
+  // Where each lane can hold a label, as a prefix count, so "is every sample
+  // between here and there usable" is one subtraction.
+  const runs = new Map<string, number[]>();
+  const usableOn = (lane: number, half: number): number[] => {
+    const key = `${lane}:${half}`;
+    const found = runs.get(key);
+    if (found) return found;
+    const counts: number[] = [0];
+    for (let i = 0; i < path.at.length; i++) {
+      const ok = standable(
+        points,
+        caption,
+        labelBox(laneAt(path, i, lane, pitch), scale, half),
+      );
+      counts.push(counts[i]! + (ok ? 1 : 0));
+    }
+    runs.set(key, counts);
+    return counts;
+  };
+
+  const spillFraction = (spill / 30) * PATH_DEGREE_SHARE;
+  const nudges = spill === 0 ? [0] : [0, spillFraction, -spillFraction];
+
+  const station = new Array<number>(count);
+  const lane = new Array<number>(count);
+  const placed: number[] = [];
+
+  for (const body of order) {
+    let chosen: { station: number; lane: number; cost: number } | null = null;
+
+    for (const nudge of nudges) {
+      const start = Math.min(Math.max(base[body]! + nudge, 0), PATH_DEGREE_SHARE);
+      const from = atFraction(path, band[0] + (band[1] - band[0]) * start);
+      const to = atFraction(
+        path,
+        band[0] + (band[1] - band[0]) * (start + PATH_TRAVEL_SHARE),
+      );
+      const first = Math.floor(Math.min(from, to));
+      const last = Math.ceil(Math.max(from, to));
+
+      for (let step = 0; step <= PATH_LANES; step++) {
+        for (const side of step === 0 ? [1] : [1, -1]) {
+          const line = step * side;
+          const counts = usableOn(line, bodies[body]!.half);
+          // Every sample the sweep touches must hold the label.
+          if (counts[last + 1]! - counts[first]! < last - first + 1) continue;
+
+          const cost = clash(
+            path,
+            band,
+            { station: start, lane: line },
+            placed.map((other) => ({
+              station: station[other]!,
+              lane: lane[other]!,
+            })),
+            pitch,
+            scale,
+            bodies,
+            body,
+            placed,
+          );
+          if (strict && cost > 0) continue;
+          if (!chosen || cost < chosen.cost) {
+            chosen = { station: start, lane: line, cost };
+          }
+          if (cost === 0) break;
+        }
+        if (chosen && chosen.cost === 0) break;
+      }
+      if (chosen && chosen.cost === 0) break;
+    }
+
+    if (!chosen) return null;
+    station[body] = chosen.station;
+    lane[body] = chosen.lane;
+    placed.push(body);
+  }
+
+  return { station, lane, pitch };
+}
+
+/** How much ink one candidate would put on the bodies already placed, taken
+ *  over the whole crossing rather than at one instant. */
+function clash(
+  path: Pathway,
+  band: [number, number],
+  candidate: { station: number; lane: number },
+  others: { station: number; lane: number }[],
+  pitch: number,
+  scale: number,
+  bodies: { half: number }[],
+  body: number,
+  placed: number[],
+): number {
+  if (others.length === 0) return 0;
+  let worst = 0;
+  for (let step = 0; step < PATH_STEPS; step++) {
+    const progress = step / (PATH_STEPS - 1);
+    const spot = (entry: { station: number; lane: number }) => {
+      const fraction = entry.station + progress * PATH_TRAVEL_SHARE;
+      return laneAt(
+        path,
+        atFraction(path, band[0] + (band[1] - band[0]) * fraction),
+        entry.lane,
+        pitch,
+      );
+    };
+    const mine = labelBox(spot(candidate), scale, bodies[body]!.half);
+    let total = 0;
+    for (let i = 0; i < others.length; i++) {
+      total += shared(
+        mine,
+        labelBox(spot(others[i]!), scale, bodies[placed[i]!]!.half),
+      );
+    }
+    worst = Math.max(worst, total);
+  }
+  return worst;
+}
+
 /**
  * A row's available width, with the compartment's caption taken out of it.
  *
@@ -734,6 +1795,16 @@ function withoutCaption(
   above: number,
   below: number,
   half: number,
+  /** Whether to hand the caption's own room back when what is left beside it
+   *  could not hold a label anyway.
+   *
+   * True only for the last resort. `rows` can decline a row and let `arrange`
+   * try another shape or another size; `squeezed` has nowhere left to go, and
+   * a body sitting on the sign's name is better than a body outside its own
+   * sign. Handing it back from `rows` too is how a name caption came to have
+   * two grahas on it: the row was placeable *somewhere*, so nothing rejected
+   * it, and the sliver test quietly withdrew the obstacle. */
+  yielding: boolean,
 ): { min: number; max: number } {
   const level = y + below > caption.top && y - above < caption.bottom;
   if (!level) return span;
@@ -755,7 +1826,7 @@ function withoutCaption(
   // chart's middle, where the compartment is widest, so it can leave two narrow
   // sides and no wide one.
   const needed = half * 2 + GRAHA_MARGIN;
-  return kept.max - kept.min >= needed ? kept : span;
+  return !yielding || kept.max - kept.min >= needed ? kept : span;
 }
 
 /** One type size's dimensions, so an arrangement can be tried at several. */
@@ -815,7 +1886,15 @@ function rows(
     }
 
     const span = spanOver(points, y - above, y + below);
-    const { min, max } = withoutCaption(span, y, caption, above, below, half);
+    const { min, max } = withoutCaption(
+      span,
+      y,
+      caption,
+      above,
+      below,
+      half,
+      false,
+    );
 
     const reach = ((inThisRow - 1) * columnWidth) / 2 + half;
     const lowest = min + reach + GRAHA_MARGIN / 2;
@@ -849,6 +1928,7 @@ function northCompartments(
   rashis: ChakraRashi[],
   lagnaSign: number,
   numbered: boolean,
+  routed: boolean,
 ): Compartment[] {
   // The construction is the same whatever the proportions: the corners, the
   // midpoints of the four sides, and the quarter points where the diamond's
@@ -901,20 +1981,27 @@ function northCompartments(
 
     const caption = placeCaption(points, house + 1, C, middle, numbered);
 
-    // In a wall triangle the caption hugs the side and the centroid is only a
-    // little further in, so the two overlapped - `Can` ran into `Ju`. The
-    // cluster steps away from the wall by the caption's own width. The other
-    // eight compartments put their caption at a far vertex, which the cluster is
-    // nowhere near.
-    const againstWall = caption.anchor !== "middle";
-    const body = againstWall
-      ? {
-          x:
-            middle.x +
-            (caption.anchor === "start" ? CAPTION_WIDTH : -CAPTION_WIDTH),
-          y: middle.y,
-        }
-      : middle;
+    // The cluster sits at the compartment's middle unless the caption is
+    // standing on that row, in which case it steps aside by the caption's own
+    // width. `Can` ran into `Ju` when it did not.
+    //
+    // Asked of the caption rather than of the compartment's shape. A wall
+    // triangle's caption used to be level with its centroid by construction, so
+    // "is this a wall triangle" and "is the caption in the way" were the same
+    // question; now that the caption sits at the narrow end of the wall they
+    // are not, and the eight compartments where the caption is nowhere near the
+    // middle should not be paying for it.
+    const room = captionBox(caption.at, caption.anchor, numbered);
+    const level = middle.y + CAPTION_BELOW > room.top && middle.y - CAPTION_ABOVE < room.bottom;
+    const body =
+      level && caption.anchor !== "middle"
+        ? {
+            x:
+              middle.x +
+              (caption.anchor === "start" ? CAPTION_WIDTH : -CAPTION_WIDTH),
+            y: middle.y,
+          }
+        : middle;
 
     return {
       points,
@@ -941,14 +2028,57 @@ function northCompartments(
     // This pointed forwards, which crept each compartment's contents away from
     // the wall they were about to cross - the exact opposite of the one thing
     // the drift exists to show.
-    const ahead = centroid(built[(house + 11) % 12]!.points);
-    const behind = centroid(built[(house + 1) % 12]!.points);
+    const previous = built[(house + 11) % 12]!;
+    const next = built[(house + 1) % 12]!;
+    const ahead = centroid(previous.points);
+    const behind = centroid(next.points);
     const dx = ahead.x - behind.x;
     const dy = ahead.y - behind.y;
     const length = Math.hypot(dx, dy);
+
+    // The route, from the edge shared with the *next* house to the edge shared
+    // with the previous one, bowed through the compartment's own cluster point.
+    // Those two edges always meet at a vertex - the outer point of a kite, the
+    // quarter point of either triangle - so the chord between them runs through
+    // the tightest part of the shape and the bow is what keeps the route in the
+    // part of the compartment that has room in it. The cluster point is already
+    // the answer to "where in this shape does text go": for a wall triangle it
+    // is the centroid stepped off the wall, clear of the caption.
+    const entry = gate(compartment.points, next.points);
+    const exit = gate(compartment.points, previous.points);
+
+    // The route is chosen for the widest label that will stand on it. One
+    // retrograde body in a compartment widens every slot in it - the scale has
+    // to be one scale, or two bodies three degrees apart would not be three
+    // degrees apart - so it has to be known before the route is picked, not
+    // after. A wall triangle's band halves on the strength of a single bracket.
+    // The route is chosen for the *narrowest* label that will stand on it, for
+    // the same reason the band is measured that way: it is the degree scale's
+    // extent, and a wider body takes a lane rather than shortening the ruler
+    // for everything else.
+    const narrowest = compartment.rashi.grahas.every((graha) => graha.retrograde)
+      ? GRAHA_HALF
+      : GRAHA_HALF_PLAIN;
+
+    // Only when something is going to draw it. Choosing a route means measuring
+    // seven of them, and the panel's own layout has no use for the answer - so
+    // the chart that ships pays exactly what it paid before.
+    const path =
+      routed && entry && exit
+        ? bestRoute(
+            compartment.points,
+            entry,
+            exit,
+            compartment.body,
+            captionBox(compartment.label, compartment.labelAnchor, numbered),
+            narrowest,
+          )
+        : undefined;
+
     return {
       ...compartment,
       along: length > 0 ? { x: dx / length, y: dy / length } : undefined,
+      path,
     };
   });
 }
@@ -1045,6 +2175,16 @@ export function Chakra(props: {
    *  motion; the handover is the only event fast enough to watch, so this is
    *  what the setting mostly controls. */
   animate: boolean;
+  /** Prototype, off by default: place the bodies by their own progress along a
+   *  route across the compartment rather than packing them into rows, and carry
+   *  the whole ring along that route as the lagna crosses its sign.
+   *  `docs/design/traversal.md`. Nothing but the visual harness sets this. */
+  pathway?: boolean;
+  /** Draw the degree lines the compartments are laid out on, and place the
+   *  bodies on them. Implies `pathway`: a scale drawn over bodies that are not
+   *  standing on it would be a chart saying something untrue. Off by default;
+   *  the reader turns it on in Advanced. */
+  grid?: boolean;
 }): JSX.Element {
   // Falls back to Mesha rather than to -1. The payload always numbers the houses
   // from the lagna so exactly one rashi is house 1, but `findIndex` returns -1
@@ -1063,7 +2203,12 @@ export function Chakra(props: {
 
   const compartments = (): Compartment[] =>
     props.format === "north"
-      ? northCompartments(props.data.rashis, lagnaSign(), props.numbered)
+      ? northCompartments(
+          props.data.rashis,
+          lagnaSign(),
+          props.numbered,
+          Boolean(props.pathway || props.grid),
+        )
       : gridCompartments(props.data.rashis, props.format);
 
   return (
@@ -1109,17 +2254,111 @@ export function Chakra(props: {
               props.format === "north" && props.numbered,
             ),
           );
-          const laid = createMemo(() =>
-            cluster(
-              each().points,
-              each().body,
-              each().rashi.grahas.length,
-              caption(),
+          // Two layouts, one of them a prototype. The packed one is what
+          // ships: rows and columns, then a rigid slide across whatever slack
+          // is left. The pathway one is a *plan* - a type size, a station and a
+          // parallel line per body - and then a position read off that plan at
+          // whatever instant is being drawn.
+          //
+          // The split is the point. `plan` deliberately does not read
+          // `props.progress`, so nothing about the arrangement can be decided
+          // by an instant; only `place` moves. Deciding the arrangement per
+          // frame is what made compartments teleport, and it is the kind of
+          // mistake that hides behind a check that samples instants one at a
+          // time and finds each of them legal.
+          const path = createMemo(() => each().path);
+          const bodies = createMemo(() =>
+            each().rashi.grahas.map((graha) => ({
+              progress: graha.progress,
+              // The brackets are what makes the widest label, and they are
+              // known here. Eight labels in nine are eight units narrower than
+              // the packed layout has to assume.
+              half: graha.retrograde ? GRAHA_HALF : GRAHA_HALF_PLAIN,
+            })),
+          );
+          // The grid implies the placement. Drawing a degree scale over bodies
+          // the packed layout put wherever they fit would be the chart
+          // asserting a degree it has not earned - the same fault the Moshier
+          // note and the scheme on the caption's hover exist to prevent. So one
+          // switch means one thing: place the grahas by degree, and show the
+          // scale they stand on. `pathway` alone stays available to the harness,
+          // which needs the placement without the overlay to judge it.
+          const threading = createMemo(() =>
+            Boolean(
+              (props.pathway || props.grid) &&
+                props.format === "north" &&
+                path(),
             ),
           );
-          const shift = createMemo(() =>
-            drift(each(), laid(), caption(), props.progress, props.format),
+          const plan = createMemo(() => {
+            if (!threading() || bodies().length === 0) return null;
+            return planFor(
+              each().points,
+              path()!,
+              caption(),
+              bodies(),
+              each().body,
+              each().along,
+            );
+          });
+          const packedLayout = createMemo(() =>
+            threading()
+              ? null
+              : cluster(
+                  each().points,
+                  each().body,
+                  each().rashi.grahas.length,
+                  caption(),
+                ),
           );
+          const scale = createMemo(
+            () => plan()?.scale ?? packedLayout()?.scale ?? 1,
+          );
+          const at = createMemo<Point[]>(() => {
+            const laid = plan();
+            if (laid) {
+              return place(laid, path()!, each().along, props.progress);
+            }
+            const packed = packedLayout();
+            if (!packed) return [];
+            const shift = drift(
+              each(),
+              packed,
+              caption(),
+              props.progress,
+              props.format,
+            );
+            return packed.at.map((point) => ({
+              x: point.x + shift.x,
+              y: point.y + shift.y,
+            }));
+          });
+
+          // What the development grid draws. It exists whether or not anything
+          // stands in the compartment: an empty house still has a route, and
+          // the overlay is about the shape rather than about its contents.
+          const scaleBar = createMemo(() => {
+            const along = path();
+            if (!props.grid || props.format !== "north" || !along) return null;
+            const laid = plan();
+            const widest = Math.max(
+              ...bodies().map((body) => body.half),
+              GRAHA_HALF_PLAIN,
+            );
+            const band =
+              laid && !laid.packed
+                ? laid.band
+                : reach(each().points, along, caption(), 1, widest);
+            if (!band) return null;
+            return {
+              band,
+              pitch:
+                laid && !laid.packed
+                  ? laid.pitch
+                  : lanePitch(along.across, 1, widest),
+              widest,
+            };
+          });
 
           // The handover. When the sign standing in this house changes, the
           // arriving group is animated in from the wall it came through - the
@@ -1136,7 +2375,14 @@ export function Chakra(props: {
             const sign = each().rashi.name;
             const changed = previous !== undefined && previous !== sign;
             previous = sign;
-            const along = each().along;
+            // Where the arriving group comes from. The ring's own direction
+            // when the chart is packed; the route's own direction at its entry
+            // gate when it is threaded, which is the same idea measured on the
+            // compartment rather than on the ring - and it is the route's entry
+            // that the previous compartment's exit hands to.
+            const track = path();
+            const along =
+              props.pathway && track ? heading(track, 0) : each().along;
             if (!changed || !group || !props.animate || !along) return;
 
             // Cancelled first. A handover can arrive while the last one is
@@ -1164,13 +2410,43 @@ export function Chakra(props: {
                 points={polygon(each().points)}
               />
 
+              {/* The development grid. Its own clipped group, before the
+                contents and outside the group the handover animates: the
+                degree scale belongs to the compartment, not to the sign
+                standing in it, so it must not slide in with an arriving one. */}
+              <Show when={scaleBar()}>
+                {(bar) => (
+                  <g
+                    class="chakra__grid"
+                    clip-path={`url(#${id}-${house})`}
+                    aria-hidden="true"
+                  >
+                    <DegreeGrid
+                      points={each().points}
+                      path={path()!}
+                      caption={caption()}
+                      band={bar().band}
+                      pitch={bar().pitch}
+                      half={bar().widest}
+                      progress={props.progress}
+                    />
+                  </g>
+                )}
+              </Show>
+
               {/* The sign's name, in all three formats. North Indian conventionally
                 writes a number here because its compartments are houses and the
                 sign is what moves through them - but a number is a lookup, and
                 the three letters cost the same room. The label is set in its own
                 colour so it stays the compartment's caption rather than
                 competing with the bodies standing in it. */}
-              <g ref={group} clip-path={`url(#${id}-${house})`}>
+              <g
+                ref={group}
+                clip-path={`url(#${id}-${house})`}
+                data-layout={plan()?.how}
+                data-cover={plan()?.cover?.toFixed(2)}
+                data-scale={props.pathway ? scale() : undefined}
+              >
               <text
                 class="chakra__label"
                 x={each().label.x}
@@ -1200,18 +2476,83 @@ export function Chakra(props: {
                 />
               </Show>
 
-              <For each={laid().at}>
-                {(at_, at) => {
-                  const graha = () => each().rashi.grahas[at()]!;
+              <Index each={at()}>
+                {(spot, index) => {
+                  const graha = () => each().rashi.grahas[index]!;
+
+                  // The slide between one computed chart and the next.
+                  //
+                  // The panel refetches once a second over IPC, so positions
+                  // arrive a second apart and at uneven moments - the interval
+                  // fires on time, the round trip does not. Drawn raw that is a
+                  // twitch every second rather than a body in motion, which is
+                  // the opposite of what the traversal is for.
+                  //
+                  // The ephemeris is still the only source of a position. What
+                  // is eased is the *drawing* between two computed ones, which
+                  // is what the handover has always done (`animation.md` §5) -
+                  // no figure is invented, and the caption still prints only
+                  // degrees the ephemeris returned.
+                  //
+                  // Linear, because the motion it stands for is linear. An
+                  // ease-in-out would draw the lagna slowing down and speeding
+                  // up once a second, which is a statement about the sky.
+                  let node: SVGTextElement | undefined;
+                  let before: Point | undefined;
+                  let held: string | undefined;
+                  let at: number | undefined;
+                  let sliding: Animation | undefined;
+                  createEffect(() => {
+                    const now = spot();
+                    const sign = each().rashi.name;
+                    // Not across a handover. The sign standing here has
+                    // changed, so these are different bodies at different
+                    // degrees, and the compartment's own slide is already
+                    // carrying them in.
+                    const settled = held === sign;
+                    held = sign;
+                    const was = before;
+                    before = now;
+                    const clock = performance.now();
+                    const since = at === undefined ? undefined : clock - at;
+                    at = clock;
+                    if (!node || !props.animate || !settled || !was) return;
+                    const dx = was.x - now.x;
+                    const dy = was.y - now.y;
+                    if (dx === 0 && dy === 0) return;
+                    // The slide lasts as long as the last gap between positions,
+                    // so it ends as the next one arrives. Measured rather than
+                    // agreed with the caller: the panel feeds this once a second
+                    // and the harness ten times a second, and a duration fixed
+                    // to either leaves the other permanently behind - restarted
+                    // every 100ms, a 1,000ms slide covers a tenth of the way and
+                    // the body never arrives anywhere.
+                    sliding?.cancel();
+                    sliding = node.animate(
+                      [
+                        { transform: `translate(${dx}px, ${dy}px)` },
+                        { transform: "translate(0px, 0px)" },
+                      ],
+                      {
+                        duration: Math.min(
+                          Math.max(since ?? SETTLE, SETTLE_LEAST),
+                          SETTLE_MOST,
+                        ),
+                        easing: "linear",
+                      },
+                    );
+                  });
+
                   return (
                     <>
                       <text
+                        ref={node}
                         class="chakra__graha"
                         classList={{
                           "is-combust": graha().combust,
                         }}
-                        x={at_.x + shift().x}
-                        y={at_.y + shift().y}
+                        x={spot().x}
+                        y={spot().y}
                         text-anchor="middle"
                         // Smaller type where the compartment could not hold
                         // the bodies at full size, which is what a printed
@@ -1224,10 +2565,10 @@ export function Chakra(props: {
                         // measurement came back at the full size while the
                         // code believed it had shrunk.
                         style={
-                          laid().scale === 1
+                          scale() === 1
                             ? undefined
                             : {
-                                "font-size": `${(11 * laid().scale).toFixed(2)}px`,
+                                "font-size": `${(11 * scale()).toFixed(2)}px`,
                               }
                         }
                       >
@@ -1250,13 +2591,214 @@ export function Chakra(props: {
                     </>
                   );
                 }}
-              </For>
+              </Index>
               </g>
             </>
           );
         }}
       </Index>
     </svg>
+  );
+}
+
+/**
+ * The development grid: the family of parallel degree lines a compartment is
+ * laid out on.
+ *
+ * Not decoration and not a debugging aid any more. It is the layout model
+ * drawn: the same lines the placement uses, at the same pitch, over the same
+ * band. A reader who turns it on sees why a crowded house is crowded, because
+ * the number of lines that survive at a station *is* the number of bodies that
+ * station can hold.
+ *
+ * | Mark | What it shows |
+ * |---|---|
+ * | Dotted lines | every parallel line, over the stretch of it that holds a label |
+ * | The heavier dotted line | the base line, which the degree scale is measured on |
+ * | Cross ticks | 0°, 5° … 30°, at this instant, drawn across the whole family |
+ *
+ * **The lines are parallel, not perpendicular offsets of a curve.** That is the
+ * fix for bodies swapping places: a family of translates keeps the order along
+ * the route and the order on screen the same thing. Drawing them is what makes
+ * that visible rather than asserted.
+ *
+ * **The ticks move.** They occupy the fifth of the band nearest the entry when
+ * the lagna has just entered its sign and the fifth nearest the exit when it is
+ * about to leave. That is the split between the degree scale and the travel
+ * made visible.
+ *
+ * Styled inline rather than from a stylesheet, because it is drawn from the
+ * geometry and there is no state for a rule to key off.
+ */
+function DegreeGrid(props: {
+  points: Point[];
+  path: Pathway;
+  caption: Box;
+  band: [number, number];
+  pitch: number;
+  half: number;
+  progress: number;
+}): JSX.Element {
+  const sampleAt = (fraction: number) =>
+    atFraction(
+      props.path,
+      props.band[0] + (props.band[1] - props.band[0]) * fraction,
+    );
+
+  /** Each line, over the run of it that holds a label. A line with no such run
+   *  is not drawn: the compartment does not have it. */
+  const lines = () => {
+    const from = Math.floor(sampleAt(0));
+    const to = Math.ceil(sampleAt(1));
+    const drawn: { lane: number; at: Point[] }[] = [];
+    for (let step = 0; step <= PATH_LANES; step++) {
+      for (const side of step === 0 ? [1] : [1, -1]) {
+        const lane = step * side;
+        const run: Point[] = [];
+        for (let i = from; i <= to; i++) {
+          const point = laneAt(props.path, i, lane, props.pitch);
+          if (
+            standable(
+              props.points,
+              props.caption,
+              labelBox(point, 1, props.half),
+            )
+          ) {
+            run.push(point);
+          } else if (run.length > 1) {
+            drawn.push({ lane, at: [...run] });
+            run.length = 0;
+          } else {
+            run.length = 0;
+          }
+        }
+        if (run.length > 1) drawn.push({ lane, at: run });
+      }
+    }
+    return drawn;
+  };
+
+  /** A degree's tick.
+   *
+   * **Nothing here is solid, and nothing here spans the compartment.** Both
+   * were tried. A solid orange line across a compartment stopped being a scale
+   * mark and became the grid: it out-drew the dotted family it was supposed to
+   * annotate, and a reader saw three bars per house rather than a set of degree
+   * lines with bodies standing on them. Dashing it helped and was not enough -
+   * thirty-six wall-to-wall marks still laid a rectilinear pattern over a
+   * curved one.
+   *
+   * They are cross marks on the family now: the majors two and a half lanes
+   * wide, the minors under one. The capacity that the wall-to-wall version was
+   * showing is already in the drawing - it is how many dotted lines survive at
+   * a station - so spanning the chord was saying it twice, in the louder of the
+   * two voices.
+   *
+   * The hierarchy is extent, rhythm, weight and opacity, in that order.
+   */
+  const tick = (degree: number) => {
+    const at = alongRoute(
+      props.path,
+      sampleAt(
+        (1 - degree / 30) * PATH_DEGREE_SHARE +
+          props.progress * PATH_TRAVEL_SHARE,
+      ),
+    );
+    const across = props.path.across;
+    const major = degree % 15 === 0;
+    const arm = props.pitch * (major ? 1.3 : 0.45);
+    const span = { back: -arm, forward: arm };
+    return {
+      x1: at.x + across.x * span.back,
+      y1: at.y + across.y * span.back,
+      x2: at.x + across.x * span.forward,
+      y2: at.y + across.y * span.forward,
+      major,
+    };
+  };
+
+  return (
+    <>
+      {/* The whole route, faintly, under the family. The dotted lines stop
+          where a label would not fit, which is the useful thing to see; this is
+          what they stop short of.
+          Dotted like everything else, on the finest rhythm on the drawing. It
+          was the one solid stroke left and there is no reason for it to be: at
+          a quarter opacity a fine dot still reads as one continuous line, which
+          is all this has to do. */}
+      <polyline
+        points={polygon(props.path.at)}
+        data-lane="route"
+        fill="none"
+        style={{
+          stroke: "var(--text-tertiary)",
+          "stroke-width": "0.4",
+          "stroke-dasharray": "0.5 1.5",
+          opacity: 0.22,
+        }}
+      />
+      <For each={lines()}>
+        {(line) => (
+          <polyline
+            points={polygon(line.at)}
+            data-lane={line.lane}
+            fill="none"
+            style={{
+              stroke: "var(--text-tertiary)",
+              "stroke-width": line.lane === 0 ? "0.75" : "0.6",
+              // The family is the mark that should read first, so it carries
+              // the longest dashes and the most ink of anything drawn here.
+              "stroke-dasharray": line.lane === 0 ? "4 2" : "2 2",
+              // Ground, not figure. In D60 nothing on the chart visibly moves,
+              // so a grid drawn at reading strength becomes the loudest thing
+              // in a view whose subject is the bodies. The hierarchy among the
+              // marks is unchanged - extent, then rhythm, then weight, then
+              // opacity - and the whole ladder is simply set lower.
+              opacity: line.lane === 0 ? 0.5 : 0.38,
+            }}
+          />
+        )}
+      </For>
+      <For each={[0, 5, 10, 15, 20, 25, 30]}>
+        {(degree) => {
+          const mark = tick(degree);
+          return (
+            <line
+              x1={mark.x1}
+              y1={mark.y1}
+              x2={mark.x2}
+              y2={mark.y2}
+              style={{
+                // Neutral, not --glare. The token file allows the app exactly
+                // two hues and --glare is one of them: it means a body lost in
+                // the Sun's rays. A grid line drawn in it borrows a meaning the
+                // grid does not have, and puts a combustion-coloured mark
+                // through compartments where nothing is combust.
+                stroke: "var(--text-tertiary)",
+                "stroke-width": mark.major ? "0.6" : "0.5",
+                // A long dash for the degree marks, a fine dot for the rest.
+                "stroke-dasharray": mark.major ? "2.5 2" : "0.75 2",
+                opacity: mark.major ? 0.42 : 0.28,
+              }}
+            />
+          );
+        }}
+      </For>
+      {/* The gates: where this compartment's route meets its neighbours'. The
+          two are on the compartment's own boundary, which is why the band
+          always stops short of them - a label centred on a wall is half
+          through it. */}
+      <For each={[props.path.at[0]!, props.path.at[props.path.at.length - 1]!]}>
+        {(at) => (
+          <circle
+            cx={at.x}
+            cy={at.y}
+            r={1.1}
+            style={{ fill: "var(--text-tertiary)", opacity: 0.45 }}
+          />
+        )}
+      </For>
+    </>
   );
 }
 

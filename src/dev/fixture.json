@@ -40,6 +40,7 @@
             "graha": "mangala",
             "longitude": 71.91725534249841,
             "name": "Mangala",
+            "progress": 0.3972418447499469,
             "retrograde": false,
             "short": "Ma"
           }
@@ -62,6 +63,7 @@
             "graha": "guru",
             "longitude": 107.06030274744896,
             "name": "Guru",
+            "progress": 0.5686767582482986,
             "retrograde": false,
             "short": "Ju"
           },
@@ -76,6 +78,7 @@
             "graha": "budha",
             "longitude": 116.24658148395841,
             "name": "Budha",
+            "progress": 0.8748860494652803,
             "retrograde": false,
             "short": "Me"
           }
@@ -98,6 +101,7 @@
             "graha": "surya",
             "longitude": 123.4795970494222,
             "name": "Surya",
+            "progress": 0.11598656831407321,
             "retrograde": false,
             "short": "Su"
           },
@@ -112,6 +116,7 @@
             "graha": "ketu",
             "longitude": 125.59957252877797,
             "name": "Ketu",
+            "progress": 0.1866524176259323,
             "retrograde": true,
             "short": "Ke"
           }
@@ -134,6 +139,7 @@
             "graha": "shukra",
             "longitude": 169.22601006011882,
             "name": "Shukra",
+            "progress": 0.6408670020039609,
             "retrograde": false,
             "short": "Ve"
           }
@@ -163,6 +169,7 @@
             "graha": "chandra",
             "longitude": 220.15101566263502,
             "name": "Chandra",
+            "progress": 0.3383671887545006,
             "retrograde": false,
             "short": "Mo"
           }
@@ -199,6 +206,7 @@
             "graha": "rahu",
             "longitude": 305.59957252877797,
             "name": "Rahu",
+            "progress": 0.1866524176259323,
             "retrograde": true,
             "short": "Ra"
           }
@@ -221,6 +229,7 @@
             "graha": "shani",
             "longitude": 349.99901973112895,
             "name": "Shani",
+            "progress": 0.6666339910376318,
             "retrograde": true,
             "short": "Sa"
           }
@@ -284,6 +293,7 @@
             "graha": "rahu",
             "longitude": 114.70586531900528,
             "name": "Rahu",
+            "progress": 0.8235288439668428,
             "retrograde": false,
             "short": "Ra"
           }
@@ -341,6 +351,7 @@
             "graha": "mangala",
             "longitude": 279.7378006739869,
             "name": "Mangala",
+            "progress": 0.3245933557995632,
             "retrograde": false,
             "short": "Ma"
           },
@@ -355,6 +366,7 @@
             "graha": "shani",
             "longitude": 280.58622786904715,
             "name": "Shani",
+            "progress": 0.35287426230157165,
             "retrograde": false,
             "short": "Sa"
           },
@@ -369,6 +381,7 @@
             "graha": "budha",
             "longitude": 292.52076631065177,
             "name": "Budha",
+            "progress": 0.7506922103550588,
             "retrograde": true,
             "short": "Me"
           },
@@ -383,6 +396,7 @@
             "graha": "surya",
             "longitude": 293.2982425386472,
             "name": "Surya",
+            "progress": 0.7766080846215725,
             "retrograde": false,
             "short": "Su"
           },
@@ -397,6 +411,7 @@
             "graha": "ketu",
             "longitude": 294.7058653190053,
             "name": "Ketu",
+            "progress": 0.8235288439668428,
             "retrograde": false,
             "short": "Ke"
           },
@@ -411,6 +426,7 @@
             "graha": "guru",
             "longitude": 295.50482071082985,
             "name": "Guru",
+            "progress": 0.850160690360995,
             "retrograde": false,
             "short": "Ju"
           },
@@ -425,6 +441,7 @@
             "graha": "shukra",
             "longitude": 295.57638066637963,
             "name": "Shukra",
+            "progress": 0.8525460222126545,
             "retrograde": false,
             "short": "Ve"
           }
@@ -447,6 +464,7 @@
             "graha": "chandra",
             "longitude": 305.9329645171435,
             "name": "Chandra",
+            "progress": 0.19776548390478296,
             "retrograde": false,
             "short": "Mo"
           }
@@ -517,6 +535,7 @@
             "graha": "rahu",
             "longitude": 114.70555260663771,
             "name": "Rahu",
+            "progress": 0.823518420221257,
             "retrograde": false,
             "short": "Ra"
           }
@@ -574,6 +593,7 @@
             "graha": "mangala",
             "longitude": 279.4234706847776,
             "name": "Mangala",
+            "progress": 0.31411568949258706,
             "retrograde": false,
             "short": "Ma"
           },
@@ -588,6 +608,7 @@
             "graha": "shani",
             "longitude": 280.5388546118154,
             "name": "Shani",
+            "progress": 0.35129515372717984,
             "retrograde": false,
             "short": "Sa"
           },
@@ -602,6 +623,7 @@
             "graha": "surya",
             "longitude": 292.888445679163,
             "name": "Surya",
+            "progress": 0.7629481893054333,
             "retrograde": false,
             "short": "Su"
           },
@@ -616,6 +638,7 @@
             "graha": "budha",
             "longitude": 293.00949292089877,
             "name": "Budha",
+            "progress": 0.7669830973632922,
             "retrograde": true,
             "short": "Me"
           },
@@ -630,6 +653,7 @@
             "graha": "ketu",
             "longitude": 294.7055526066377,
             "name": "Ketu",
+            "progress": 0.8235184202212565,
             "retrograde": false,
             "short": "Ke"
           },
@@ -644,6 +668,7 @@
             "graha": "shukra",
             "longitude": 295.06918893374376,
             "name": "Shukra",
+            "progress": 0.835639631124792,
             "retrograde": false,
             "short": "Ve"
           },
@@ -658,6 +683,7 @@
             "graha": "guru",
             "longitude": 295.4080996001354,
             "name": "Guru",
+            "progress": 0.8469366533378472,
             "retrograde": false,
             "short": "Ju"
           },
@@ -672,6 +698,7 @@
             "graha": "chandra",
             "longitude": 299.8252875720832,
             "name": "Chandra",
+            "progress": 0.9941762524027733,
             "retrograde": false,
             "short": "Mo"
           }
@@ -749,6 +776,7 @@
             "graha": "chandra",
             "longitude": 220.15101566263502,
             "name": "Chandra",
+            "progress": 0.8383671887545006,
             "retrograde": false,
             "short": "Mo"
           }
@@ -771,6 +799,7 @@
             "graha": "mangala",
             "longitude": 71.91725534249841,
             "name": "Mangala",
+            "progress": 0.897241844749947,
             "retrograde": false,
             "short": "Ma"
           },
@@ -785,6 +814,7 @@
             "graha": "guru",
             "longitude": 107.06030274744896,
             "name": "Guru",
+            "progress": 0.0686767582482986,
             "retrograde": false,
             "short": "Ju"
           },
@@ -799,6 +829,7 @@
             "graha": "budha",
             "longitude": 116.24658148395841,
             "name": "Budha",
+            "progress": 0.37488604946528026,
             "retrograde": false,
             "short": "Me"
           },
@@ -813,6 +844,7 @@
             "graha": "surya",
             "longitude": 123.4795970494222,
             "name": "Surya",
+            "progress": 0.6159865683140732,
             "retrograde": false,
             "short": "Su"
           },
@@ -827,6 +859,7 @@
             "graha": "ketu",
             "longitude": 125.59957252877797,
             "name": "Ketu",
+            "progress": 0.6866524176259323,
             "retrograde": true,
             "short": "Ke"
           },
@@ -841,6 +874,7 @@
             "graha": "shukra",
             "longitude": 169.22601006011882,
             "name": "Shukra",
+            "progress": 0.1408670020039608,
             "retrograde": false,
             "short": "Ve"
           },
@@ -855,6 +889,7 @@
             "graha": "rahu",
             "longitude": 305.59957252877797,
             "name": "Rahu",
+            "progress": 0.6866524176259323,
             "retrograde": true,
             "short": "Ra"
           },
@@ -869,6 +904,7 @@
             "graha": "shani",
             "longitude": 349.99901973112895,
             "name": "Shani",
+            "progress": 0.3332679820752636,
             "retrograde": true,
             "short": "Sa"
           }
@@ -960,6 +996,7 @@
             "graha": "rahu",
             "longitude": 22.800631992709082,
             "name": "Rahu",
+            "progress": 0.7600210664236361,
             "retrograde": true,
             "short": "Ra"
           }
@@ -982,6 +1019,7 @@
             "graha": "chandra",
             "longitude": 56.5326924705473,
             "name": "Chandra",
+            "progress": 0.8844230823515767,
             "retrograde": false,
             "short": "Mo"
           }
@@ -1004,6 +1042,7 @@
             "graha": "shani",
             "longitude": 81.76419405390048,
             "name": "Shani",
+            "progress": 0.7254731351300161,
             "retrograde": false,
             "short": "Sa"
           }
@@ -1026,6 +1065,7 @@
             "graha": "mangala",
             "longitude": 94.03346858692092,
             "name": "Mangala",
+            "progress": 0.13444895289736394,
             "retrograde": false,
             "short": "Ma"
           },
@@ -1040,6 +1080,7 @@
             "graha": "budha",
             "longitude": 110.58089064462641,
             "name": "Budha",
+            "progress": 0.6860296881542136,
             "retrograde": false,
             "short": "Me"
           }
@@ -1062,6 +1103,7 @@
             "graha": "surya",
             "longitude": 128.62806972504626,
             "name": "Surya",
+            "progress": 0.28760232416820863,
             "retrograde": false,
             "short": "Su"
           }
@@ -1084,6 +1126,7 @@
             "graha": "shukra",
             "longitude": 158.51927950518592,
             "name": "Shukra",
+            "progress": 0.28397598350619735,
             "retrograde": false,
             "short": "Ve"
           }
@@ -1106,6 +1149,7 @@
             "graha": "guru",
             "longitude": 194.86396023043216,
             "name": "Guru",
+            "progress": 0.4954653410144052,
             "retrograde": false,
             "short": "Ju"
           },
@@ -1120,6 +1164,7 @@
             "graha": "ketu",
             "longitude": 202.80063199270907,
             "name": "Ketu",
+            "progress": 0.7600210664236358,
             "retrograde": true,
             "short": "Ke"
           }
@@ -1204,6 +1249,7 @@
             "graha": "surya",
             "longitude": 123.4795970494222,
             "name": "Surya",
+            "progress": 0.04387911482666015,
             "retrograde": false,
             "short": "Su"
           },
@@ -1218,6 +1264,7 @@
             "graha": "ketu",
             "longitude": 125.59957252877797,
             "name": "Ketu",
+            "progress": 0.6798717586333902,
             "retrograde": true,
             "short": "Ke"
           }
@@ -1240,6 +1287,7 @@
             "graha": "shukra",
             "longitude": 169.22601006011882,
             "name": "Shukra",
+            "progress": 0.7678030180356479,
             "retrograde": false,
             "short": "Ve"
           }
@@ -1283,6 +1331,7 @@
             "graha": "chandra",
             "longitude": 220.15101566263502,
             "name": "Chandra",
+            "progress": 0.0453046987905053,
             "retrograde": false,
             "short": "Mo"
           }
@@ -1305,6 +1354,7 @@
             "graha": "rahu",
             "longitude": 305.59957252877797,
             "name": "Rahu",
+            "progress": 0.6798717586333887,
             "retrograde": true,
             "short": "Ra"
           }
@@ -1327,6 +1377,7 @@
             "graha": "guru",
             "longitude": 107.06030274744896,
             "name": "Guru",
+            "progress": 0.11809082423468611,
             "retrograde": false,
             "short": "Ju"
           },
@@ -1341,6 +1392,7 @@
             "graha": "shani",
             "longitude": 349.99901973112895,
             "name": "Shani",
+            "progress": 0.999705919338686,
             "retrograde": true,
             "short": "Sa"
           }
@@ -1363,6 +1415,7 @@
             "graha": "mangala",
             "longitude": 71.91725534249841,
             "name": "Mangala",
+            "progress": 0.575176602749523,
             "retrograde": false,
             "short": "Ma"
           }
@@ -1385,6 +1438,7 @@
             "graha": "budha",
             "longitude": 116.24658148395841,
             "name": "Budha",
+            "progress": 0.8739744451875209,
             "retrograde": false,
             "short": "Me"
           }
@@ -1448,6 +1502,7 @@
             "graha": "mangala",
             "longitude": 71.97142511952636,
             "name": "Mangala",
+            "progress": 0.39904750398421196,
             "retrograde": false,
             "short": "Ma"
           }
@@ -1470,6 +1525,7 @@
             "graha": "guru",
             "longitude": 107.07833396531731,
             "name": "Guru",
+            "progress": 0.5692777988439104,
             "retrograde": false,
             "short": "Ju"
           },
@@ -1484,6 +1540,7 @@
             "graha": "budha",
             "longitude": 116.41410731929412,
             "name": "Budha",
+            "progress": 0.8804702439764706,
             "retrograde": false,
             "short": "Me"
           }
@@ -1506,6 +1563,7 @@
             "graha": "surya",
             "longitude": 123.55981772953885,
             "name": "Surya",
+            "progress": 0.11866059098462832,
             "retrograde": false,
             "short": "Su"
           },
@@ -1520,6 +1578,7 @@
             "graha": "ketu",
             "longitude": 125.599480423888,
             "name": "Ketu",
+            "progress": 0.1866493474629332,
             "retrograde": true,
             "short": "Ke"
           }
@@ -1542,6 +1601,7 @@
             "graha": "shukra",
             "longitude": 169.30234653553515,
             "name": "Shukra",
+            "progress": 0.643411551184505,
             "retrograde": false,
             "short": "Ve"
           }
@@ -1571,6 +1631,7 @@
             "graha": "chandra",
             "longitude": 221.1472099196719,
             "name": "Chandra",
+            "progress": 0.37157366398906316,
             "retrograde": false,
             "short": "Mo"
           }
@@ -1607,6 +1668,7 @@
             "graha": "rahu",
             "longitude": 305.599480423888,
             "name": "Rahu",
+            "progress": 0.1866493474629332,
             "retrograde": true,
             "short": "Ra"
           }
@@ -1629,6 +1691,7 @@
             "graha": "shani",
             "longitude": 349.99560924987657,
             "name": "Shani",
+            "progress": 0.6665203083292188,
             "retrograde": true,
             "short": "Sa"
           }
@@ -1671,6 +1734,7 @@
             "graha": "surya",
             "longitude": 123.4795970494222,
             "name": "Surya",
+            "progress": 0.6959194098844392,
             "retrograde": false,
             "short": "Su"
           }
@@ -1721,6 +1785,7 @@
             "graha": "chandra",
             "longitude": 220.15101566263502,
             "name": "Chandra",
+            "progress": 0.7358593803764312,
             "retrograde": false,
             "short": "Mo"
           }
@@ -1750,6 +1815,7 @@
             "graha": "budha",
             "longitude": 116.24658148395841,
             "name": "Budha",
+            "progress": 0.24931629679168169,
             "retrograde": false,
             "short": "Me"
           }
@@ -1772,6 +1838,7 @@
             "graha": "mangala",
             "longitude": 71.91725534249841,
             "name": "Mangala",
+            "progress": 0.23965691781230092,
             "retrograde": false,
             "short": "Ma"
           }
@@ -1801,6 +1868,7 @@
             "graha": "ketu",
             "longitude": 125.59957252877797,
             "name": "Ketu",
+            "progress": 0.11991450575559384,
             "retrograde": true,
             "short": "Ke"
           },
@@ -1815,6 +1883,7 @@
             "graha": "rahu",
             "longitude": 305.59957252877797,
             "name": "Rahu",
+            "progress": 0.11991450575559384,
             "retrograde": true,
             "short": "Ra"
           }
@@ -1837,6 +1906,7 @@
             "graha": "guru",
             "longitude": 107.06030274744896,
             "name": "Guru",
+            "progress": 0.6325378434311197,
             "retrograde": false,
             "short": "Ju"
           },
@@ -1851,6 +1921,7 @@
             "graha": "shukra",
             "longitude": 169.22601006011882,
             "name": "Shukra",
+            "progress": 0.903251257514853,
             "retrograde": false,
             "short": "Ve"
           },
@@ -1865,6 +1936,7 @@
             "graha": "shani",
             "longitude": 349.99901973112895,
             "name": "Shani",
+            "progress": 0.9998774663911192,
             "retrograde": true,
             "short": "Sa"
           }
@@ -1928,6 +2000,7 @@
             "graha": "rahu",
             "longitude": 114.70578241411374,
             "name": "Rahu",
+            "progress": 0.823526080470458,
             "retrograde": false,
             "short": "Ra"
           }
@@ -1985,6 +2058,7 @@
             "graha": "mangala",
             "longitude": 279.66650375678495,
             "name": "Mangala",
+            "progress": 0.3222167918928316,
             "retrograde": false,
             "short": "Ma"
           },
@@ -1999,6 +2073,7 @@
             "graha": "shani",
             "longitude": 280.57548728087875,
             "name": "Shani",
+            "progress": 0.3525162426959582,
             "retrograde": false,
             "short": "Sa"
           },
@@ -2013,6 +2088,7 @@
             "graha": "budha",
             "longitude": 292.6317744982445,
             "name": "Budha",
+            "progress": 0.754392483274817,
             "retrograde": true,
             "short": "Me"
           },
@@ -2027,6 +2103,7 @@
             "graha": "surya",
             "longitude": 293.20530391897125,
             "name": "Surya",
+            "progress": 0.7735101306323752,
             "retrograde": false,
             "short": "Su"
           },
@@ -2041,6 +2118,7 @@
             "graha": "ketu",
             "longitude": 294.70578241411374,
             "name": "Ketu",
+            "progress": 0.823526080470458,
             "retrograde": false,
             "short": "Ke"
           },
@@ -2055,6 +2133,7 @@
             "graha": "shukra",
             "longitude": 295.4613502983474,
             "name": "Shukra",
+            "progress": 0.8487116766115794,
             "retrograde": false,
             "short": "Ve"
           },
@@ -2069,6 +2148,7 @@
             "graha": "guru",
             "longitude": 295.48288280364653,
             "name": "Guru",
+            "progress": 0.8494294267882178,
             "retrograde": false,
             "short": "Ju"
           }
@@ -2091,6 +2171,7 @@
             "graha": "chandra",
             "longitude": 304.5473310082539,
             "name": "Chandra",
+            "progress": 0.15157770027512923,
             "retrograde": false,
             "short": "Mo"
           }

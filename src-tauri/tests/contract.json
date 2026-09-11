@@ -22,6 +22,7 @@
             "graha": "string",
             "longitude": "number",
             "name": "string",
+            "progress": "number",
             "retrograde": "boolean",
             "short": "string"
           }
@@ -454,6 +455,7 @@
     "chart": {
       "animate": "boolean",
       "format": "string",
+      "grid": "boolean",
       "numbered": "boolean",
       "vargas": [
         "string"

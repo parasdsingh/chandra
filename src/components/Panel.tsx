@@ -123,6 +123,11 @@ export function Panel(props: Props): JSX.Element {
     // microseconds, so a second is 0.005% of a core - and the slowest division
     // takes two hours to cross a compartment, which is 7,200 steps at this rate.
     // Nothing is gained by asking the ephemeris faster than the eye resolves.
+    //
+    // `Chakra`'s SETTLE is held equal to the animating interval, so each body's
+    // slide between two computed charts ends exactly as the next one begins.
+    // The round trip is what makes this necessary: the interval fires on time,
+    // the IPC does not, so the arrivals are a second apart but not evenly so.
     const every = animating() ? 1_000 : 60_000;
     const timer = window.setInterval(() => setChartAt(Date.now()), every);
     onCleanup(() => window.clearInterval(timer));
@@ -848,6 +853,7 @@ export function Panel(props: Props): JSX.Element {
               numbered={props.boot.settings.chart.numbered}
               timeZone={timeZone()}
               animate={animating()}
+              grid={props.boot.settings.chart.grid}
             />
           </Show>
 

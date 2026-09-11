@@ -458,6 +458,13 @@ export interface ChakraGraha {
   name: string;
   longitude: number;
   degrees_in_rashi: [number, number, number];
+  /** How far this body is through the run of longitudes that put it in the
+   *  compartment it is drawn in, 0 to 1. The same quantity as `Lagna.progress`,
+   *  read on the body. In D1 it is the degree within the rashi over thirty; in
+   *  a division it is the fraction through the part-run that maps to this varga
+   *  sign. `degrees_in_rashi` cannot serve — it is the D1 degree in every
+   *  chart, so in D9 it names a position in a sign the chart is not drawing. */
+  progress: number;
   /** Written as brackets around the name: `(Sa)`. */
   retrograde: boolean;
   /** Inside the Sun's rays. Drawn as the warm wash the calendar cell uses. */
@@ -520,6 +527,11 @@ export interface Settings {
      *  its name. Both references write a number; a number is a lookup, so the
      *  name is the default here and this is the choice. */
     numbered: boolean;
+    /** Whether the North Indian chart draws the degree lines a compartment is
+     *  laid out on. Off by default: it is the chart's own scaffolding, and it
+     *  is there for the reader who wants to know why two bodies in one sign are
+     *  drawn where they are (`docs/design/traversal.md`). */
+    grid: boolean;
   };
   tray: {
     /** Calendars with their own menu bar item. Chandra is one of these since

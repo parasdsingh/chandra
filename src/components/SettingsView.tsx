@@ -41,6 +41,7 @@ export type SettingsSection =
   | "panchanga"
   | "chart"
   | "motion"
+  | "grid"
   | "advanced"
   | "ingress"
   | "compartments"
@@ -56,6 +57,7 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   panchanga: "Panchanga",
   chart: "Lagna Kundali",
   motion: "Motion",
+  grid: "Degree grid",
   advanced: "Advanced",
   ingress: "Ingress labels",
   compartments: "Compartments",
@@ -93,6 +95,9 @@ export function SettingsView(props: Props): JSX.Element {
       </Show>
       <Show when={props.section === "motion"}>
         <Motion boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "grid"}>
+        <Grid boot={props.boot} apply={props.apply} />
       </Show>
 
       <Show when={props.section === "advanced"}>
@@ -891,6 +896,46 @@ function Motion(props: SectionProps): JSX.Element {
   );
 }
 
+/**
+ * Whether the chart draws the lines it is laid out on.
+ *
+ * Its own pane and not a row in the chart's, for the same reason Motion has
+ * one: it is about how the chart is drawn rather than about what it says, and
+ * the explanation is longer than a row can carry.
+ *
+ * Off by default, unlike every other switch here that ships on. The grid is the
+ * chart's own scaffolding; a reader who has not asked for it has asked for a
+ * chart, and drawing construction lines over it unbidden would be answering a
+ * question nobody put.
+ */
+function Grid(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <Toggle
+        label="Show the degree lines"
+        on={settings().chart.grid}
+        onToggle={() =>
+          props.apply({
+            ...settings(),
+            chart: { ...settings().chart, grid: !settings().chart.grid },
+          })
+        }
+      />
+
+      <p class="settings__hint settings__hint--foot">
+        Each compartment is laid out along a route from the edge a sign arrives
+        through to the edge it leaves by, divided into the thirty degrees of that
+        sign, with parallel lines either side for bodies that share a degree.
+        Drawn, it says why two grahas in one sign sit where they do — and how
+        much room a crowded house has left. North Indian only: the other two
+        formats have no route through a compartment.
+      </p>
+    </div>
+  );
+}
+
 function Advanced(props: {
   boot: Bootstrap;
   onOpen: (section: SettingsSection) => void;
@@ -918,6 +963,10 @@ function Advanced(props: {
     {
       id: "motion",
       value: () => (settings().chart.animate ? "On" : "Off"),
+    },
+    {
+      id: "grid",
+      value: () => (settings().chart.grid ? "On" : "Off"),
     },
   ];
 

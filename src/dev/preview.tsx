@@ -11,6 +11,7 @@ import type { JSX } from "solid-js";
 import { createSignal, For, onCleanup } from "solid-js";
 
 import fixture from "./fixture.json";
+import { Chakra as ChakraChart } from "../components/Chakra";
 import { DayDetail } from "../components/DayDetail";
 import { ChartView } from "../components/ChartView";
 import { Header } from "../components/Header";
@@ -62,7 +63,7 @@ const context: FormatContext = { timeZone: data.timeZone };
 
 const boot: Bootstrap = {
   settings: {
-    schema_version: 12,
+    schema_version: 13,
     location: {
       mode: "manual",
       place: {
@@ -77,7 +78,13 @@ const boot: Bootstrap = {
     sidereal: { ayanamsa: "lahiri", node_type: "true" },
     calendar: { month_system: "amanta", ingress: "rashi" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
-    chart: { format: "north", vargas: ["d1", "d9"], numbered: false, animate: true },
+    chart: {
+      format: "north",
+      vargas: ["d1", "d9"],
+      numbered: false,
+      animate: true,
+      grid: false,
+    },
     tray: { subjects: ["chandra", "mangala", "shani"], colour_mode: false },
     appearance: { scale: 1 },
   },
@@ -160,6 +167,7 @@ function ChartCase(props: {
   numbered: boolean;
   error?: { code: string; message: string };
   animate?: boolean;
+  grid?: boolean;
 }): JSX.Element {
   return (
     <Case title={props.title}>
@@ -191,9 +199,162 @@ function ChartCase(props: {
           // gives it. The drift is stepped by its own case below, where it can
           // be checked at more than one instant.
           animate={props.animate ?? false}
+          grid={props.grid ?? false}
         />
       </div>
     </Case>
+  );
+}
+
+/**
+ * One chart drawn by the pathway prototype, without the pane around it.
+ *
+ * `ChartView` is not in the way here on purpose. The prototype is a change to
+ * where bodies stand inside a compartment and to nothing else, so the panel's
+ * own pane has no part in it and is left exactly as it ships - the harness
+ * reaches past it to the renderer, which is the only thing being looked at.
+ *
+ * `docs/design/traversal.md`.
+ */
+function PathwayCase(props: {
+  title: string;
+  chart: Chakra;
+  progress: number;
+  grid?: boolean;
+  /** Whether each body eases to its next position rather than stepping to it.
+   *  Only the running case sets this: the stepped cases are measured by the
+   *  geometric checks, and a body caught mid-slide is not at the position the
+   *  layout gave it. */
+  animate?: boolean;
+}): JSX.Element {
+  return (
+    <Case title={props.title}>
+      <div class="region">
+        <div class="chakra-view">
+          <ChakraChart
+            data={props.chart}
+            format="north"
+            numbered={false}
+            progress={props.progress}
+            animate={props.animate ?? false}
+            pathway
+            grid={props.grid}
+          />
+        </div>
+      </div>
+    </Case>
+  );
+}
+
+/**
+ * The pathway, running.
+ *
+ * The static cases below draw five instants; this draws all of them. One
+ * crossing of the rising sign takes five seconds here against two hours in D1,
+ * which is the only way the traversal can be judged as motion rather than as a
+ * strip of positions.
+ */
+function PathwayRun(props: {
+  title: string;
+  chart: Chakra;
+  grid?: boolean;
+}): JSX.Element {
+  const [at, setAt] = createSignal(0);
+  const timer = setInterval(() => setAt((was) => (was + 0.02) % 1), 100);
+  onCleanup(() => clearInterval(timer));
+
+  return (
+    <PathwayCase
+      title={props.title}
+      chart={props.chart}
+      progress={at()}
+      grid={props.grid}
+      // The only case that exercises the smoothing. Everything else here is
+      // stepped and measured.
+      animate
+    />
+  );
+}
+
+/**
+ * Every crowding case at one progress, with the progress under the reader's
+ * hand.
+ *
+ * The geometric check is the reason this exists rather than a longer strip of
+ * fixed charts. An arrangement that is legal at 0% and at 100% can be illegal
+ * at 43%, so the check has to walk the whole crossing - and it can, by driving
+ * this one slider and re-measuring at every step. Four charts is the whole
+ * range of shapes the layout has to survive: a kite holding eight, a corner
+ * triangle holding seven, a wall triangle holding seven, and the hora, which
+ * puts eight in one compartment on any day of the year.
+ */
+function PathwaySweep(): JSX.Element {
+  const [at, setAt] = createSignal(50);
+  const [grid, setGrid] = createSignal(false);
+
+  const charts: [string, Chakra][] = [
+    ["D1", data.chakra],
+    ["eight in a kite", data.chakraCrowded],
+    ["seven in a corner triangle", data.chakraCorner],
+    ["seven in a wall triangle", data.chakraWall],
+    ["D2 hora", data.chakraHora],
+    ["D9 navamsa", data.chakraNavamsa],
+    ["D30 trimsamsa", data.chakraTrimsamsa],
+  ];
+
+  return (
+    <section class="preview__case preview__case--wide" id="pathway-sweep">
+      <h2 class="preview__title">Pathway · the crossing, swept</h2>
+      <div class="preview__controls">
+        <label>
+          progress
+          <input
+            id="pathway-progress"
+            type="range"
+            min="0"
+            max="100"
+            value={at()}
+            onInput={(event) => setAt(Number(event.currentTarget.value))}
+          />
+          <output id="pathway-progress-value">{at()}%</output>
+        </label>
+        <label>
+          <input
+            id="pathway-grid"
+            type="checkbox"
+            checked={grid()}
+            onChange={(event) => setGrid(event.currentTarget.checked)}
+          />
+          degree grid
+        </label>
+      </div>
+      <div class="preview__row">
+        <For each={charts}>
+          {([label, chart]) => (
+            <div class="preview__cell">
+              <span class="preview__caption">{label}</span>
+              <div class="panel-frame">
+                <div class="panel">
+                  <div class="region">
+                    <div class="chakra-view">
+                      <ChakraChart
+                        data={chart}
+                        format="north"
+                        numbered={false}
+                        progress={at() / 100}
+                        animate={false}
+                        pathway
+                        grid={grid()}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </For>
+      </div>
+    </section>
   );
 }
 
@@ -463,6 +624,8 @@ export function Preview(): JSX.Element {
             "location",
             "astrology",
             "chart",
+            "motion",
+            "grid",
             "menubar",
             "advanced",
             "size",
@@ -536,6 +699,21 @@ export function Preview(): JSX.Element {
         numbered={false}
       />
 
+      {/* The degree grid as the panel actually draws it, which nothing else
+          here covers: the pathway cases set `pathway` directly, and the panel
+          cannot - it has one setting. That gap is why a build once drew the
+          scale over bodies the packed layout had placed, a chart asserting a
+          degree its bodies did not stand at. This case is the configuration a
+          reader gets when they turn the setting on, so the grid and the
+          placement can be checked against each other rather than separately. */}
+      <ChartCase
+        title="Chart · the degree grid, as the panel draws it"
+        chart={data.chakra}
+        format="north"
+        numbered={false}
+        grid
+      />
+
       {/* The handover, on a loop. It is the only motion in the chart fast enough
           to watch - the drift is a position, not a movement - and a real one is
           two hours away in D1, so the harness alternates between two charts two
@@ -580,6 +758,91 @@ export function Preview(): JSX.Element {
             numbered={false}
             animate
           />
+        )}
+      </For>
+
+      {/* ---- The pathway prototype. `docs/design/traversal.md`. -------------
+
+          Everything below is behind `pathway` on the renderer, which nothing
+          but this file sets, so the panel above is drawn by the code that
+          shipped and is unaffected by any of it.
+
+          What is being looked at: a body no longer sits where a packer put it.
+          It sits at its own progress along a route across its compartment - its
+          degree, in D1 - and the whole ring carries that route's contents from
+          the edge the sign arrived through to the edge it will leave by as the
+          lagna crosses its sign. Half the band is the degree and half is the
+          crossing, because in the sky both spans are one house long. */}
+
+      <PathwaySweep />
+
+      {/* The traversal as motion. Five seconds a crossing against two hours in
+          D1, with the degree grid on: the ticks slide down the band as the
+          crossing runs, which is the arithmetic rather than an impression of
+          it. */}
+      <PathwayRun title="Pathway · D1, running, with the grid" chart={data.chakra} grid />
+
+      {/* The same, in the shape that constrains it most. Seven bodies in a
+          corner triangle have to lane out either side of the route, and the
+          route has to keep them off a diagonal wall the whole way. */}
+      <PathwayRun
+        title="Pathway · seven in a corner triangle, running"
+        chart={data.chakraCorner}
+      />
+
+      {/* The grid on all three compartment shapes at once, at the two ends of a
+          crossing. Four kites, four corner triangles, four wall triangles: the
+          question the overlay answers is whether the scale bunches into the
+          point of a triangle, which is what a route drawn straight between the
+          two gates would do. */}
+      <For each={[0, 1]}>
+        {(at) => (
+          <PathwayCase
+            title={`Pathway · degree grid at ${Math.round(at * 100)}%`}
+            chart={data.chakra}
+            progress={at}
+            grid
+          />
+        )}
+      </For>
+
+      {/* The stations themselves, stepped. Ma at 12° of Mithuna stands further
+          from the exit than Su at 3° of Simha, in both charts, at every
+          progress - the degree is a station and the crossing is a translation
+          the whole ring shares. */}
+      <For each={[0, 0.5, 1]}>
+        {(at) => (
+          <PathwayCase
+            title={`Pathway · D1 at ${Math.round(at * 100)}%`}
+            chart={data.chakra}
+            progress={at}
+          />
+        )}
+      </For>
+
+      {/* The three crowding cases at the two ends. Eight in a kite is the
+          ceiling the whole layout is answerable to; seven in either triangle is
+          the shape that runs out of room first. */}
+      <For
+        each={
+          [
+            ["eight in a kite", data.chakraCrowded],
+            ["seven in a corner triangle", data.chakraCorner],
+            ["seven in a wall triangle", data.chakraWall],
+            ["D2 hora, eight in one", data.chakraHora],
+          ] as const
+        }
+      >
+        {([label, chart]) => (
+          <For each={[0, 1]}>
+            {(at) => (
+              <PathwayCase
+                title={`Pathway · ${label} at ${Math.round(at * 100)}%`}
+                chart={chart}
+                progress={at}
+              />
+            )}
+          </For>
         )}
       </For>
 

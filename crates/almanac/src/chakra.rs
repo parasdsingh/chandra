@@ -101,6 +101,19 @@ pub struct ChakraGraha {
     pub short: String,
     pub longitude: f64,
     pub degrees_in_rashi: (u32, u32, f64),
+    /// How far this body is through the run of longitudes that put it in the
+    /// compartment it is drawn in, 0 to 1.
+    ///
+    /// The same quantity as `Lagna::progress` and from the same function, read
+    /// on the body rather than on the ascendant. In D1 it is simply the degree
+    /// within the rashi over thirty; in a division it is the fraction through
+    /// the part-run that maps to this varga sign, which is the only reading of
+    /// "how far into its compartment" that survives a division at all.
+    ///
+    /// `degrees_in_rashi` cannot serve: it is the D1 degree in every chart
+    /// (deliberately - see the field's own note), so in D9 it names a position
+    /// in a sign the chart is not drawing.
+    pub progress: f64,
     /// Marked on the chart by writing the name in brackets.
     pub retrograde: bool,
     /// Inside the Sun's rays. Marked by the same warm wash the calendar cell
@@ -203,6 +216,11 @@ pub fn at(
             // schemes in one application alone. The honest figure is the one
             // actually computed, and it is the same number in every division.
             degrees_in_rashi: degrees_in_rashi(position.longitude),
+            // Where the body stands inside the compartment it is about to be
+            // drawn in. `part_progress` is the same call the lagna's own
+            // progress comes from, so the chart has one definition of "how far
+            // through" rather than two.
+            progress: part_progress(varga, position.longitude),
             retrograde: position.is_retrograde(),
             combust: combustion_from(graha, position, sun).combust,
             // Read in the sign the body occupies *in this chart*. Dignity is a

@@ -30,6 +30,9 @@ interface Props {
   /** Whether the compartments' contents slide as the lagna crosses its sign.
    *  Off leaves them where the static layout puts them. */
   animate: boolean;
+  /** Whether the chart draws the degree lines its compartments are laid out on.
+   *  `docs/design/traversal.md`. */
+  grid: boolean;
 }
 
 export function ChartView(props: Props): JSX.Element {
@@ -79,6 +82,7 @@ export function ChartView(props: Props): JSX.Element {
               // one code path draws both.
               progress={props.animate ? data().lagna.progress : 0.5}
               animate={props.animate}
+              grid={props.grid}
             />
 
             {/* The chart is as exact as the ephemeris behind it, and outside

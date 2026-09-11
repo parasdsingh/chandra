@@ -63,3 +63,48 @@ body {
   color: var(--text-secondary);
 }
 
+
+/* The pathway sweep's own controls and its row of small charts.
+   `docs/design/traversal.md`. Harness chrome, like everything else here. */
+.preview__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  font: var(--type-caption);
+  color: var(--text-secondary);
+}
+
+.preview__controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview__controls input[type="range"] {
+  width: 320px;
+}
+
+.preview__controls output {
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.preview__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.preview__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview__caption {
+  font: var(--type-caption);
+  color: var(--text-tertiary);
+}
