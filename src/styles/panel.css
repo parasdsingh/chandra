@@ -612,15 +612,57 @@
   color: var(--accent);
 }
 
+/* The day's name with a step either side of it. A grid rather than flex so the
+   name is centred on the pane and not on whatever is left over: with flex, a
+   day whose name is a character longer shifted the line, and a line that moves
+   while you step through days is the one thing this row must not do. */
+.detail__step {
+  display: grid;
+  grid-template-columns: 20px 1fr 20px;
+  align-items: center;
+  margin-bottom: var(--s-4);
+}
+
 .detail__date {
   font: var(--type-micro);
   letter-spacing: var(--track-micro);
   color: var(--text-secondary);
   text-transform: uppercase;
   height: 14px;
-  /* The day's name, then the fields. Without this the first field's own label
-     sat immediately under it and the two read as one run of small capitals. */
-  margin-bottom: var(--s-4);
+  text-align: center;
+}
+
+/* Quiet until wanted. The arrows sit beside micro type in a 318 point panel, so
+   at full strength they would be the loudest thing in a pane whose subject is
+   the day's figures - but they are controls, so they answer the pointer and
+   they take focus visibly. */
+.detail__nudge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: default;
+  border-radius: var(--r-button);
+  transition: color var(--d-hover-out) var(--ease-standard);
+}
+
+.detail__nudge:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.detail__nudge:active {
+  opacity: 0.6;
+  transition: none;
+}
+
+.detail__nudge:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
 }
 /* Stated as a fact, in words, where the number is read. No amber, no triangle,
    no border (docs/DESIGN.md 9.4). */

@@ -560,6 +560,17 @@ export function Panel(props: Props): JSX.Element {
       return;
     }
 
+    // The day view steps a day at a time, the same keys the calendar uses to
+    // move the selection. Reading one day after another is most of what the day
+    // view is for, and until now every step went back to the grid and picked
+    // again - two moves and a change of view to see tomorrow.
+    if (view() === "day") {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      moveSelection(event.key === "ArrowLeft" ? -1 : 1);
+      return;
+    }
+
     if (view() !== "calendar") return;
     // The picker has the keyboard while it is open: an arrow that moved the
     // selection behind it would move a ring nobody can see, and Enter would
@@ -841,6 +852,7 @@ export function Panel(props: Props): JSX.Element {
               isToday={sameDate(selected(), today())}
               lunar={lunar()}
               error={error()}
+              onStep={(delta) => moveSelection(delta)}
             />
           </Show>
 

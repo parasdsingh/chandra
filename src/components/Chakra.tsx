@@ -921,27 +921,42 @@ const PATH_LANES = 8;
  * the true ring, and it spends half the compartment on a motion that moves a
  * pixel every ten seconds. The degree scale is the reading.
  *
- * Measured over the seven crowding cases, across a whole crossing. `worst gap`
- * is the widest degree separation between two labels that overlap - the number
- * that says whether an overlap is a conjunction or a mistake:
+ * Measured across a whole crossing. `worst gap` is the widest degree separation
+ * between two labels that overlap - the number that says whether an overlap is
+ * a conjunction or a mistake. The first table is the eight sweep charts, four
+ * of which are crowded on purpose:
  *
- * | Share | exact/spilled/stacked/packed | Worst gap | Travel, median | Travel, slowest |
- * |---|---|---|---|---|
- * | 0.65 | 24 / 1 / 4 / 1 | 6.8° | 22.2 | 11.5 |
- * | 0.75 | 25 / 0 / 4 / 1 | 6.8° | 15.6 | 7.5 |
- * | **0.80** | **25 / 1 / 3 / 1** | **3.1°** | **12.3** | **5.8** |
+ * | Share | Worst gap | Travel, median | D60 median |
+ * |---|---|---|---|
+ * | 0.80 | 3.1° | 12.3 | 8.1 |
+ * | 0.60 | 14.4° | 27.0 | 17.1 |
+ * | **0.40** | **14.4°** | **33.8** | **28.8** |
+ * | 0.25 | 14.4° | 37.1 | 42.5 |
  *
- * **0.80 is a knee, not a preference.** It is the point at which every pair of
- * labels that overlap is inside the three degrees the spill is allowed to move
- * a body - that is, the point at which every overlap on the chart is a
- * conjunction. A twentieth less doubles the worst overlap to nearly seven
- * degrees, which is two bodies a fifth of a sign apart drawn on top of each
- * other, for three units of extra travel.
+ * That table made 0.80 look forced, and it was the wrong table: the worst gap
+ * in it comes from the four compartments holding seven and eight bodies, which
+ * overlap at *every* share, so the figure barely moves between 0.60 and 0.25
+ * and drowns out what happens to a chart anybody actually reads.
  *
- * The travel it costs is real and is stated in §9 rather than hidden: no body
- * moves fast enough to see moving, and this is why.
+ * Split out, the ordinary charts answer it:
+ *
+ * | Share | D1 | D9 | D30 | D60 | overlapping pairs, per frame |
+ * |---|---|---|---|---|---|
+ * | 0.40 | 28.7 | 30.5 | 66.6 | 28.8 | **0** in all four |
+ * | 0.25 | 37.1 | 38.1 | 30.0 | 42.5 | D9 0.8, D60 0.3 at 5.1° |
+ *
+ * **0.40 is the knee.** Every chart that is not deliberately crowded draws with
+ * no overlapping labels at all, and the travel is three and a half times what
+ * 0.80 allowed: in D60 a body crosses 28.8 units in the two minutes the lagna
+ * takes, which is a pixel every four seconds against a pixel every fifteen.
+ * Below 0.40 overlaps start appearing in ordinary charts and buy little.
+ *
+ * The degree scale that remains is not the reading it was at 0.80, and that is
+ * the trade taken deliberately: a tenth of a degree is not a distance a reader
+ * can measure off a 318 point chart, while a body that never visibly moves is a
+ * chart that does not look like a reading of now.
  */
-const PATH_DEGREE_SHARE = 0.8;
+const PATH_DEGREE_SHARE = 0.4;
 const PATH_TRAVEL_SHARE = 1 - PATH_DEGREE_SHARE;
 
 /** Progress samples a plan is tested at. The stations sweep rigidly, so

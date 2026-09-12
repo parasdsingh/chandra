@@ -467,6 +467,10 @@ export function Preview(): JSX.Element {
             isToday
             lunar={false}
             error={undefined}
+            // Wired here so the harness draws the day steps. The other day
+            // cases leave it off, which is also worth seeing: the row keeps its
+            // shape and the name stays centred with no arrows in it.
+            onStep={() => {}}
           />
         </div>
       </Case>

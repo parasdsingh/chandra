@@ -74,6 +74,9 @@ interface Props {
    * the Moon's phase itself. */
   lunar: boolean;
   error: { code: string; message: string } | undefined;
+  /** Steps the day being read, in days. Optional because the visual harness
+   *  draws this pane without a calendar behind it to step through. */
+  onStep?: (delta: number) => void;
 }
 
 /** Which pane is showing. */
@@ -163,7 +166,25 @@ function Body(props: Props): JSX.Element {
           {/* The header already carries the date, so this names the day rather
               than repeating it: the weekday, and the vara, which is what the day
               is actually called. */}
-          <div class="detail__date">
+          {/* The day steps from here. Reading one day after another is most
+              of what this view is for, and every step used to mean going back
+              to the grid and picking again - two moves and a change of view to
+              see tomorrow. The arrows flank the line that names the day, so
+              what they move is the thing beside them. Left and right, not up
+              and down: a day's neighbours are before and after it. */}
+          <div class="detail__step">
+            <Show when={props.onStep} fallback={<span class="detail__nudge" />}>
+              {(step) => (
+                <button
+                  class="detail__nudge"
+                  onClick={() => step()(-1)}
+                  aria-label="Previous day"
+                >
+                  <Nudge back />
+                </button>
+              )}
+            </Show>
+            <div class="detail__date">
             <Show when={props.isToday}>
               <span class="detail__today">TODAY</span>
               <span> · </span>
@@ -176,6 +197,18 @@ function Body(props: Props): JSX.Element {
               <span> · {formatShortDate(detail().date)}</span>
             </Show>
             <span> · {detail().panchanga.vara_name}</span>
+            </div>
+            <Show when={props.onStep} fallback={<span class="detail__nudge" />}>
+              {(step) => (
+                <button
+                  class="detail__nudge"
+                  onClick={() => step()(1)}
+                  aria-label="Next day"
+                >
+                  <Nudge />
+                </button>
+              )}
+            </Show>
           </div>
 
           <div class="detail__panes" role="tablist" aria-label="Day detail">
@@ -770,4 +803,32 @@ export function ErrorBlock(props: {
 
 function truncate(message: string): string {
   return message.length > 60 ? `${message.slice(0, 59)}…` : message;
+}
+
+/**
+ * The chevron on a day-step button.
+ *
+ * The same shape as the header's back chevron, at the size a control beside a
+ * line of micro type can be: the panel has one chevron and this is it, turned
+ * around for the forward direction rather than drawn a second time.
+ */
+function Nudge(props: { back?: boolean }): JSX.Element {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      style={props.back ? undefined : { transform: "scaleX(-1)" }}
+    >
+      <path
+        d="M 14.5 5 L 8.5 12 L 14.5 19"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
 }
