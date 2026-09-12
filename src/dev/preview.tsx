@@ -56,6 +56,8 @@ const data = fixture as unknown as {
   chakraTrimsamsa: Chakra;
   chakraCorner: Chakra;
   chakraWall: Chakra;
+  chakraShashtiamsa: Chakra;
+  chakraShashtiamsaNext: Chakra;
   chakraMoshier: Chakra;
 };
 
@@ -300,6 +302,7 @@ function PathwaySweep(): JSX.Element {
     ["D2 hora", data.chakraHora],
     ["D9 navamsa", data.chakraNavamsa],
     ["D30 trimsamsa", data.chakraTrimsamsa],
+    ["D60 shashtiamsa", data.chakraShashtiamsa],
   ];
 
   return (
@@ -709,6 +712,31 @@ export function Preview(): JSX.Element {
       <ChartCase
         title="Chart · the degree grid, as the panel draws it"
         chart={data.chakra}
+        format="north"
+        numbered={false}
+        grid
+      />
+
+      {/* D60, with the grid, as the panel draws it. The fastest division and
+          the one a reader watching the chart is most likely to have open - the
+          lagna crosses a part every two minutes. Its own case because the
+          traversal's behaviour follows how a division scatters the bodies, and
+          D60 scatters them differently from D1. */}
+      <ChartCase
+        title="Chart · D60 with the degree grid, as the panel draws it"
+        chart={data.chakraShashtiamsa}
+        format="north"
+        numbered={false}
+        grid
+      />
+
+      {/* The same D60 chart one crossing later - two minutes. Every sign has
+          moved one house, so the same body is now in a differently shaped
+          compartment. Side by side with the case above, this is what a reader
+          sees change when the chart hands over. */}
+      <ChartCase
+        title="Chart · D60, one crossing later"
+        chart={data.chakraShashtiamsaNext}
         format="north"
         numbered={false}
         grid

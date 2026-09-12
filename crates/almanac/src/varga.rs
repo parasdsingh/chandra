@@ -111,35 +111,6 @@ impl Varga {
         }
     }
 
-    /// How the division writes itself where there is room for a mark and no
-    /// room for a name: `D9`, not `9` and not `d9`.
-    ///
-    /// Separate from [`Varga::key`] on purpose. The key is an identifier - it is
-    /// in the settings file and in every IPC payload, so it cannot be changed to
-    /// suit a drawing - and it is lower case because identifiers here are. The
-    /// status item was printing the key, which put a lower-case `d9` in the menu
-    /// bar beside proper nouns. The division is a name when a reader sees it.
-    pub const fn mark(self) -> &'static str {
-        match self {
-            Varga::D1 => "D1",
-            Varga::D2 => "D2",
-            Varga::D3 => "D3",
-            Varga::D4 => "D4",
-            Varga::D7 => "D7",
-            Varga::D9 => "D9",
-            Varga::D10 => "D10",
-            Varga::D12 => "D12",
-            Varga::D16 => "D16",
-            Varga::D20 => "D20",
-            Varga::D24 => "D24",
-            Varga::D27 => "D27",
-            Varga::D30 => "D30",
-            Varga::D40 => "D40",
-            Varga::D45 => "D45",
-            Varga::D60 => "D60",
-        }
-    }
-
     /// How the chart names itself: the division and what it is called.
     pub const fn label(self) -> &'static str {
         match self {
@@ -458,34 +429,6 @@ fn trimsamsa(sign: usize, within: f64) -> Rashi {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The mark is the key made presentable, and nothing else.
-    ///
-    /// Written as a relationship rather than as a sixteen-line table, because a
-    /// second table would only be checked against the first by eye. The key is
-    /// an identifier and lives in the settings file; the mark is what a reader
-    /// sees in the menu bar. Neither may drift into the other.
-    #[test]
-    fn the_mark_is_the_key_in_the_case_a_reader_reads() {
-        for varga in Varga::ALL {
-            assert_eq!(
-                varga.mark(),
-                varga.key().to_uppercase(),
-                "{} marks itself differently from its key",
-                varga.key()
-            );
-            assert!(
-                varga.mark().starts_with('D'),
-                "{} does not name its division",
-                varga.mark()
-            );
-            assert!(
-                varga.label().starts_with(varga.mark()),
-                "{} does not open with its own mark",
-                varga.label()
-            );
-        }
-    }
 
     /// Every worked example in `docs/design/vargas.md` §7, for the five vargas
     /// built here.

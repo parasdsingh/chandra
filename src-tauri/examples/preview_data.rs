@@ -276,6 +276,18 @@ fn main() {
         "chakraTrimsamsa": almanac
             .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D30)
             .expect("trimsamsa"),
+        // D60, the fastest division and the one a reader watching the chart move
+        // is most likely to have open: the lagna crosses a part every two
+        // minutes. Nothing else here covers it, and the traversal's behaviour
+        // is a function of how a division scatters the bodies.
+        "chakraShashtiamsa": almanac
+            .chakra(instant(2026, 8, 20, 0.72), PLACE, Varga::D60)
+            .expect("shashtiamsa"),
+        // Two minutes after it, which is one whole crossing in D60 - the same
+        // relationship `chakraNext` has to `chakra` in D1.
+        "chakraShashtiamsaNext": almanac
+            .chakra(instant(2026, 8, 20, 0.72) + 120_000, PLACE, Varga::D60)
+            .expect("shashtiamsa next"),
         // Before 1800, where the ephemeris falls back to the analytic model and
         // the pane has to say so.
         "chakraMoshier": almanac

@@ -664,7 +664,12 @@ export function Panel(props: Props): JSX.Element {
   /** Whether the calendar in force names months by the Moon. */
   const lunar = () => props.boot.settings.calendar.month_system !== "solar";
 
-  const headerTitle = () => {
+  // A memo, not a plain accessor. It reads the chart resource, which is replaced
+  // every second while the chart animates, so as a plain accessor it notified
+  // its readers once a second with a string identical to the one they already
+  // had - and the header's ladder reset on every one of them. A memo compares
+  // and stays quiet.
+  const headerTitle = createMemo(() => {
     if (view() === "settings") return SECTION_TITLES[section()];
     // The reading, not the genre. Every other header in the panel names a value
     // - `Chandra · August 2026`, `Shukla Ashtami`, the settings section - and
@@ -709,7 +714,7 @@ export function Panel(props: Props): JSX.Element {
       return `${span.paksha === "shukla" ? "Shukla" : "Krishna"} ${span.name}`;
     }
     return monthAt(visibleDelta())?.label ?? "";
-  };
+  });
 
   // The window is sized by the back end from the same number; this scales what
   // is drawn inside it.
