@@ -276,21 +276,32 @@ const CAPTION_BELOW = 3;
  * clip path is what makes this safe: none of it is drawn until it is inside. */
 const HANDOVER = 26;
 
-/** How long a body takes to reach its next computed position, in milliseconds,
- * before any gap has been measured. The panel's animating tick.
+/** The gap between two positions becomes the duration of the slide between
+ * them, so each slide ends as the next arrives and the motion is continuous
+ * rather than a step followed by a wait. Measured rather than agreed with the
+ * caller: the panel feeds this once a second and the harness ten times a
+ * second, and the renderer is told neither.
  *
- * After the first move the duration is the measured gap between positions, so
- * each slide ends as the next arrives and the motion is continuous rather than
- * a step followed by a wait. The renderer is not told how often it is fed -
- * the panel's second and the harness's tenth of a second both work. */
-const SETTLE = 1_000;
-
-/** The gap is clamped before it becomes a duration. Below the floor a slide is
- * shorter than a frame and buys nothing; above the ceiling a stalled feed - a
- * throttled background window, a slow round trip - would leave a body crawling
- * toward a position the chart has long since moved past. */
+ * Clamped before it is used. Below the floor a slide is shorter than a frame
+ * and buys nothing; above the ceiling a hiccup in the feed would leave a body
+ * crawling toward a position the chart has already moved past. */
 const SETTLE_LEAST = 80;
 const SETTLE_MOST = 2_000;
+
+/** Beyond this gap between two positions, the body is moved rather than slid.
+ *
+ * A slide says "this is where it has got to since a moment ago". When the panel
+ * has been closed, or the window occluded and its timers throttled, the last
+ * drawn position is not a moment old - it is however long the panel was away -
+ * and sliding from it plays the whole absence back as a swoop the instant the
+ * chart appears. A chart being opened should show now, not catch up to it.
+ *
+ * Four seconds, against a feed that arrives every one: long enough that no
+ * ordinary tick is mistaken for an absence, short enough that any real stall is.
+ * Measured from the positions themselves rather than from a panel-open event,
+ * because the renderer does not know what a panel is, and the same stall
+ * happens to a background tab that never opened or closed anything. */
+const SETTLE_STALE = 4_000;
 
 const LABEL_ASCENT = 12;
 const LABEL_DESCENT = 6;
@@ -2541,6 +2552,17 @@ export function Chakra(props: {
                     const since = at === undefined ? undefined : clock - at;
                     at = clock;
                     if (!node || !props.animate || !settled || !was) return;
+                    // Nothing to catch up on. After an absence the body is put
+                    // where it belongs, because the chart is a reading of now
+                    // and opening it should show now rather than replay the
+                    // time it was shut. A cancel and no new animation, so a
+                    // slide interrupted by the panel closing does not resume
+                    // from wherever it had reached.
+                    if (since === undefined || since > SETTLE_STALE) {
+                      sliding?.cancel();
+                      sliding = undefined;
+                      return;
+                    }
                     const dx = was.x - now.x;
                     const dy = was.y - now.y;
                     if (dx === 0 && dy === 0) return;
@@ -2559,7 +2581,7 @@ export function Chakra(props: {
                       ],
                       {
                         duration: Math.min(
-                          Math.max(since ?? SETTLE, SETTLE_LEAST),
+                          Math.max(since, SETTLE_LEAST),
                           SETTLE_MOST,
                         ),
                         easing: "linear",
