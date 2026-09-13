@@ -1111,3 +1111,50 @@
   margin: 0 0 var(--s-2);
 }
 
+
+/* ---------- the sky behind the chart ---------- */
+
+/* Decoration, and the only decoration in the chart. It sits under every line
+   and every label, so its whole job is to be present without being read: the
+   brightest star is dimmer than the faintest rule, and nothing in the field is
+   large enough to be mistaken for a graha.
+
+   Neutral, not a hue. The app allows itself two colours and both mean
+   something - gold is today, orange is a body lost in the Sun's rays - so a
+   sky in either would be saying one of those things about nothing. */
+.chakra__sky circle {
+  fill: var(--marker);
+  opacity: var(--star-dim);
+}
+
+/* Only the brightest few carry the motion. One compositor animation per star,
+   a hundred and twenty of them, held for as long as the panel is open, is a
+   real cost for decoration - and a sky reads as alive if anything in it moves,
+   not if everything does. */
+.chakra__sky circle.is-twinkling {
+  animation-name: twinkle;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-timing-function: ease-in-out;
+}
+
+/* Half a step either side of the star's own opacity, over five to eleven
+   seconds. Slow enough that no single star is ever seen to change - what shows
+   is the field being not quite still, which is the difference between a sky and
+   a pattern. */
+@keyframes twinkle {
+  from {
+    opacity: var(--star-dim);
+  }
+  to {
+    opacity: var(--star-lit);
+  }
+}
+
+/* A reader who has asked their system for stillness has asked. The field stays;
+   only its motion goes. */
+@media (prefers-reduced-motion: reduce) {
+  .chakra__sky circle.is-twinkling {
+    animation: none;
+  }
+}

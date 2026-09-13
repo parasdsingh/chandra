@@ -871,6 +871,7 @@ export function Panel(props: Props): JSX.Element {
               timeZone={timeZone()}
               animate={animating()}
               grid={props.boot.settings.chart.grid}
+              sky={props.boot.settings.chart.sky}
             />
           </Show>
 

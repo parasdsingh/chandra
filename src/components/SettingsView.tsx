@@ -42,6 +42,7 @@ export type SettingsSection =
   | "chart"
   | "motion"
   | "grid"
+  | "sky"
   | "advanced"
   | "ingress"
   | "compartments"
@@ -58,6 +59,7 @@ export const SECTION_TITLES: Record<SettingsSection, string> = {
   chart: "Lagna Kundali",
   motion: "Motion",
   grid: "Degree grid",
+  sky: "Starry sky",
   advanced: "Advanced",
   ingress: "Ingress labels",
   compartments: "Compartments",
@@ -98,6 +100,9 @@ export function SettingsView(props: Props): JSX.Element {
       </Show>
       <Show when={props.section === "grid"}>
         <Grid boot={props.boot} apply={props.apply} />
+      </Show>
+      <Show when={props.section === "sky"}>
+        <Sky boot={props.boot} apply={props.apply} />
       </Show>
 
       <Show when={props.section === "advanced"}>
@@ -936,6 +941,34 @@ function Grid(props: SectionProps): JSX.Element {
   );
 }
 
+function Sky(props: SectionProps): JSX.Element {
+  const settings = () => props.boot.settings;
+
+  return (
+    <div class="settings__section">
+      <Toggle
+        label="Show the stars"
+        on={settings().chart.sky}
+        onToggle={() =>
+          props.apply({
+            ...settings(),
+            chart: { ...settings().chart, sky: !settings().chart.sky },
+          })
+        }
+      />
+
+      <p class="settings__hint settings__hint--foot">
+        A field of stars behind the compartments, thinned toward the middle
+        where the bodies stand. It is the only decoration in the chart
+        and it carries no reading: no star marks anything, and turning it off
+        changes nothing but the look. The field is the same every time — it is
+        drawn from a fixed pattern, not scattered afresh. It drifts very slowly;
+        a system asking for reduced motion stills it.
+      </p>
+    </div>
+  );
+}
+
 function Advanced(props: {
   boot: Bootstrap;
   onOpen: (section: SettingsSection) => void;
@@ -967,6 +1000,10 @@ function Advanced(props: {
     {
       id: "grid",
       value: () => (settings().chart.grid ? "On" : "Off"),
+    },
+    {
+      id: "sky",
+      value: () => (settings().chart.sky ? "On" : "Off"),
     },
   ];
 

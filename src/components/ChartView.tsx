@@ -33,6 +33,8 @@ interface Props {
   /** Whether the chart draws the degree lines its compartments are laid out on.
    *  `docs/design/traversal.md`. */
   grid: boolean;
+  /** Whether a field of stars is drawn behind the chart. */
+  sky: boolean;
 }
 
 export function ChartView(props: Props): JSX.Element {
@@ -83,6 +85,7 @@ export function ChartView(props: Props): JSX.Element {
               progress={props.animate ? data().lagna.progress : 0.5}
               animate={props.animate}
               grid={props.grid}
+              sky={props.sky}
             />
 
             {/* The chart is as exact as the ephemeris behind it, and outside

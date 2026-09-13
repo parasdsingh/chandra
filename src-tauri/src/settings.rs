@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 
 /// Bumped only when the shape changes in a way older files cannot satisfy.
-pub const SCHEMA_VERSION: u32 = 13;
+pub const SCHEMA_VERSION: u32 = 14;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
@@ -146,6 +146,14 @@ pub struct ChartSetting {
     /// `docs/design/traversal.md`. Ignored by the two grid formats, whose
     /// compartments are the signs and have no route through them.
     pub grid: bool,
+    /// Whether a field of stars is drawn behind the chart.
+    ///
+    /// On by default: a reader who has never seen a thing cannot ask for it -
+    /// the same reasoning `animate` shipped under, and the opposite of `grid`,
+    /// which moves where the bodies stand. This changes no figure, no position
+    /// and no reading. It is the only decoration in the chart, it sits under
+    /// every line and every label, and it is hidden from screen readers.
+    pub sky: bool,
 }
 
 /// The three chart formats in common use.
@@ -320,6 +328,7 @@ impl Default for Settings {
                 numbered: false,
                 animate: true,
                 grid: false,
+                sky: true,
                 vargas: vec![Varga::D1],
             },
             tray: TraySetting {
@@ -675,6 +684,21 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         version = 13;
     }
 
+    // 13 -> 14. The chart gained a sky, on by default - unlike the grid, and for
+    // the reason the grid is not: the grid moves the bodies and says why, so a
+    // reader who has not asked for it should not find their chart rearranged.
+    // The sky is behind everything and changes no figure and no reading.
+    if version == 13 {
+        if let Some(chart) = value
+            .get_mut("chart")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            chart.entry("sky").or_insert(serde_json::Value::Bool(true));
+        }
+        value["schema_version"] = serde_json::Value::from(14u32);
+        version = 14;
+    }
+
     match version {
         SCHEMA_VERSION => Ok(value),
         newer if newer > SCHEMA_VERSION => Err(AppError::Settings(format!(
@@ -936,6 +960,50 @@ mod tests {
         assert!(settings.chart.numbered);
         assert!(!settings.chart.animate);
         assert_eq!(settings.chart.vargas, vec![Varga::D1, Varga::D9]);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// The sky arrives switched on, and a schema 13 file still loads.
+    ///
+    /// The opposite default from the grid one step earlier, and the test says
+    /// which is which so the pair cannot be quietly made consistent: the grid
+    /// moves where the bodies stand, so it waits to be asked; the sky is behind
+    /// everything and changes no reading, so it ships on, like `animate`.
+    #[test]
+    fn the_sky_arrives_on_and_a_schema_thirteen_file_still_loads() {
+        let dir = temp_dir("schema-fourteen");
+
+        let mut document = serde_json::to_value(Settings::default()).expect("serialise");
+        document["schema_version"] = serde_json::Value::from(13u32);
+        document["chart"] = serde_json::json!({
+            "format": "east",
+            "numbered": true,
+            "animate": false,
+            "grid": true,
+            "vargas": ["d1", "d60"]
+        });
+        fs::write(
+            Settings::path(&dir),
+            serde_json::to_string(&document).expect("json"),
+        )
+        .expect("write");
+
+        let settings = Settings::load(&dir).expect("a version 13 document must migrate");
+        assert_eq!(settings.schema_version, SCHEMA_VERSION);
+        assert!(
+            settings.chart.sky,
+            "the sky changes no reading, so it arrives without being asked for"
+        );
+        assert_eq!(
+            settings.chart.format,
+            ChartFormat::East,
+            "and every choice the reader did make survives"
+        );
+        assert!(settings.chart.numbered);
+        assert!(!settings.chart.animate);
+        assert!(settings.chart.grid);
+        assert_eq!(settings.chart.vargas, vec![Varga::D1, Varga::D60]);
 
         let _ = fs::remove_dir_all(&dir);
     }

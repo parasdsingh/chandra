@@ -86,6 +86,7 @@ const boot: Bootstrap = {
       numbered: false,
       animate: true,
       grid: false,
+      sky: true,
     },
     tray: { subjects: ["chandra", "mangala", "shani"], colour_mode: false },
     appearance: { scale: 1 },
@@ -170,6 +171,7 @@ function ChartCase(props: {
   error?: { code: string; message: string };
   animate?: boolean;
   grid?: boolean;
+  sky?: boolean;
 }): JSX.Element {
   return (
     <Case title={props.title}>
@@ -202,6 +204,11 @@ function ChartCase(props: {
           // be checked at more than one instant.
           animate={props.animate ?? false}
           grid={props.grid ?? false}
+          // Off in the harness by default. Every geometric check below reads
+          // the chart's own elements, and a hundred and twenty circles behind
+          // them is a hundred and twenty things to skip; the sky gets its own
+          // case instead, where it is the subject.
+          sky={props.sky ?? false}
         />
       </div>
     </Case>
@@ -744,6 +751,35 @@ export function Preview(): JSX.Element {
         format="north"
         numbered={false}
         grid
+      />
+
+      {/* The sky, which is the only decoration in the chart. Drawn on its own
+          and again under the grid, because the two together are the densest the
+          chart ever gets and the question is whether the labels still read. */}
+      <ChartCase
+        title="Chart · the starry sky"
+        chart={data.chakra}
+        format="north"
+        numbered={false}
+        sky
+      />
+      <ChartCase
+        title="Chart · the sky under the degree grid"
+        chart={data.chakra}
+        format="north"
+        numbered={false}
+        sky
+        grid
+      />
+      {/* South Indian, where the compartments are cells rather than kites: the
+          sky is thinned by distance from the chart's centre, and a grid of
+          cells puts labels in places a diamond does not. */}
+      <ChartCase
+        title="Chart · the sky, South Indian"
+        chart={data.chakra}
+        format="south"
+        numbered={false}
+        sky
       />
 
       {/* The handover, on a loop. It is the only motion in the chart fast enough

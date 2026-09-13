@@ -457,6 +457,7 @@
       "format": "string",
       "grid": "boolean",
       "numbered": "boolean",
+      "sky": "boolean",
       "vargas": [
         "string"
       ]

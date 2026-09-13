@@ -532,6 +532,8 @@ export interface Settings {
      *  is there for the reader who wants to know why two bodies in one sign are
      *  drawn where they are (`docs/design/traversal.md`). */
     grid: boolean;
+  /** Whether a field of stars is drawn behind the chart. */
+  sky: boolean;
   };
   tray: {
     /** Calendars with their own menu bar item. Chandra is one of these since

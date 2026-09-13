@@ -288,6 +288,93 @@ const HANDOVER = 26;
 const SETTLE_LEAST = 80;
 const SETTLE_MOST = 2_000;
 
+/** The sky behind the chart.
+ *
+ * Fixed at module load, never regenerated. The chart is redrawn every second
+ * while it animates, and a sky drawn from `Math.random` would be a different
+ * sky on every one of them - the one thing a background must not be. A seeded
+ * generator gives the same field on every run of the app, so the stars are a
+ * property of the drawing rather than of the moment it was drawn.
+ *
+ * Thinned toward the middle rather than spread uniformly: labels gather near
+ * the centre of the chart, and the corners of the square are where no
+ * compartment reaches. It thins the odds rather than clearing the ground -
+ * measured, seven of a hundred and twenty still fall inside a label's box, and
+ * they have to be allowed to. The bodies move every second, so a field culled
+ * against where they are now would be a different field every second, and a
+ * sky that reshuffles is worse than a star behind a letter.
+ */
+interface Star {
+  x: number;
+  y: number;
+  r: number;
+  /** The two ends of the twinkle: resting, and at its brightest. */
+  a: number;
+  lit: number;
+  /** Seconds for one twinkle, and how far into it this star starts, so the
+   *  field does not pulse as one. */
+  period: number;
+  delay: number;
+  /** Whether this star twinkles at all.
+   *
+   * Only the brightest few. A running animation per star is a compositor
+   * animation per star, and a hundred and twenty of them, in a menu bar app,
+   * for decoration, is not a trade worth making - the visual harness draws
+   * three charts and its three hundred and sixty animations were enough to stop
+   * the page answering. Seven of a hundred and twenty carry the whole effect,
+   * because a sky reads as alive if anything in it moves. */
+  lively: boolean;
+}
+
+/** Mulberry32. Small, fast, and - the only property that matters here -
+ *  identical on every platform and every run for a given seed. */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SKY_COUNT = 120;
+
+const SKY: Star[] = (() => {
+  const random = seeded(0x43414e44);
+  const stars: Star[] = [];
+  const midX = WIDTH / 2;
+  const midY = HEIGHT / 2;
+  while (stars.length < SKY_COUNT) {
+    const x = INSET + random() * (WIDTH - INSET * 2);
+    const y = INSET + random() * (HEIGHT - INSET * 2);
+    // Thinned toward the middle, where the labels are. Distance from centre,
+    // normalised, is the chance of keeping the star - so the corners of the
+    // square, which no compartment fills, keep almost all of theirs.
+    const away = Math.hypot((x - midX) / midX, (y - midY) / midY);
+    if (random() > Math.min(1, 0.25 + away * 0.9)) continue;
+    // Most stars are the smallest a subpixel circle can be and still render;
+    // a few are larger, because a field of identical dots reads as a texture
+    // rather than as a sky.
+    const bright = random();
+    const r = bright > 0.94 ? 0.9 : bright > 0.78 ? 0.65 : 0.4;
+    stars.push({
+      x,
+      y,
+      r,
+      a: 0.12 + bright * 0.26,
+      // A third brighter, never more. The twinkle has to be findable only by
+      // looking away from it; a star that visibly blinks is a star a reader
+      // keeps checking.
+      lit: (0.12 + bright * 0.26) * 1.35,
+      period: 5 + random() * 6,
+      delay: random() * 8,
+      lively: bright > 0.94,
+    });
+  }
+  return stars;
+})();
+
 /** Beyond this gap between two positions, the body is moved rather than slid.
  *
  * A slide says "this is where it has got to since a moment ago". When the panel
@@ -2215,6 +2302,10 @@ export function Chakra(props: {
    *  the whole ring along that route as the lagna crosses its sign.
    *  `docs/design/traversal.md`. Nothing but the visual harness sets this. */
   pathway?: boolean;
+  /** Draw a field of stars behind the chart. Decoration, and the only thing in
+   *  the chart that is: it carries no reading and is hidden from screen
+   *  readers. */
+  sky?: boolean;
   /** Draw the degree lines the compartments are laid out on, and place the
    *  bodies on them. Implies `pathway`: a scale drawn over bodies that are not
    *  standing on it would be a chart saying something untrue. Off by default;
@@ -2255,6 +2346,36 @@ export function Chakra(props: {
       role="img"
       aria-label={spoken(props.data, props.format)}
     >
+      {/* The sky, before anything else, so every line and every label is drawn
+          over it. Its own group rather than a CSS background: the chart is an
+          SVG scaled with the panel, and a background image would not scale with
+          it. Hidden from the accessibility tree - it carries nothing to read. */}
+      <Show when={props.sky}>
+        <g class="chakra__sky" aria-hidden="true">
+          <For each={SKY}>
+            {(star) => (
+              <circle
+                classList={{ "is-twinkling": star.lively }}
+                cx={star.x}
+                cy={star.y}
+                r={star.r}
+                style={{
+                  // Both ends of the twinkle, per star, because a keyframe
+                  // cannot read the value it is animating from: `opacity:
+                  // inherit` in the keyframe takes the group's, which would
+                  // throw away every star's own brightness and pulse the whole
+                  // field between two identical values.
+                  "--star-dim": String(star.a),
+                  "--star-lit": String(star.lit),
+                  "animation-duration": `${star.period}s`,
+                  "animation-delay": `-${star.delay}s`,
+                }}
+              />
+            )}
+          </For>
+        </g>
+      </Show>
+
       {/* One clip path per house, so a group arriving from the next compartment
           comes *through* the wall rather than over it. The wall stays a wall. */}
       <defs>
