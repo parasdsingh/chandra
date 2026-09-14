@@ -338,38 +338,50 @@ function seeded(seed: number): () => number {
   };
 }
 
-const SKY_COUNT = 120;
+/** How many stars. Few and legible rather than many and faint.
+ *
+ * The first attempt drew a hundred and twenty, and ninety-nine of them were
+ * 0.4 units across - about one and a half device pixels on a 2x screen at the
+ * panel's own scale. A circle that small cannot render as a point of light: it
+ * antialiases into a grey smudge, and a field of them reads as dirt on the
+ * screen rather than as a sky. On the panel it is worse than in the harness,
+ * because the ground there is translucent material over whatever is behind the
+ * window rather than flat black, so the smudges sit on a ground that moves.
+ *
+ * Nothing here is now below three device pixels. */
+const SKY_COUNT = 38;
 
 const SKY: Star[] = (() => {
   const random = seeded(0x43414e44);
   const stars: Star[] = [];
   const midX = WIDTH / 2;
   const midY = HEIGHT / 2;
-  while (stars.length < SKY_COUNT) {
+  let guard = 0;
+  while (stars.length < SKY_COUNT && guard++ < 4000) {
     const x = INSET + random() * (WIDTH - INSET * 2);
     const y = INSET + random() * (HEIGHT - INSET * 2);
-    // Thinned toward the middle, where the labels are. Distance from centre,
-    // normalised, is the chance of keeping the star - so the corners of the
-    // square, which no compartment fills, keep almost all of theirs.
-    const away = Math.hypot((x - midX) / midX, (y - midY) / midY);
-    if (random() > Math.min(1, 0.25 + away * 0.9)) continue;
-    // Most stars are the smallest a subpixel circle can be and still render;
-    // a few are larger, because a field of identical dots reads as a texture
-    // rather than as a sky.
+    // Kept toward the edges, hard. Labels gather across the middle of the
+    // chart, and the corners of the square are where no compartment reaches -
+    // so the further from centre, the likelier a star survives. Squared, so the
+    // middle is nearly empty rather than merely thinner.
+    const away = Math.min(1, Math.hypot((x - midX) / midX, (y - midY) / midY));
+    if (random() > away * away) continue;
+    // Three sizes, all of them a real dot. 0.7 units is about 2.7 device pixels
+    // at the panel's scale on a 2x screen, 1.3 is about five.
     const bright = random();
-    const r = bright > 0.94 ? 0.9 : bright > 0.78 ? 0.65 : 0.4;
+    const r = bright > 0.9 ? 1.3 : bright > 0.62 ? 0.95 : 0.7;
+    // Brighter as well as bigger. A dot that is crisp and dim still reads as a
+    // speck; what makes it a star is that it is clearly lit against the ground.
+    const a = 0.3 + bright * 0.34;
     stars.push({
       x,
       y,
       r,
-      a: 0.12 + bright * 0.26,
-      // A third brighter, never more. The twinkle has to be findable only by
-      // looking away from it; a star that visibly blinks is a star a reader
-      // keeps checking.
-      lit: (0.12 + bright * 0.26) * 1.35,
+      a,
+      lit: Math.min(0.92, a * 1.4),
       period: 5 + random() * 6,
       delay: random() * 8,
-      lively: bright > 0.94,
+      lively: bright > 0.9,
     });
   }
   return stars;
