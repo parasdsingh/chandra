@@ -32,6 +32,12 @@
      faint mark on a moving ground is dirt. This is the one surface in the app
      that refuses the material deliberately. */
   --sky-ground: #000000;
+
+  /* The rising sign's compartment, composited. --surface-selected at the 0.55
+     it is filled with, over --sky-ground: 0x2b * 0.55 = 24, 0x32 * 0.55 = 28.
+     Written out because a label's stroke has to be cut against the ground it is
+     actually on, and one house in twelve is not black. */
+  --sky-ground-lagna: #18181c;
   --surface: #141417;
   /* Raised from #1C1C20: at 1.1:1 against the ground the selected day was
      almost invisible, and selection is the app's primary feedback. */

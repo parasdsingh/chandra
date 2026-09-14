@@ -1153,7 +1153,7 @@
    a pattern. */
 @keyframes twinkle {
   from {
-    opacity: var(--star-dim);
+    opacity: var(--star-low);
   }
   to {
     opacity: var(--star-lit);
@@ -1166,4 +1166,28 @@
   .chakra__sky circle.is-twinkling {
     animation: none;
   }
+}
+
+/* Labels cut against the ground they stand on.
+
+   A star drawn behind a name merges with it - the glyph is light, the star is
+   light, and at 11px the two become one shape. A stroke in the ground's own
+   colour, painted under the glyph rather than over it, puts a hair of dark
+   around every letter and separates them without changing the letterform.
+
+   `paint-order` is what makes it a halo rather than an outline: without it the
+   stroke is painted over the fill and every glyph thickens. */
+.chakra__graha,
+.chakra__label {
+  paint-order: stroke fill;
+  stroke: var(--sky-ground);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+/* One house in twelve is not black: the rising sign carries a wash, so a label
+   there cut against black would sit in a dark patch of its own. */
+.chakra__graha.is-on-lagna,
+.chakra__label.is-on-lagna {
+  stroke: var(--sky-ground-lagna);
 }

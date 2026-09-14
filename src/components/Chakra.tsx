@@ -381,10 +381,21 @@ const SKY: Star[] = (() => {
       y,
       r,
       a,
-      lit: Math.min(1, a * 1.3),
-      period: 5 + random() * 6,
-      delay: random() * 8,
-      lively: bright > 0.9,
+      // Far enough to be seen. A third brighter was invisible at these sizes;
+      // the dim end drops well under the resting value and the lit end goes to
+      // white, so a twinkling star is doing something a still one is not.
+      lit: Math.min(1, a * 1.55),
+      // Varied, and short enough to be caught. Five to eleven seconds meant a
+      // star changed too slowly to be seen changing, which is a still sky with
+      // a cost. Two to six, and no two stars on the same clock.
+      period: 2 + random() * 4,
+      delay: random() * 6,
+      // A third of them, not six. Six was a performance decision taken when
+      // there were a hundred and twenty stars and the harness drew three charts
+      // of them; at fifty-four, a third is eighteen a chart, and a sky twinkles
+      // or it does not. Still not all of them: a field where everything pulses
+      // reads as a fault rather than as a sky.
+      lively: random() < 0.34,
     });
   }
   return stars;
@@ -2365,6 +2376,19 @@ export function Chakra(props: {
           over it. Its own group rather than a CSS background: the chart is an
           SVG scaled with the panel, and a background image would not scale with
           it. Hidden from the accessibility tree - it carries nothing to read. */}
+      {/* Pitch, always, whether or not there are stars on it. The chart is a
+          window onto the sky and a window is dark when nothing is lit; the
+          black is also what every label's stroke is cut against, so it cannot
+          come and go with a setting. This is the one surface in the app that
+          refuses the panel's material. */}
+      <rect
+        class="chakra__ground"
+        x={INSET}
+        y={INSET}
+        width={WIDTH - INSET * 2}
+        height={HEIGHT - INSET * 2}
+      />
+
       <Show when={props.sky}>
         <defs>
           {/* What makes a dot a star. A flat disc of one opacity is a speck at
@@ -2379,17 +2403,6 @@ export function Chakra(props: {
             <stop offset="100%" stop-color="var(--disc-lit)" stop-opacity="0" />
           </radialGradient>
         </defs>
-
-        {/* Pitch, and the whole reason the stars read. Drawn to the frame, so
-            the chart is a window onto a night sky rather than a diagram with
-            marks behind it. */}
-        <rect
-          class="chakra__ground"
-          x={INSET}
-          y={INSET}
-          width={WIDTH - INSET * 2}
-          height={HEIGHT - INSET * 2}
-        />
 
         <g class="chakra__sky" aria-hidden="true">
           <For each={SKY}>
@@ -2407,6 +2420,9 @@ export function Chakra(props: {
                   // throw away every star's own brightness and pulse the whole
                   // field between two identical values.
                   "--star-dim": String(star.a),
+                  // The twinkle runs from below the resting value to above it,
+                  // so the star is seen to dim as well as to flare.
+                  "--star-low": String(star.a * 0.55),
                   "--star-lit": String(star.lit),
                   "animation-duration": `${star.period}s`,
                   "animation-delay": `-${star.delay}s`,
@@ -2646,6 +2662,7 @@ export function Chakra(props: {
               >
               <text
                 class="chakra__label"
+                classList={{ "is-on-lagna": each().rashi.house === 1 }}
                 x={each().label.x}
                 y={each().label.y}
                 text-anchor={each().labelAnchor}
@@ -2758,6 +2775,10 @@ export function Chakra(props: {
                         class="chakra__graha"
                         classList={{
                           "is-combust": graha().combust,
+                          // Which ground this label is cut against. Every
+                          // compartment is black except the rising sign's,
+                          // which carries a wash over it.
+                          "is-on-lagna": each().rashi.house === 1,
                         }}
                         x={spot().x}
                         y={spot().y}
