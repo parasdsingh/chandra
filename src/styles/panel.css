@@ -1122,8 +1122,17 @@
    Neutral, not a hue. The app allows itself two colours and both mean
    something - gold is today, orange is a body lost in the Sun's rays - so a
    sky in either would be saying one of those things about nothing. */
+/* Pitch black, behind everything the chart draws. The panel's material stops
+   at this rect: a star is a point of light and needs dark to be light against,
+   and over translucency the same dot read as a smudge on a ground that moves. */
+.chakra__ground {
+  fill: var(--sky-ground);
+}
+
+/* The fill is a radial gradient set on the element, not here - it needs the
+   chart's own id, because two charts on one page would otherwise share one
+   gradient. This carries only what does not vary. */
 .chakra__sky circle {
-  fill: var(--marker);
   opacity: var(--star-dim);
 }
 

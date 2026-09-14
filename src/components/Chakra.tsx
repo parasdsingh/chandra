@@ -349,7 +349,7 @@ function seeded(seed: number): () => number {
  * window rather than flat black, so the smudges sit on a ground that moves.
  *
  * Nothing here is now below three device pixels. */
-const SKY_COUNT = 38;
+const SKY_COUNT = 54;
 
 const SKY: Star[] = (() => {
   const random = seeded(0x43414e44);
@@ -366,19 +366,22 @@ const SKY: Star[] = (() => {
     // middle is nearly empty rather than merely thinner.
     const away = Math.min(1, Math.hypot((x - midX) / midX, (y - midY) / midY));
     if (random() > away * away) continue;
-    // Three sizes, all of them a real dot. 0.7 units is about 2.7 device pixels
-    // at the panel's scale on a 2x screen, 1.3 is about five.
+    // The *halo*, not the dot. The gradient's lit core is the inner fifth of
+    // this, so these read as cores of roughly half a unit to one unit with a
+    // glow around them - which is the shape of a point of light, and the thing
+    // a flat disc of any size could not be.
     const bright = random();
-    const r = bright > 0.9 ? 1.3 : bright > 0.62 ? 0.95 : 0.7;
-    // Brighter as well as bigger. A dot that is crisp and dim still reads as a
-    // speck; what makes it a star is that it is clearly lit against the ground.
-    const a = 0.3 + bright * 0.34;
+    const r = bright > 0.9 ? 4.2 : bright > 0.62 ? 3.0 : 2.2;
+    // Bright, because the ground beneath is now pitch. The first two attempts
+    // were dim because they were drawn over the panel's translucent material,
+    // where anything bright would have glared; on black a star can be a star.
+    const a = 0.45 + bright * 0.5;
     stars.push({
       x,
       y,
       r,
       a,
-      lit: Math.min(0.92, a * 1.4),
+      lit: Math.min(1, a * 1.3),
       period: 5 + random() * 6,
       delay: random() * 8,
       lively: bright > 0.9,
@@ -2363,6 +2366,31 @@ export function Chakra(props: {
           SVG scaled with the panel, and a background image would not scale with
           it. Hidden from the accessibility tree - it carries nothing to read. */}
       <Show when={props.sky}>
+        <defs>
+          {/* What makes a dot a star. A flat disc of one opacity is a speck at
+              any size; a point of light has a core that is nearly white and a
+              falloff around it, and the eye reads the falloff as brightness
+              rather than as size. The drawn circle is the halo - the lit core
+              is the inner quarter of it. */}
+          <radialGradient id={`${id}-star`}>
+            <stop offset="0%" stop-color="var(--disc-lit)" stop-opacity="1" />
+            <stop offset="22%" stop-color="var(--disc-lit)" stop-opacity="0.85" />
+            <stop offset="45%" stop-color="var(--disc-lit)" stop-opacity="0.28" />
+            <stop offset="100%" stop-color="var(--disc-lit)" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Pitch, and the whole reason the stars read. Drawn to the frame, so
+            the chart is a window onto a night sky rather than a diagram with
+            marks behind it. */}
+        <rect
+          class="chakra__ground"
+          x={INSET}
+          y={INSET}
+          width={WIDTH - INSET * 2}
+          height={HEIGHT - INSET * 2}
+        />
+
         <g class="chakra__sky" aria-hidden="true">
           <For each={SKY}>
             {(star) => (
@@ -2371,6 +2399,7 @@ export function Chakra(props: {
                 cx={star.x}
                 cy={star.y}
                 r={star.r}
+                fill={`url(#${id}-star)`}
                 style={{
                   // Both ends of the twinkle, per star, because a keyframe
                   // cannot read the value it is animating from: `opacity:

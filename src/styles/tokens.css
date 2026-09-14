@@ -24,6 +24,14 @@
 
   /* Surfaces */
   --ground: #0a0a0b;
+
+  /* The chart's own ground, behind the sky. Pitch, not the panel's --ground:
+     a star is a point of light, and a point of light needs dark to be light
+     against. Over the panel's translucent material the same dot read as a
+     smudge, because the material carries whatever is behind the window and a
+     faint mark on a moving ground is dirt. This is the one surface in the app
+     that refuses the material deliberately. */
+  --sky-ground: #000000;
   --surface: #141417;
   /* Raised from #1C1C20: at 1.1:1 against the ground the selected day was
      almost invisible, and selection is the app's primary feedback. */
