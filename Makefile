@@ -1,14 +1,17 @@
 # Chandra - development and release tasks.
 #
-# Every target here is also what CI runs, so a green `make check` locally means
-# a green pipeline.
+# `build` and `install` build for this machine only, because that is what a
+# development loop wants. `dmg` builds universal, because that is what is handed
+# to strangers: a Mac sold since 2020 is Apple Silicon, and an Intel-only binary
+# there costs the user a Rosetta install prompt before they reach the app.
 
 SHELL := /bin/bash
 APP := target/release/bundle/macos/Chandra.app
+UNIVERSAL := target/universal-apple-darwin/release/bundle/macos/Chandra.app
 INSTALLED := /Applications/Chandra.app
 VENDOR := $(shell ls -d $$HOME/.cargo/registry/src/*/swiss-eph-0.2.1/vendor/swisseph 2>/dev/null | head -1)
 
-.PHONY: help dev build install uninstall run test lint fmt check golden swetest clean
+.PHONY: help dev build universal install uninstall run test lint fmt check golden swetest clean archs
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -19,8 +22,21 @@ dev: ## Run the app against the Vite dev server
 build: ## Build the release .app bundle
 	npx tauri build --bundles app
 
-dmg: ## Build a distributable .dmg
-	npx tauri build --bundles app,dmg
+universal: ## Build the .app for Intel and Apple Silicon together
+	npx tauri build --bundles app --target universal-apple-darwin
+
+dmg: universal ## Build a distributable universal .dmg
+	npx tauri build --bundles app,dmg --target universal-apple-darwin
+	@$(MAKE) --no-print-directory archs BIN="$(UNIVERSAL)/Contents/MacOS/chandra"
+
+archs: ## Assert a binary carries both architectures. BIN=path
+	@archs=$$(lipo -archs "$(BIN)"); \
+	echo "==> $(BIN): $$archs"; \
+	for want in x86_64 arm64; do \
+	  case " $$archs " in *" $$want "*) ;; \
+	    *) echo "missing $$want - this build would exclude those Macs" >&2; exit 1 ;; \
+	  esac; \
+	done
 
 install: build ## Install to /Applications, ad-hoc signed, and launch
 	@echo "==> replacing $(INSTALLED)"
