@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chandra — a jyotisha calendar in the menu bar</title>
+<meta name="description" content="A macOS menu bar app: the Moon's phase, a panchanga calendar for nine grahas, and a Lagna Kundali with all sixteen divisional charts. Computed on your Mac, offline." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* Paraxis house tokens, shared with ahoratra.paraxis.dev so the two read as
+   siblings rather than as two unrelated pages that happen to be adjacent. */
+:root {
+  --bg: #0c0e11;
+  --surface: #14171b;
+  --surface-2: #1c2026;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.15);
+  --text: #e8ebef;
+  --text-dim: #8a939f;
+  --accent: #4d9cff;
+  --accent-fill: rgba(77, 156, 255, 0.16);
+  --annotate: #d6a45c;
+  --warn: #f0645a;
+  --warn-text: #ff8a7e;
+  --warn-fill: rgba(240, 100, 90, 0.13);
+  --display: "Barlow Condensed", "Inter", sans-serif;
+  --body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --measure: 62ch;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.65 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- masthead ---------- */
+
+.top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--line);
+}
+.brand {
+  font: 500 15px/1 var(--mono);
+  letter-spacing: 0.02em; color: var(--text-dim);
+}
+.brand b { color: var(--text); font-weight: 500; }
+.top nav { display: flex; gap: 22px; font-size: 14px; }
+.top nav a { color: var(--text-dim); }
+.top nav a:hover { color: var(--text); text-decoration: none; }
+
+/* ---------- hero ---------- */
+
+.hero { padding: 72px 0 8px; display: grid; gap: 40px; grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .hero { grid-template-columns: 1fr 512px; align-items: center; gap: 56px; padding: 88px 0 24px; }
+}
+
+.eyebrow {
+  font: 500 13px/1 var(--mono); letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--annotate); margin: 0 0 18px;
+}
+h1 {
+  font: 600 clamp(52px, 9vw, 92px)/0.95 var(--display);
+  letter-spacing: -0.01em; margin: 0 0 20px; text-wrap: balance;
+}
+.lede { font-size: 19px; color: var(--text-dim); margin: 0 0 32px; max-width: 46ch; }
+.lede strong { color: var(--text); font-weight: 500; }
+
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 22px; border-radius: 8px; border: 1px solid var(--line-2);
+  font: 500 15px/1 var(--body); color: var(--text); background: var(--surface-2);
+}
+.btn:hover { text-decoration: none; border-color: var(--text-dim); }
+.btn--primary { background: var(--accent-fill); border-color: var(--accent); color: var(--text); }
+.btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.btn small { font: 400 13px/1 var(--mono); color: var(--text-dim); }
+.cta-note { font-size: 13px; color: var(--text-dim); margin: 14px 0 0; }
+
+.shot { width: 100%; height: auto; border-radius: 14px; display: block; }
+.shot--hero { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6); }
+
+/* ---------- sections ---------- */
+
+section { padding: 80px 0; border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; }
+h2 {
+  font: 600 clamp(30px, 4vw, 40px)/1.05 var(--display);
+  letter-spacing: 0; margin: 0 0 14px;
+}
+.section-lede { color: var(--text-dim); max-width: var(--measure); margin: 0 0 40px; }
+
+.features { display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.feature { border-top: 1px solid var(--line); padding-top: 18px; }
+.feature h3 { font: 600 17px/1.3 var(--body); margin: 0 0 8px; }
+.feature p { margin: 0; color: var(--text-dim); font-size: 15px; }
+.feature .num {
+  display: block; font: 500 12px/1 var(--mono);
+  color: var(--annotate); letter-spacing: 0.08em; margin-bottom: 12px;
+}
+
+.gallery { display: grid; gap: 40px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+figure { margin: 0; }
+figcaption { margin-top: 14px; font-size: 14px; color: var(--text-dim); }
+figcaption b { color: var(--text); font-weight: 500; display: block; margin-bottom: 2px; }
+
+/* ---------- facts table ---------- */
+
+.facts { width: 100%; border-collapse: collapse; font-size: 15px; max-width: var(--measure); }
+.facts th, .facts td { text-align: left; padding: 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.facts th { font-weight: 500; color: var(--text-dim); width: 40%; }
+.facts td { font-family: var(--mono); font-size: 14px; }
+
+/* ---------- support ---------- */
+
+.support { display: grid; gap: 32px; grid-template-columns: 1fr; max-width: var(--measure); }
+.upi {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 24px;
+}
+.upi-id {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 16px 0 0; font: 500 16px/1 var(--mono);
+  background: var(--bg); border: 1px solid var(--line-2);
+  border-radius: 8px; padding: 14px 16px;
+}
+.upi-id button {
+  margin-left: auto; font: 500 13px/1 var(--body); color: var(--accent);
+  background: none; border: 1px solid var(--line-2); border-radius: 6px;
+  padding: 7px 12px; cursor: pointer;
+}
+.upi-id button:hover { border-color: var(--accent); }
+
+.note {
+  border-left: 2px solid var(--annotate); padding: 2px 0 2px 18px;
+  color: var(--text-dim); font-size: 15px; max-width: var(--measure);
+}
+.note--warn { border-color: var(--warn); }
+.note strong { color: var(--text); font-weight: 500; }
+
+footer {
+  border-top: 1px solid var(--line); padding: 44px 0 64px;
+  color: var(--text-dim); font-size: 14px;
+}
+footer .cols { display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+footer h4 { font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); margin: 0 0 12px; }
+footer ul { list-style: none; margin: 0; padding: 0; }
+footer li { margin-bottom: 7px; }
+footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <span class="brand"><b>Chandra</b> — paraxis.dev</span>
+    <nav>
+      <a href="#what">What it does</a>
+      <a href="#shots">Screenshots</a>
+      <a href="#facts">Facts</a>
+      <a href="#support">Support</a>
+      <a href="https://ahoratra.paraxis.dev">Ahorātra ↗</a>
+    </nav>
+  </div>
+
+  <div class="hero">
+    <div>
+      <p class="eyebrow">macOS menu bar</p>
+      <h1>The sky, where you already look.</h1>
+      <p class="lede">
+        A jyotisha calendar that lives in the menu bar. The Moon's phase at a
+        glance, a panchanga for any day, and a <strong>Lagna Kundali</strong>
+        that redraws itself as the lagna moves — all sixteen divisional charts.
+        <strong>Computed on your Mac. Nothing is sent anywhere.</strong>
+      </p>
+      <div class="cta">
+        <a class="btn btn--primary" id="download" href="#" aria-disabled="true">
+          Download for macOS <small id="download-meta">not yet released</small>
+        </a>
+        <a class="btn" href="#support">Support the work</a>
+      </div>
+      <p class="cta-note" id="requirements">macOS 11 Big Sur or later.</p>
+    </div>
+    <figure>
+      <img class="shot shot--hero" src="assets/chart.png" width="1024" height="1062"
+           alt="The Chandra panel showing a North Indian Lagna Kundali: twelve compartments on a black sky scattered with stars, each holding a rashi abbreviation and the grahas standing in it." />
+    </figure>
+  </div>
+</div>
+
+<div class="wrap">
+
+<section id="what">
+  <h2>What it does</h2>
+  <p class="section-lede">
+    Nine calendars, a panchanga, and a chart — each with its own menu bar item,
+    so what you want is one click away and what you don't is not there at all.
+  </p>
+  <div class="features">
+    <div class="feature">
+      <span class="num">01</span>
+      <h3>The Moon, always visible</h3>
+      <p>The current phase is drawn in the menu bar itself, not hidden behind a click. The calendar beneath it gives every day of the month its phase.</p>
+    </div>
+    <div class="feature">
+      <span class="num">02</span>
+      <h3>Nine grahas, nine calendars</h3>
+      <p>A month of transits for any graha — rashi and nakshatra ingresses, stations, combustion — each switchable into the menu bar on its own.</p>
+    </div>
+    <div class="feature">
+      <span class="num">03</span>
+      <h3>A full panchanga</h3>
+      <p>Tithi, vara, nakshatra with pada, yoga, karana and the muhurtas, for the day you pick. Amanta or purnimanta, or a plain solar month.</p>
+    </div>
+    <div class="feature">
+      <span class="num">04</span>
+      <h3>Sixteen divisional charts</h3>
+      <p>The shodasavarga, from D1 to D60, Parashari throughout. Any of them can sit in the menu bar beside the others.</p>
+    </div>
+    <div class="feature">
+      <span class="num">05</span>
+      <h3>A chart that moves</h3>
+      <p>Each graha stands at its own degree along a route through its house, and the whole ring advances as the lagna crosses its sign. A reading of now that looks like one.</p>
+    </div>
+    <div class="feature">
+      <span class="num">06</span>
+      <h3>Offline, and private</h3>
+      <p>Swiss Ephemeris runs on your Mac. There is no account, no telemetry and no network code in the app at all — your location never leaves the machine.</p>
+    </div>
+  </div>
+</section>
+
+<section id="shots">
+  <h2>Screenshots</h2>
+  <p class="section-lede">
+    The actual panel, rendered by the app's own components at twice the size it
+    draws at. Nothing here is a mockup.
+  </p>
+  <div class="gallery">
+    <figure>
+      <img class="shot" src="assets/calendar.png" width="1024" height="1062"
+           alt="A month grid for August 2026. Each day shows its number above a drawn moon phase; the 20th is ringed in gold as today." />
+      <figcaption><b>The month</b>Every day's phase, drawn rather than named. Today is ringed; scroll or drag to change month.</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="assets/day.png" width="1024" height="1062"
+           alt="The day view for 20 August 2026, showing phase, rashi with its end date, and nakshatra with pada and the time it changes." />
+      <figcaption><b>A day</b>Phase, rashi, nakshatra and pada, with the moment each one ends. Arrows step a day at a time.</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="assets/degree-grid.png" width="1024" height="1062"
+           alt="The same kundali with the degree grid switched on: dotted parallel lines curving through each compartment, marking the thirty degrees of its sign." />
+      <figcaption><b>The degree grid</b>The scale the bodies already stand on, drawn — so you can see why two grahas in one sign sit where they do.</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="assets/settings.png" width="1024" height="1062"
+           alt="The settings list: Calendar, Location, Lagna Kundali, Calendars, Size, Advanced and About." />
+      <figcaption><b>Settings</b>Ayanamsa, node type, month system, chart format and which items sit in the menu bar.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="facts">
+  <h2>What it is built on</h2>
+  <p class="section-lede">
+    The figures come from somewhere, and the app says where. Every position is
+    Swiss Ephemeris; outside its precise range the chart says so on its face.
+  </p>
+  <table class="facts">
+    <tbody>
+      <tr><th>Ephemeris</th><td>Swiss Ephemeris 2.10.03</td></tr>
+      <tr><th>Zodiac</th><td>Sidereal</td></tr>
+      <tr><th>Ayanamsa</th><td>Lahiri, Raman, Krishnamurti or True Chitra</td></tr>
+      <tr><th>Nodes</th><td>Mean or true</td></tr>
+      <tr><th>Houses</th><td>Whole sign</td></tr>
+      <tr><th>Divisions</th><td>D1–D60, Parashari</td></tr>
+      <tr><th>Chart formats</th><td>North, South and East Indian</td></tr>
+      <tr><th>Precise range</th><td>1800–2399 CE</td></tr>
+      <tr><th>Cities</th><td>GeoNames, offline</td></tr>
+      <tr><th>Requires</th><td>macOS 11 or later</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="support">
+  <h2>Support the work</h2>
+  <p class="section-lede">
+    Chandra is free and open source, and will stay that way. If it is useful to
+    you and you would like to put something behind it, this is the way.
+  </p>
+  <div class="support">
+    <div class="upi" id="upi-block" hidden>
+      <h3 style="margin:0 0 6px;font:600 17px/1.3 var(--body)">UPI</h3>
+      <p style="margin:0;color:var(--text-dim);font-size:15px">
+        Any amount, directly, with no platform in between and no fee taken out.
+      </p>
+      <p class="upi-id">
+        <span id="upi-id"></span>
+        <button type="button" id="upi-copy">Copy</button>
+      </p>
+      <p style="margin:14px 0 0"><a id="upi-link" href="#">Open in a UPI app ↗</a></p>
+    </div>
+    <p class="note" id="support-pending">
+      <strong>Not set up yet.</strong> A UPI ID will appear here once the app is
+      released. Nothing is being collected in the meantime.
+    </p>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <h4>Chandra</h4>
+        <ul>
+          <li><a href="#what">What it does</a></li>
+          <li><a href="#shots">Screenshots</a></li>
+          <li><a href="#support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Source</h4>
+        <ul>
+          <li><a id="source-link" href="#">Repository</a></li>
+          <li><a id="licence-link" href="#">AGPL-3.0</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Also from paraxis</h4>
+        <ul>
+          <li><a href="https://ahoratra.paraxis.dev">Ahorātra ↗</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="fine">
+      Chandra is licensed under the GNU Affero General Public License v3.0.
+      Planetary positions are computed with the
+      <a href="https://www.astro.com/swisseph/">Swiss Ephemeris</a>,
+      © 1997–2021 Astrodienst AG, used under the AGPL.
+      City data from <a href="https://www.geonames.org/">GeoNames</a>, licensed
+      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+      Chandra is not affiliated with Astrodienst AG.
+    </p>
+  </div>
+</footer>
+
+<script>
+/* The two things this page cannot know until the release exists.
+   Both are read in one place, and every part of the page that depends on them
+   stays hidden or disabled until they are filled in - so the page never offers
+   a download that does not exist or a payment address nobody is watching. */
+const RELEASE = {
+  /* The .dmg on Cloudflare R2. */
+  downloadUrl: "",
+  /* What the download button says beside its label. */
+  version: "",
+  sizeMb: "",
+  /* Where the source lives. AGPL-3.0 requires this to be reachable from
+     anywhere the binary is offered - the download button stays off until it is
+     set, because offering one without the other is a licence violation. */
+  sourceUrl: "",
+  licenceUrl: "",
+  /* UPI. The QR is deliberately not generated from this: a wrong QR is worse
+     than no QR, so export one from your bank app and drop it in beside it. */
+  upiId: "",
+  upiName: "Chandra",
+};
+
+(function apply() {
+  const download = document.getElementById("download");
+  const meta = document.getElementById("download-meta");
+  if (RELEASE.downloadUrl && RELEASE.sourceUrl) {
+    download.href = RELEASE.downloadUrl;
+    download.removeAttribute("aria-disabled");
+    const bits = [RELEASE.version, RELEASE.sizeMb && RELEASE.sizeMb + " MB"].filter(Boolean);
+    meta.textContent = bits.join(" · ");
+  }
+
+  for (const [id, url] of [["source-link", RELEASE.sourceUrl], ["licence-link", RELEASE.licenceUrl]]) {
+    const el = document.getElementById(id);
+    if (url) el.href = url;
+    else el.closest("li").hidden = true;
+  }
+
+  if (RELEASE.upiId) {
+    document.getElementById("upi-block").hidden = false;
+    document.getElementById("support-pending").hidden = true;
+    document.getElementById("upi-id").textContent = RELEASE.upiId;
+    document.getElementById("upi-link").href =
+      "upi://pay?pa=" + encodeURIComponent(RELEASE.upiId) +
+      "&pn=" + encodeURIComponent(RELEASE.upiName) + "&cu=INR";
+    document.getElementById("upi-copy").addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      try {
+        await navigator.clipboard.writeText(RELEASE.upiId);
+        button.textContent = "Copied";
+        setTimeout(() => (button.textContent = "Copy"), 1600);
+      } catch {
+        button.textContent = "Select it";
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

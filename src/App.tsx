@@ -17,9 +17,29 @@ function isPreview(): boolean {
   return import.meta.env.DEV && window.location.search.includes("preview");
 }
 
+/** Release screenshots, at `?preview&shots`. Its own mode because the harness
+ *  draws forty animated panels, which is more than a browser can be driven
+ *  through for a picture - and a screenshot wants one panel, on a plain ground,
+ *  at a size worth publishing. */
+function isShots(): boolean {
+  return isPreview() && window.location.search.includes("shots");
+}
+
 export function App(): JSX.Element {
+  if (isShots()) return <DevShots />;
   if (isPreview()) return <DevPreview />;
   return <PanelWindow />;
+}
+
+function DevShots(): JSX.Element {
+  const [module] = createResource(async () => {
+    await import("./dev/preview.css");
+    await import("./dev/shots.css");
+    const { Shots } = await import("./dev/shots");
+    const { previewBoot } = await import("./dev/preview");
+    return () => <Shots boot={previewBoot} />;
+  });
+  return <Show when={module()}>{(view) => view()()}</Show>;
 }
 
 function DevPreview(): JSX.Element {

@@ -1,0 +1,35 @@
+/* Release screenshots. Development only.
+   A plain ground and nothing else, so a capture of one figure is a capture of
+   the panel and not of the page around it. */
+
+.shots {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 64px;
+  padding: 48px;
+  background: #000;
+}
+
+.shots__shot {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A transform does not change how much room an element claims, so the scaled
+   panel would paint straight over the next figure. The stage reserves the drawn
+   size - 320x332 at scale 2 - and the frame paints inside it from its top left,
+   which is where `transform-origin` already puts it. */
+.shots__stage {
+  width: 512px;
+  height: 532px;
+}
+
+.shots__shot figcaption {
+  font: 600 13px / 1 -apple-system, system-ui, sans-serif;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8a939f;
+}

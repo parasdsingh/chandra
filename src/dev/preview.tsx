@@ -63,7 +63,9 @@ const data = fixture as unknown as {
 
 const context: FormatContext = { timeZone: data.timeZone };
 
-const boot: Bootstrap = {
+/** Exported so the screenshot mode draws settings from the same fixture the
+ *  harness does, rather than keeping a second copy that could drift. */
+export const previewBoot: Bootstrap = {
   settings: {
     schema_version: 13,
     location: {
@@ -666,7 +668,7 @@ export function Preview(): JSX.Element {
             />
             <div class="region">
               <SettingsView
-                boot={boot}
+                boot={previewBoot}
                 section={id}
                 onOpen={setSection}
                 apply={() => {}}
