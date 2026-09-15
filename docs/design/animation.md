@@ -1,7 +1,17 @@
 # The chart, moving
 
-Specification for **E6.6**. Status: **built.** The drift and the handover slide
-are in; §6 is what is left.
+Specification for **E6.6**. Status: **superseded in part.**
+
+The **drift this document specifies no longer exists.** It was the first answer
+to "what moves": pack the bodies wherever they fit, then slide the whole group
+by whatever slack was left over. `docs/design/traversal.md` replaced it - a body
+now stands at its own degree along a route, and the same progress that drove the
+drift sweeps those stations along it. One mechanism, not two.
+
+What survives here and is still current: §1 on what moves and what does not, §2
+on what the motion is per format, §3 on the tick rate, §4 on the invariants, and
+the handover slide in §5. §5's account of *how far* a group travels, and §7's
+deferral of degree placement, are both history - read the traversal for those.
 
 **Read §1 first.** The drift is a *position*, not a motion — at one pixel per ten
 seconds in the fastest division, nothing about it is visible as movement. The

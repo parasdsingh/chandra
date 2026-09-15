@@ -3,10 +3,17 @@
 Degree-based placement and a pathway around the ring, for the North Indian
 Lagna Kundali. Specification for **E6.5**.
 
-Status: the **degree grid ships** as a switch in Advanced, off by default
-(schema 13). The **pathway placement is a prototype**, behind `pathway` on
-`Chakra`, drawn only in the visual harness at `?preview`, and does not ship
-until it has been looked at.
+Status: **shipped, and the only way a North Indian chart is laid out.** Every
+compartment is placed along its route whether or not the lines are drawn; the
+**degree grid** switch in Advanced (schema 13, off by default) governs only
+whether the scale is shown.
+
+The `drift` that preceded it is **removed**. Placing a body at its own degree
+asserts nothing the chart cannot support, so there was never a reason to keep a
+second mechanism behind a setting - and a chart whose bodies moved differently
+depending on a toggle was one implementation too many. South and East Indian
+have no route through a compartment and never had motion: `drift` returned zero
+for both. They are packed, and still.
 
 Read `docs/design/animation.md` first. This replaces its §7, which deferred
 degree placement on the grounds that it did not compose with `cluster`. It does

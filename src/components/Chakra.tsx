@@ -786,57 +786,6 @@ function squeezed(
   });
 }
 
-/**
- * Where a compartment's contents sit, for a given progress through the sign.
- *
- * Zero at 0.5, so a chart drawn without animation is drawn exactly where it was
- * before this existed.
- *
- * The direction follows the house order: the vector from the previous house's
- * middle to the next one's. That makes twelve compartments read as one rotation
- * rather than as twelve unrelated slides, and it needs no compartment's edges
- * named - the ring's own geometry gives it.
- *
- * Only the North Indian chart has a rotation to foreshadow. In the other two the
- * compartments *are* the signs and do not move, so nothing drifts.
- */
-function drift(
-  compartment: Compartment,
-  laid: Cluster,
-  caption: Box,
-  progress: number,
-  format: ChartFormat,
-): Point {
-  if (format !== "north") return { x: 0, y: 0 };
-
-  const along = compartment.along;
-  if (!along) return { x: 0, y: 0 };
-
-  // The bodies only. The caption is not in this list and does not move.
-  //
-  // `placeCaption` puts it at a far vertex or hard against a wall on purpose,
-  // which is the convention both reference applications follow - so it starts
-  // against a wall and can travel almost nothing, and including it capped the
-  // whole group at its own tiny slack. The grahas sit near the compartment's
-  // middle and have room on both sides.
-  //
-  // What is drawn is then the bodies crossing the house toward the wall they
-  // will leave by, under a caption that names where they are. The caption still
-  // moves at a handover, because at a handover the sign itself changes.
-  const boxes = laid.at.map((at) => labelBox(at, laid.scale));
-  if (boxes.length === 0) return { x: 0, y: 0 };
-
-  const room = travel(compartment.points, boxes, caption, along);
-
-  // Centred on where the layout put it, so the drift is symmetric about the
-  // static position rather than starting there.
-  const from = -room.back;
-  const to = room.forward;
-  const at = from + (to - from) * progress;
-
-  return { x: along.x * at, y: along.y * at };
-}
-
 /** A graha label's box at a placed position, for the travel test.
  *
  * `half` defaults to the widest label there can be, which is what the packed
@@ -2076,7 +2025,6 @@ function northCompartments(
   rashis: ChakraRashi[],
   lagnaSign: number,
   numbered: boolean,
-  routed: boolean,
 ): Compartment[] {
   // The construction is the same whatever the proportions: the corners, the
   // midpoints of the four sides, and the quarter points where the diamond's
@@ -2208,11 +2156,11 @@ function northCompartments(
       ? GRAHA_HALF
       : GRAHA_HALF_PLAIN;
 
-    // Only when something is going to draw it. Choosing a route means measuring
-    // seven of them, and the panel's own layout has no use for the answer - so
-    // the chart that ships pays exactly what it paid before.
+    // The route is the layout now, not an overlay on it, so every North Indian
+    // compartment has one. Choosing it means measuring seven candidates, which
+    // is what a chart costs to lay out at all.
     const path =
-      routed && entry && exit
+      entry && exit
         ? bestRoute(
             compartment.points,
             entry,
@@ -2323,11 +2271,6 @@ export function Chakra(props: {
    *  motion; the handover is the only event fast enough to watch, so this is
    *  what the setting mostly controls. */
   animate: boolean;
-  /** Prototype, off by default: place the bodies by their own progress along a
-   *  route across the compartment rather than packing them into rows, and carry
-   *  the whole ring along that route as the lagna crosses its sign.
-   *  `docs/design/traversal.md`. Nothing but the visual harness sets this. */
-  pathway?: boolean;
   /** Draw a field of stars behind the chart. Decoration, and the only thing in
    *  the chart that is: it carries no reading and is hidden from screen
    *  readers. */
@@ -2355,12 +2298,9 @@ export function Chakra(props: {
 
   const compartments = (): Compartment[] =>
     props.format === "north"
-      ? northCompartments(
-          props.data.rashis,
-          lagnaSign(),
-          props.numbered,
-          Boolean(props.pathway || props.grid),
-        )
+      ? // Routes always, for North Indian: the placement is built on them now,
+        // not only the overlay. The argument is gone with the choice.
+        northCompartments(props.data.rashis, lagnaSign(), props.numbered)
       : gridCompartments(props.data.rashis, props.format);
 
   return (
@@ -2496,12 +2436,13 @@ export function Chakra(props: {
           // switch means one thing: place the grahas by degree, and show the
           // scale they stand on. `pathway` alone stays available to the harness,
           // which needs the placement without the overlay to judge it.
+          // North Indian is always threaded. Placing a body at its own degree
+          // asserts nothing the chart cannot support, so there was never a
+          // reason to wait to be asked for it - only the *lines* were ever the
+          // setting. The other two formats have no route through a compartment
+          // and so have no traversal; they are packed and they are still.
           const threading = createMemo(() =>
-            Boolean(
-              (props.pathway || props.grid) &&
-                props.format === "north" &&
-                path(),
-            ),
+            Boolean(props.format === "north" && path()),
           );
           const plan = createMemo(() => {
             if (!threading() || bodies().length === 0) return null;
@@ -2532,19 +2473,10 @@ export function Chakra(props: {
             if (laid) {
               return place(laid, path()!, each().along, props.progress);
             }
-            const packed = packedLayout();
-            if (!packed) return [];
-            const shift = drift(
-              each(),
-              packed,
-              caption(),
-              props.progress,
-              props.format,
-            );
-            return packed.at.map((point) => ({
-              x: point.x + shift.x,
-              y: point.y + shift.y,
-            }));
+            // South and East Indian. Their compartments are cells in a grid
+            // and the signs in them do not move - what moves is which cell is
+            // house 1, and that is a mark, not a position. Packed, and still.
+            return packedLayout()?.at ?? [];
           });
 
           // What the development grid draws. It exists whether or not anything
@@ -2588,14 +2520,13 @@ export function Chakra(props: {
             const sign = each().rashi.name;
             const changed = previous !== undefined && previous !== sign;
             previous = sign;
-            // Where the arriving group comes from. The ring's own direction
-            // when the chart is packed; the route's own direction at its entry
-            // gate when it is threaded, which is the same idea measured on the
-            // compartment rather than on the ring - and it is the route's entry
-            // that the previous compartment's exit hands to.
+            // Where the arriving group comes from: the route's own direction
+            // at its entry gate, which is the gate the previous compartment's
+            // exit hands to. The ring's direction is the fallback for the two
+            // grid formats, which have no route - and no handover slide either,
+            // since their signs do not change compartment.
             const track = path();
-            const along =
-              props.pathway && track ? heading(track, 0) : each().along;
+            const along = track ? heading(track, 0) : each().along;
             if (!changed || !group || !props.animate || !along) return;
 
             // Cancelled first. A handover can arrive while the last one is
@@ -2658,7 +2589,7 @@ export function Chakra(props: {
                 clip-path={`url(#${id}-${house})`}
                 data-layout={plan()?.how}
                 data-cover={plan()?.cover?.toFixed(2)}
-                data-scale={props.pathway ? scale() : undefined}
+                data-scale={scale()}
               >
               <text
                 class="chakra__label"

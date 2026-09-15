@@ -930,12 +930,14 @@ function Grid(props: SectionProps): JSX.Element {
       />
 
       <p class="settings__hint settings__hint--foot">
-        Each compartment is laid out along a route from the edge a sign arrives
-        through to the edge it leaves by, divided into the thirty degrees of that
-        sign, with parallel lines either side for bodies that share a degree.
-        Drawn, it says why two grahas in one sign sit where they do — and how
-        much room a crowded house has left. North Indian only: the other two
-        formats have no route through a compartment.
+        Every North Indian chart is laid out this way whether the lines are
+        drawn or not: each compartment runs from the edge a sign arrives through
+        to the edge it leaves by, divided into the thirty degrees of that sign,
+        with parallel lines either side for bodies that share a degree. This
+        shows the scale the bodies are already standing on — why two grahas in
+        one sign sit where they do, and how much room a crowded house has left.
+        The other two formats have no route through a compartment, so there is
+        nothing to draw.
       </p>
     </div>
   );

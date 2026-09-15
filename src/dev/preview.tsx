@@ -246,7 +246,6 @@ function PathwayCase(props: {
             numbered={false}
             progress={props.progress}
             animate={props.animate ?? false}
-            pathway
             grid={props.grid}
           />
         </div>
@@ -353,7 +352,6 @@ function PathwaySweep(): JSX.Element {
                         numbered={false}
                         progress={at() / 100}
                         animate={false}
-                        pathway
                         grid={grid()}
                       />
                     </div>
