@@ -64,17 +64,31 @@ a:hover { text-decoration: underline; }
 
 /* ---------- hero ---------- */
 
-.hero { padding: 72px 0 8px; display: grid; gap: 40px; grid-template-columns: 1fr; }
+.hero { padding: 40px 0 8px; display: grid; gap: 40px; grid-template-columns: 1fr; }
 @media (min-width: 900px) {
-  .hero { grid-template-columns: 1fr 512px; align-items: center; gap: 56px; padding: 88px 0 24px; }
+  .hero { grid-template-columns: 1fr 512px; align-items: center; gap: 56px; padding: 56px 0 24px; }
 }
 
 .eyebrow {
   font: 500 13px/1 var(--mono); letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--annotate); margin: 0 0 18px;
 }
-h1 {
-  font: 600 clamp(52px, 9vw, 92px)/0.95 var(--display);
+/* The name, on its own, before anything is claimed about it. A wordmark rather
+   than a heading: the app is called Chandra and the page should say so before
+   it starts selling. */
+.title { padding: 64px 0 0; }
+.title__name {
+  font: 600 clamp(76px, 15vw, 168px)/0.85 var(--display);
+  letter-spacing: -0.02em; margin: 0;
+}
+.title__gloss {
+  margin: 14px 0 0; color: var(--text-dim);
+  font: 400 16px/1 var(--mono); letter-spacing: 0.02em;
+}
+.title__gloss i { color: var(--annotate); font-style: normal; }
+
+.hero__line {
+  font: 600 clamp(34px, 5vw, 52px)/1.05 var(--display);
   letter-spacing: -0.01em; margin: 0 0 20px; text-wrap: balance;
 }
 .lede { font-size: 19px; color: var(--text-dim); margin: 0 0 32px; max-width: 46ch; }
@@ -182,10 +196,17 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
     </nav>
   </div>
 
+  <div class="title">
+    <h1 class="title__name">Chandra</h1>
+    <p class="title__gloss">
+      <span lang="sa">चन्द्र</span> · <i>chandra</i> · the Moon
+    </p>
+  </div>
+
   <div class="hero">
     <div>
       <p class="eyebrow">macOS menu bar</p>
-      <h1>The sky, where you already look.</h1>
+      <h2 class="hero__line">The sky, where you already look.</h2>
       <p class="lede">
         A jyotisha calendar that lives in the menu bar. The Moon's phase at a
         glance, a panchanga for any day, and a <strong>Lagna Kundali</strong>
@@ -256,6 +277,16 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
     draws at. Nothing here is a mockup.
   </p>
   <div class="gallery">
+    <figure>
+      <img class="shot" src="assets/graha-month.png" width="1024" height="1062"
+           alt="A month grid for Mangala, February 2025. Most days carry the Mars glyph inside a dashed ring; from the 25th the ring is gone." />
+      <figcaption><b>Any graha's month</b>Mangala retrograde through February, the dashed ring marking each day of it. It stops at the station on the 24th.</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="assets/retrograde.png" width="1024" height="1062"
+           alt="The day view for Shani on 21 August 2026, showing rashi Meena, nakshatra Revati pada 1, and a Motion field reading Retrograde." />
+      <figcaption><b>Retrograde, said in words</b>Shani turned back through Meena. The motion is a field you can read, not a mark you have to know — and the dotted rail down the edge says it again.</figcaption>
+    </figure>
     <figure>
       <img class="shot" src="assets/calendar.png" width="1024" height="1062"
            alt="A month grid for August 2026. Each day shows its number above a drawn moon phase; the 20th is ringed in gold as today." />

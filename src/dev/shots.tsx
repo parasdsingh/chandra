@@ -25,7 +25,15 @@ import { DayDetail } from "../components/DayDetail";
 import { Header } from "../components/Header";
 import { MonthCells, WeekdayRow } from "../components/MonthGrid";
 import { SettingsView } from "../components/SettingsView";
-import type { Bootstrap, Chakra, DayDetail as Detail, GrahaInfo, MoonMonth, Snapshot } from "../ipc/types";
+import type {
+  Bootstrap,
+  Chakra,
+  DayDetail as Detail,
+  GrahaInfo,
+  GrahaMonth,
+  MoonMonth,
+  Snapshot,
+} from "../ipc/types";
 import fixture from "./fixture.json";
 
 const data = fixture as unknown as {
@@ -33,6 +41,8 @@ const data = fixture as unknown as {
   grahas: GrahaInfo[];
   moonMonth: MoonMonth;
   moonDay: Detail;
+  grahaMonth: GrahaMonth;
+  lunarGrahaDay: Detail;
   snapshot: Snapshot;
   chakra: Chakra;
   chakraNavamsa: Chakra;
@@ -133,6 +143,52 @@ export function Shots(props: { boot: Bootstrap }): JSX.Element {
       ),
     },
     {
+      id: "graha-month",
+      caption: "A graha's month",
+      view: () => (
+        <>
+          <Chrome title={data.grahaMonth.label} division={1} view="calendar" subject="mangala" />
+          <div class="region">
+            <WeekdayRow firstWeekday={0} />
+            <div class="grid-region">
+              <MonthCells
+                firstWeekday={0}
+                month={data.grahaMonth}
+                kind="graha"
+                info={data.grahas.find((graha) => graha.key === "mangala")}
+                selected={null}
+                today={data.moonDay.date}
+                southern={false}
+                active
+                ingress="rashi"
+                onSelect={() => {}}
+              />
+            </div>
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "retrograde",
+      caption: "A retrograde day",
+      view: () => (
+        <>
+          <Chrome title="21 August 2026" division={1} view="day" subject="shani" />
+          <div class="region">
+            <DayDetail
+              detail={data.lunarGrahaDay}
+              events={[]}
+              context={{ timeZone: data.timeZone }}
+              isToday={false}
+              lunar
+              error={undefined}
+              onStep={() => {}}
+            />
+          </div>
+        </>
+      ),
+    },
+    {
       id: "day",
       caption: "A day",
       view: () => (
@@ -197,13 +253,22 @@ function Chrome(props: {
   title: string;
   division: number;
   view: "calendar" | "day" | "settings" | "chart";
+  /** Which calendar this shot is of. The Moon unless said otherwise - the other
+   *  eight put their own glyph in the header and their own name on the tray. */
+  subject?: "chandra" | "mangala" | "shani";
 }): JSX.Element {
+  const subject = () => props.subject ?? "chandra";
+  const named: Record<string, string> = {
+    chandra: "Chandra",
+    mangala: "Mangala",
+    shani: "Shani",
+  };
   return (
     <Header
       division={props.division}
-      subject="chandra"
-      subjectName="Chandra"
-      info={data.grahas.find((graha) => graha.key === "chandra")}
+      subject={subject()}
+      subjectName={named[subject()]!}
+      info={data.grahas.find((graha) => graha.key === subject())}
       snapshot={data.snapshot}
       southern={false}
       title={props.title}
