@@ -104,6 +104,9 @@ export const previewBoot: Bootstrap = {
   },
   subject: "chandra",
   subjects: ["mangala", "shani"],
+  // The harness reads its settings from a fixture, never from disk, so there is
+  // nothing that could have failed to load.
+  settings_error: null,
   // The harness runs in a browser tab with no AppKit material behind it, so the
   // panel paints its own ground here exactly as it does when vibrancy fails.
   panel_material: false,

@@ -24,11 +24,32 @@ pub struct AppState {
     /// actually happens - would each decide against a document the other is
     /// about to replace, and one would overwrite the other wholesale.
     applying: Mutex<()>,
+    /// Why the stored settings were not used, if they were not. See
+    /// [`AppState::new`].
+    settings_error: Option<String>,
 }
 
 impl AppState {
     pub fn new(config_dir: PathBuf, ephemeris_dir: &std::path::Path) -> Result<Self> {
-        let settings = Settings::load(&config_dir)?;
+        // A settings file that cannot be read must not stop the app.
+        //
+        // This used to be `?`, which returns out of Tauri's `setup` closure -
+        // and Tauri turns that into a panic. With `panic = "abort"` and an
+        // accessory activation policy, the process died before it had a menu
+        // bar item, so the user saw *nothing at all*: no icon, no dialog, no
+        // way to discover why. Forever, on every launch, from a document a
+        // downgrade or a truncated write could produce.
+        //
+        // The file is left exactly as found. Resetting it here would destroy
+        // the only record of what the reader had chosen, which `Settings::load`
+        // deliberately refuses to do. So: run on defaults, remember why, and
+        // let `bootstrap` tell the reader their choices are not the ones in
+        // force. Changing any setting overwrites the file, which is a
+        // deliberate act rather than a silent one.
+        let (settings, settings_error) = match Settings::load(&config_dir) {
+            Ok(settings) => (settings, None),
+            Err(error) => (Settings::default(), Some(error.to_string())),
+        };
         let resolved = location::resolve_offline(&settings);
 
         let almanac = Almanac::new(
@@ -44,7 +65,13 @@ impl AppState {
             location: RwLock::new(resolved),
             config_dir,
             applying: Mutex::new(()),
+            settings_error,
         })
+    }
+
+    /// Why the stored settings were not used, if they were not.
+    pub fn settings_error(&self) -> Option<String> {
+        self.settings_error.clone()
     }
 
     /// A month cursor in the configured month system.

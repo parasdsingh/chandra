@@ -269,3 +269,58 @@ fn the_sidereal_lagna_sits_on_the_same_frame_as_every_other_figure() {
         );
     }
 }
+
+/// An observer that is not on Earth is refused, not answered.
+///
+/// Swiss Ephemeris does not refuse these. `swe_houses` returns success for a
+/// latitude of 91, of -180 - which is `CLLocationCoordinate2DInvalid` - and of
+/// 1e9, and for a NaN latitude `swe_rise_trans` reports a rise and a set at the
+/// same instant, which is the origin of its internal search grid and not an
+/// event. Each of those is a fabricated answer, and a fabricated answer is
+/// worse than an error.
+#[test]
+fn an_observer_that_is_not_on_earth_is_refused() {
+    let engine = engine();
+    let jd = chandra_ephemeris::julian_day(2026, 6, 15, 0.0);
+
+    let impossible = [
+        ("latitude past the pole", Observer::new(91.0, 0.0, 0.0)),
+        (
+            "latitude past the other pole",
+            Observer::new(-91.0, 0.0, 0.0),
+        ),
+        (
+            "CLLocationCoordinate2DInvalid",
+            Observer::new(-180.0, -180.0, 0.0),
+        ),
+        ("NaN latitude", Observer::new(f64::NAN, 0.0, 0.0)),
+        ("infinite longitude", Observer::new(0.0, f64::INFINITY, 0.0)),
+        ("a latitude of a billion", Observer::new(1e9, 0.0, 0.0)),
+        ("below the accepted floor", Observer::new(0.0, 0.0, -600.0)),
+    ];
+
+    for (what, observer) in impossible {
+        assert!(
+            engine.ascendant(jd, observer).is_err(),
+            "{what}: an ascendant was returned for a position that is not on Earth"
+        );
+        assert!(
+            engine
+                .rise_set(jd, jd + 1.0, chandra_ephemeris::Graha::Surya, observer)
+                .is_err(),
+            "{what}: a rise or set was returned for a position that is not on Earth"
+        );
+    }
+
+    // And the poles themselves are positions, not errors.
+    for (what, observer) in [
+        ("north pole", Observer::new(90.0, 0.0, 0.0)),
+        ("south pole", Observer::new(-90.0, 0.0, 0.0)),
+        ("the antimeridian", Observer::new(0.0, 180.0, 0.0)),
+    ] {
+        assert!(
+            engine.ascendant(jd, observer).is_ok(),
+            "{what} is a place on Earth and must still be answered"
+        );
+    }
+}

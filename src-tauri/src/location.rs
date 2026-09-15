@@ -248,6 +248,25 @@ mod platform {
                 let altitude = unsafe { location.altitude() };
                 let vertical_accuracy = unsafe { location.verticalAccuracy() };
 
+                // CoreLocation's own "no answer" value is a coordinate, not a
+                // nil: `CLLocationCoordinate2DInvalid` is (-180, -180), which is
+                // a latitude no place on Earth has. Delivered unchecked it
+                // became an observer, and Swiss Ephemeris answers questions
+                // about it without complaint - an ascendant, a plausible
+                // sunrise, no error anywhere.
+                //
+                // Treated as no answer at all, which is what it is. The offline
+                // chain - the stored place, then the timezone's centroid - then
+                // does its job.
+                if !(-90.0..=90.0).contains(&coordinate.latitude)
+                    || !(-180.0..=180.0).contains(&coordinate.longitude)
+                    || !coordinate.latitude.is_finite()
+                    || !coordinate.longitude.is_finite()
+                {
+                    self.deliver(Outcome::Unavailable);
+                    return;
+                }
+
                 self.deliver(Outcome::Located {
                     latitude: coordinate.latitude,
                     longitude: coordinate.longitude,

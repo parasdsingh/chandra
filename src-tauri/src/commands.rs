@@ -47,6 +47,15 @@ pub struct Bootstrap {
     /// The divisional charts on offer. Served rather than written out in the
     /// front end so nothing here can drift from `Varga`'s own answers.
     pub vargas: Vec<VargaInfo>,
+    /// Why the stored settings were not used, if they were not.
+    ///
+    /// A settings file that cannot be read is a real event the reader has to be
+    /// told about: it means the choices on screen are the defaults and not
+    /// theirs. The file is left exactly as it is - resetting it silently would
+    /// destroy the only copy of what they had chosen - so the app runs on
+    /// defaults until they either fix the file or change a setting, which
+    /// overwrites it deliberately.
+    pub settings_error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,6 +109,7 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
             settings
         },
         location: state.location(),
+        settings_error: state.settings_error(),
         subject: panel::subject_or_default(&app).key().to_string(),
         subjects: state.tray_subjects(),
         panel_material: panel::has_material(&app),

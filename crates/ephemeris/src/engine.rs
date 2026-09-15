@@ -332,6 +332,13 @@ impl Engine {
         graha: Graha,
         observer: Observer,
     ) -> Result<RiseSet> {
+        if !observer.is_on_earth() {
+            return Err(Error::InvalidObserver {
+                latitude: observer.latitude,
+                longitude: observer.longitude,
+                elevation: observer.elevation,
+            });
+        }
         // The nodes are geometric points with no disc, and never cross the
         // horizon in the sense a rise and set calculation means. Answered before
         // the lock is taken and before anything is computed: there is no window
@@ -384,6 +391,13 @@ impl Engine {
     /// calls `swe_houses_ex` directly for the same reason `calc_raw` calls
     /// `swe_calc_ut` directly, which is that the flag word is the whole point.
     pub fn ascendant(&self, jd_ut: f64, observer: Observer) -> Result<Reading> {
+        if !observer.is_on_earth() {
+            return Err(Error::InvalidObserver {
+                latitude: observer.latitude,
+                longitude: observer.longitude,
+                elevation: observer.elevation,
+            });
+        }
         let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
         let sidereal = houses_raw(HouseRequest {
             jd_ut,
@@ -415,6 +429,13 @@ impl Engine {
     /// sky rather than about a body, so neither is behind the sidereal
     /// configuration.
     pub fn ascendant_tropical(&self, jd_ut: f64, observer: Observer) -> Result<f64> {
+        if !observer.is_on_earth() {
+            return Err(Error::InvalidObserver {
+                latitude: observer.latitude,
+                longitude: observer.longitude,
+                elevation: observer.elevation,
+            });
+        }
         let _guard = self.inner.lock().map_err(|_| Error::Poisoned)?;
         Ok(houses_raw(HouseRequest {
             jd_ut,

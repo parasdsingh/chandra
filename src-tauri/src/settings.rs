@@ -395,12 +395,33 @@ impl Settings {
             AppError::Settings(format!("{} is not valid JSON: {e}", path.display()))
         })?;
 
-        let version = value
-            .get("schema_version")
-            .and_then(|v| v.as_u64())
-            .ok_or_else(|| AppError::Settings("settings file has no schema_version".into()))?;
+        // `u32`, not `u64 as u32`. The cast wrapped: 4294967297 became 1, and
+        // the whole 1 -> 14 chain then ran over a document that claimed to come
+        // from a version far ahead of this build, rewriting `schema_version` at
+        // every step and adopting it silently. The guard below, which exists to
+        // refuse exactly that document, never saw it.
+        //
+        // `as_u64` is also the wrong question on its own: it answers `None` for
+        // `14.0`, for `"14"` and for `-1` alike, and the message then tells the
+        // reader the field is absent while they are looking straight at it.
+        let stored = value.get("schema_version");
+        let version = match stored.and_then(serde_json::Value::as_u64) {
+            Some(version) => u32::try_from(version).map_err(|_| {
+                AppError::Settings(format!(
+                    "settings were written by a newer version of Chandra (schema {version})"
+                ))
+            })?,
+            None => {
+                return Err(AppError::Settings(match stored {
+                    None => "settings file has no schema_version".into(),
+                    Some(other) => format!(
+                        "settings file has a schema_version of {other}, which is not a version"
+                    ),
+                }))
+            }
+        };
 
-        let migrated = migrate(value, version as u32)?;
+        let migrated = migrate(value, version)?;
         serde_json::from_value(migrated)
             .map_err(|e| AppError::Settings(format!("settings do not match the schema: {e}")))
     }
@@ -1006,6 +1027,63 @@ mod tests {
         assert_eq!(settings.chart.vargas, vec![Varga::D1, Varga::D60]);
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// A version far past this build is refused, not wrapped into a valid one.
+    ///
+    /// `version as u32` turned 4294967297 into 1, and the migration chain then
+    /// walked the document up to the current schema and adopted it - so a file
+    /// from a future build was silently rewritten rather than refused.
+    #[test]
+    fn a_schema_version_beyond_u32_is_refused_rather_than_wrapped() {
+        let dir = temp_dir("schema-wrap");
+
+        let mut document = serde_json::to_value(Settings::default()).expect("serialise");
+        document["schema_version"] = serde_json::Value::from(4_294_967_297u64);
+        fs::write(
+            Settings::path(&dir),
+            serde_json::to_string(&document).expect("json"),
+        )
+        .expect("write");
+
+        let error = Settings::load(&dir).expect_err("a future schema must be refused");
+        assert!(
+            error.to_string().contains("newer version"),
+            "the reader must be told the file is from a newer build, got: {error}"
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// A `schema_version` that is present but is not a version says so.
+    ///
+    /// `as_u64` answers `None` for `14.0`, `"14"` and `-1` alike, and the
+    /// message told the reader the field was missing while they were looking
+    /// straight at it.
+    #[test]
+    fn a_malformed_schema_version_is_not_reported_as_a_missing_one() {
+        for bad in [
+            serde_json::Value::from(14.5),
+            serde_json::Value::from("14"),
+            serde_json::Value::from(-1),
+        ] {
+            let dir = temp_dir("schema-malformed");
+            let mut document = serde_json::to_value(Settings::default()).expect("serialise");
+            document["schema_version"] = bad.clone();
+            fs::write(
+                Settings::path(&dir),
+                serde_json::to_string(&document).expect("json"),
+            )
+            .expect("write");
+
+            let error = Settings::load(&dir).expect_err("not a version");
+            assert!(
+                !error.to_string().contains("no schema_version"),
+                "{bad} is present; the error must not claim it is absent, got: {error}"
+            );
+
+            let _ = fs::remove_dir_all(&dir);
+        }
     }
 
     /// Version 1 carried the elevation inside the place; version 2 carries a

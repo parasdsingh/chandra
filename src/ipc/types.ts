@@ -601,6 +601,12 @@ export interface Bootstrap {
   /** The divisional charts on offer. Served rather than written out here so
    *  nothing can drift from the Rust `Varga`'s own answers. */
   vargas: VargaInfo[];
+  /** Why the stored settings were not used, if they were not.
+   *
+   *  A settings file that cannot be read means the choices on screen are the
+   *  defaults and not the reader's. The file is left as it is rather than reset,
+   *  so this says what happened until they fix it or change a setting. */
+  settings_error: string | null;
 }
 
 export interface VargaInfo {

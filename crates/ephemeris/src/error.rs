@@ -30,4 +30,22 @@ pub enum Error {
     /// because the C library's global state is then of unknown validity.
     #[error("ephemeris engine is poisoned; a previous calculation panicked")]
     Poisoned,
+
+    /// A position that is not on Earth.
+    ///
+    /// Swiss Ephemeris does not refuse these. `swe_houses` returns success for a
+    /// latitude of 91, of -180 and of 1e9, giving an ascendant that looks like
+    /// an answer; a NaN latitude makes `swe_rise_trans` return a rise and a set
+    /// at the *same* instant, two hours after the search began, which is the
+    /// origin of its internal grid rather than an event in the sky. A fabricated
+    /// answer is worse than an error, so the check is here.
+    #[error(
+        "observer is not a position on Earth: latitude {latitude}, longitude {longitude}, \
+         elevation {elevation} m"
+    )]
+    InvalidObserver {
+        latitude: f64,
+        longitude: f64,
+        elevation: f64,
+    },
 }

@@ -465,12 +465,16 @@ impl Almanac {
     }
 
     pub fn moon_month(&self, cursor: MonthCursor) -> Result<MoonMonth> {
-        // Both read before any computation starts. A reconfigure that lands
-        // while this is running bumps the generation, and the result is then
-        // discarded rather than stored under a configuration that did not
-        // produce it.
-        let settings = self.settings_snapshot()?;
+        // The generation first, then the settings, and the order is the whole
+        // guard. `set_location` writes the settings, releases the lock, and
+        // *then* bumps the generation - so a reader that takes the settings
+        // first can be preempted, snapshot the old location, read the new
+        // generation, and store a month computed for the previous city under a
+        // generation that says it is current. Nothing would ever invalidate it
+        // again. Reading the generation first makes that interleaving store a
+        // stale generation, which `Lru::insert` refuses.
         let generation = self.generation()?;
+        let settings = self.settings_snapshot()?;
 
         let resolved = self.resolved(cursor, &settings, generation)?;
         let key = CacheKey::Moon(cursor.system, resolved.first_day(), cursor.first_weekday);
@@ -499,8 +503,16 @@ impl Almanac {
             ));
         }
 
-        let settings = self.settings_snapshot()?;
+        // The generation first, then the settings, and the order is the whole
+        // guard. `set_location` writes the settings, releases the lock, and
+        // *then* bumps the generation - so a reader that takes the settings
+        // first can be preempted, snapshot the old location, read the new
+        // generation, and store a month computed for the previous city under a
+        // generation that says it is current. Nothing would ever invalidate it
+        // again. Reading the generation first makes that interleaving store a
+        // stale generation, which `Lru::insert` refuses.
         let generation = self.generation()?;
+        let settings = self.settings_snapshot()?;
 
         let resolved = self.resolved(cursor, &settings, generation)?;
         let key = CacheKey::Graha(
