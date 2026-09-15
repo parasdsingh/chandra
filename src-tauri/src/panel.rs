@@ -364,10 +364,16 @@ pub async fn request_device_location(app: &AppHandle) {
             .is_ok()
         {
             let _ = handle.emit("chandra://location", state.location());
-            let for_tray = handle.clone();
-            let _ = handle.run_on_main_thread(move || {
-                let _ = crate::tray::refresh_icons(&for_tray);
-            });
+            // The reading here, the drawing on the main thread. This runs on a
+            // CoreLocation callback, not a UI thread, so taking it is safe -
+            // and doing it inside the dispatch would put eleven engine calls on
+            // the thread AppKit draws with.
+            if let Ok(snapshot) = crate::tray::icon_reading(&handle) {
+                let for_tray = handle.clone();
+                let _ = handle.run_on_main_thread(move || {
+                    let _ = crate::tray::refresh_icons_with(&for_tray, snapshot);
+                });
+            }
         }
     }
 }

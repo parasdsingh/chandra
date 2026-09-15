@@ -314,11 +314,21 @@ pub async fn update_settings(app: AppHandle, settings: Settings) -> Result<Boots
     if applied.tray_changed || applied.icons_changed {
         let handle = app.clone();
         let rebuild = applied.tray_changed;
+        // The reading before the dispatch. This command already runs off the
+        // main thread, and the alternative put eleven engine calls on the
+        // thread AppKit draws with - behind whatever else holds the engine
+        // mutex, which when saving in the settings pane is often a month
+        // assembling its forty-two sunrises. `rebuild` creates items and has to
+        // read on the main thread; it is rare and it is not the hot path.
+        let snapshot = if rebuild {
+            None
+        } else {
+            Some(tray::icon_reading(&app)?)
+        };
         app.run_on_main_thread(move || {
-            let outcome = if rebuild {
-                tray::rebuild(&handle)
-            } else {
-                tray::refresh_icons(&handle)
+            let outcome = match snapshot {
+                None => tray::rebuild(&handle),
+                Some(snapshot) => tray::refresh_icons_with(&handle, snapshot),
             };
             if let Err(error) = outcome {
                 // The settings themselves are already saved; a menu bar that

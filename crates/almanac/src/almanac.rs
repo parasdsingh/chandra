@@ -673,6 +673,25 @@ impl Almanac {
     /// What the menu bar needs: the Moon's current phase, and where each enabled
     /// graha currently stands.
     pub fn now(&self, unix_ms: i64, subjects: &[Graha]) -> Result<Snapshot> {
+        // Retried against the generation, for the reason `chakra` is: this takes
+        // the engine lock about eleven times, once per call, and a `set_sidereal`
+        // landing in the middle gives a reading with some grahas on Lahiri and
+        // some on Raman - a whole rashi apart, in the menu bar, with nothing
+        // saying so. `chakra` already defended against exactly this; `now` is
+        // what feeds the tray and did not.
+        for _ in 0..3 {
+            let generation = self.generation()?;
+            let built = self.snapshot_once(unix_ms, subjects)?;
+            if self.generation()? == generation {
+                return Ok(built);
+            }
+        }
+        Err(Error::TimeZone(
+            "the configuration kept changing while the menu bar was being read".into(),
+        ))
+    }
+
+    fn snapshot_once(&self, unix_ms: i64, subjects: &[Graha]) -> Result<Snapshot> {
         let jd = chandra_ephemeris::unix_seconds_to_jd(unix_ms as f64 / 1000.0);
         let illumination = self.engine.illumination(jd)?;
         let elongation = {

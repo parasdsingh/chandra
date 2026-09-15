@@ -31,7 +31,19 @@ pub fn julian_day(year: i32, month: u32, day: u32, day_fraction: f64) -> f64 {
 }
 
 /// Calendar date and day fraction for a Julian Day. Inverse of [`julian_day`].
-pub fn from_julian_day(jd: f64) -> (i32, u32, u32, f64) {
+///
+/// `None` for a Julian Day that is not one. The arithmetic below is a chain of
+/// `floor`s and casts, and casts saturate: a NaN came out as `(0, 0, 0, NaN)`
+/// and 1e300 as `(2147483647, 0, 0, 0.0)`. Month zero and day zero are not
+/// calendar values, and one of them reached `MONTHS.get(month - 1)`, which
+/// underflows a `usize` - a panic in debug, an enormous index in release.
+///
+/// The range accepted is generous rather than astronomically meaningful: this
+/// says the answer is a date, not that anyone should ask about it.
+pub fn from_julian_day(jd: f64) -> Option<(i32, u32, u32, f64)> {
+    if !jd.is_finite() || !(-1.0e9..=1.0e9).contains(&jd) {
+        return None;
+    }
     let z_and_f = jd + 0.5;
     let z = z_and_f.floor();
     let f = z_and_f - z;
@@ -47,7 +59,14 @@ pub fn from_julian_day(jd: f64) -> (i32, u32, u32, f64) {
     let month = if e < 14.0 { e - 1.0 } else { e - 13.0 } as u32;
     let year = if month > 2 { c - 4716.0 } else { c - 4715.0 } as i32;
 
-    (year, month, day, f)
+    // The formula produces 1..=12 and 1..=31 for every input the guard above
+    // admits, so this is belt and braces - but a tuple that leaves here is used
+    // as a date, and `(_, 0, 0, _)` is not one.
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+
+    Some((year, month, day, f))
 }
 
 /// Seconds since the Unix epoch for a Julian Day in UT.
@@ -83,12 +102,39 @@ mod tests {
             for month in 1..=12 {
                 for day in [1, 15, 28] {
                     let jd = julian_day(year, month, day, 0.25);
-                    let (y, m, d, f) = from_julian_day(jd);
+                    let (y, m, d, f) = from_julian_day(jd).expect("a real date round trips");
                     assert_eq!((y, m, d), (year, month, day), "jd {jd}");
                     assert!((f - 0.25).abs() < 1e-9, "fraction drift at {jd}");
                 }
             }
         }
+    }
+
+    /// A Julian Day that is not one has no calendar date.
+    ///
+    /// The casts saturate rather than panicking, so these used to come back as
+    /// `(0, 0, 0, NaN)` and `(2147483647, 0, 0, 0.0)` - month zero and day zero,
+    /// which are not calendar values. One of them fed `MONTHS.get(month - 1)`,
+    /// a `usize` underflow.
+    #[test]
+    fn a_julian_day_that_is_not_one_has_no_date() {
+        for jd in [
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            1e300,
+            -1e300,
+            f64::MAX,
+            f64::MIN,
+        ] {
+            assert!(
+                from_julian_day(jd).is_none(),
+                "{jd} is not a Julian Day and must not produce a date"
+            );
+        }
+
+        // And a real one still is one.
+        assert!(from_julian_day(julian_day(2026, 8, 20, 0.5)).is_some());
     }
 
     #[test]

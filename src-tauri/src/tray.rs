@@ -145,8 +145,39 @@ pub fn rebuild(app: &AppHandle) -> Result<()> {
     build(app)
 }
 
-/// Redraws every tray icon from the current instant and settings.
+/// The ephemeris half of a redraw, to be run off the main thread.
+///
+/// `Engine`'s contract, quoted further down this file, is that it is called
+/// "from a blocking pool, never from a UI thread". `refresh_tooltip` was moved
+/// to honour it after the first version stalled the menu bar; `refresh_icons`
+/// was not, and it makes about eleven engine calls, each taking the engine
+/// mutex. Saving in the settings pane while a month was assembling its
+/// forty-two sunrises put those calls behind that work, on the thread AppKit
+/// draws with - and macOS mutexes are not fair, so the main thread can lose
+/// repeatedly. A hang, not a crash, which is why nothing caught it.
+///
+/// Splitting it means the caller computes here and draws there.
+pub fn icon_reading(app: &AppHandle) -> Result<Snapshot> {
+    let state = app.state::<AppState>();
+    let subjects = state.tray_subjects();
+    let now = jiff::Timestamp::now().as_millisecond();
+    state.almanac.now(now, &subjects).map_err(AppError::from)
+}
+
+/// Takes a reading and redraws every tray icon with it.
+///
+/// Only for `build`, which runs during setup: there is no menu bar to stall
+/// yet. Every runtime caller takes the reading off the main thread and calls
+/// [`refresh_icons_with`].
 pub fn refresh_icons(app: &AppHandle) -> Result<()> {
+    let snapshot = icon_reading(app)?;
+    draw_icons(app, snapshot)
+}
+
+/// Redraws every tray icon from a reading already taken.
+///
+/// AppKit only. Must be on the main thread, and must do no ephemeris work.
+fn draw_icons(app: &AppHandle, snapshot: Snapshot) -> Result<()> {
     let state = app.state::<AppState>();
     let settings = state.settings();
     let location = state.location();
@@ -166,9 +197,6 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
     // A template image is inverted by macOS to suit the menu bar; a fixed colour
     // must not be, or it would be inverted into its opposite.
     let is_template = !settings.tray.colour_mode;
-
-    let now = jiff::Timestamp::now().as_millisecond();
-    let snapshot = state.almanac.now(now, &subjects).map_err(AppError::from)?;
 
     if let Some(item) = app.tray_by_id(MOON_ID) {
         let icon = moon_icon(
@@ -253,6 +281,14 @@ pub fn refresh_icons(app: &AppHandle) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Redraws every tray icon from a reading the caller has already taken.
+///
+/// The pairing for [`icon_reading`]: take the reading off the main thread, draw
+/// with it on the main thread.
+pub fn refresh_icons_with(app: &AppHandle, snapshot: Snapshot) -> Result<()> {
+    draw_icons(app, snapshot)
 }
 
 /// Rebuilds one item's tooltip from this instant.

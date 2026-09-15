@@ -376,8 +376,13 @@ pub fn sankrantis(engine: &Engine, from: f64, to: f64) -> Result<Vec<(f64, Rashi
             engine.position(next, Graha::Surya)?.longitude,
         );
 
-        let index_a = (a / RASHI_ARC) as usize;
-        let index_b = (b / RASHI_ARC) as usize;
+        // Guarded, like every other place that turns a longitude into an index
+        // into `Rashi::ALL`. This one was not: a longitude of exactly 360.0
+        // gives 12 and indexes past the end of a twelve element array. The
+        // ephemeris does not return that today, but this takes whatever the
+        // engine hands it and the array has no room for the mistake.
+        let index_a = ((a / RASHI_ARC) as usize).min(11);
+        let index_b = ((b / RASHI_ARC) as usize).min(11);
 
         if index_a != index_b {
             let boundary = index_b as f64 * RASHI_ARC;

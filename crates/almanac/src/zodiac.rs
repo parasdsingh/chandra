@@ -286,7 +286,11 @@ impl Nakshatra {
 
 /// Quarter of a nakshatra, numbered 1 to 4.
 pub fn pada(longitude: f64) -> u8 {
-    let within = longitude.rem_euclid(360.0) % NAKSHATRA_ARC;
+    // `rem_euclid` answers exactly 360.0 for a longitude a hair below zero, so
+    // the modulo then gave the *last* pada for a position at the very start of
+    // the zodiac. Folded to zero first.
+    let turned = longitude.rem_euclid(360.0);
+    let within = if turned >= 360.0 { 0.0 } else { turned } % NAKSHATRA_ARC;
     // Clamped because a longitude of exactly 13.333... would otherwise divide to
     // 4 and index a fifth pada that does not exist.
     ((within / PADA_ARC) as u8 + 1).min(4)
@@ -311,7 +315,11 @@ pub fn degrees_in_rashi(longitude: f64) -> (u32, u32, f64) {
 /// Clamped at the top because floating point division of a longitude a hair
 /// under 360 can round up to the division count and index past the end.
 fn index_of(longitude: f64, arc: f64, count: usize) -> usize {
-    let normalised = longitude.rem_euclid(360.0);
+    // Clamped at both ends. The top is the rounding described above; the bottom
+    // is `rem_euclid` returning exactly 360.0 for a tiny negative, which without
+    // this made a position a hair before Mesha answer Meena.
+    let turned = longitude.rem_euclid(360.0);
+    let normalised = if turned >= 360.0 { 0.0 } else { turned };
     ((normalised / arc) as usize).min(count - 1)
 }
 

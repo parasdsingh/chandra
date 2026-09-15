@@ -175,13 +175,22 @@ fn watch_the_clock(app: tauri::AppHandle) {
             }
             drawn_at = now;
 
-            // Same rule as everywhere else: the status item is an AppKit object
-            // and must only be touched on the main thread.
+            // The reading first, here - this loop is already off the main
+            // thread - and only the drawing dispatched. The status item is an
+            // AppKit object and must only be touched on the main thread; the
+            // ephemeris must only be touched off it.
+            let snapshot = match tray::icon_reading(&app) {
+                Ok(snapshot) => snapshot,
+                Err(error) => {
+                    // A failed reading leaves a stale disc in the menu bar,
+                    // which is wrong but not fatal, so the loop continues.
+                    eprintln!("chandra: could not read the sky: {error}");
+                    continue;
+                }
+            };
             let handle = app.clone();
             let dispatched = app.run_on_main_thread(move || {
-                if let Err(error) = tray::refresh_icons(&handle) {
-                    // A failed redraw leaves a stale disc in the menu bar, which
-                    // is wrong but not fatal, so the loop continues.
+                if let Err(error) = tray::refresh_icons_with(&handle, snapshot) {
                     eprintln!("chandra: could not redraw the menu bar: {error}");
                 }
             });

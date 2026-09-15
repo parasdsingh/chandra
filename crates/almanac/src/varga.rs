@@ -266,7 +266,19 @@ impl Varga {
 /// an odd sign and are reversed in an even one, and their targets are the five
 /// non-luminary planets' own signs rather than a count from anywhere.
 pub fn varga_rashi(varga: Varga, longitude: f64) -> Rashi {
-    let longitude = longitude.rem_euclid(360.0);
+    // `rem_euclid` is not quite a modulo for tiny negatives: it returns exactly
+    // 360.0 for anything in roughly (-2.3e-14, 0), because the true result is
+    // too small to represent and rounds up to the divisor. `within` was then 30
+    // rather than 0, the part clamped to the last one instead of the first, and
+    // a longitude a hair below Mesha answered Dhanu in D9 and Meena in D12.
+    //
+    // Not reachable from the ephemeris, which returns longitudes in [0, 360) -
+    // checked across every graha from 1800 to 2400. Reachable from this
+    // function's own contract, which takes any `f64` and is tested with -1e-9.
+    let longitude = match longitude.rem_euclid(360.0) {
+        turned if turned >= 360.0 => 0.0,
+        turned => turned,
+    };
     let sign = (longitude / RASHI_ARC) as usize % 12;
     let within = longitude - sign as f64 * RASHI_ARC;
 
@@ -278,7 +290,14 @@ pub fn varga_rashi(varga: Varga, longitude: f64) -> Rashi {
     // is under `parts` - unless a rounding error at a rashi boundary makes the
     // division land exactly on it, which would index past the end.
     let parts = varga.parts() as usize;
-    let part = ((within / RASHI_ARC * parts as f64) as usize).min(parts - 1);
+    // Multiply before dividing, which is what `docs/design/vargas.md` §6.6
+    // legislates - and it is not only a preference. At D45's first boundary a
+    // degree built as `deg + min/60 + sec/3600` is 0.66666666666666663; times
+    // 45 that is exactly 30.0 and the part is 1, while divided by 30 first it is
+    // 0.99999999999999989 and the part is 0. The document's own worked example
+    // says Vrishabha, which is the first of those. Twenty boundaries across D7,
+    // D27 and D45 differ between the two orders.
+    let part = ((within * parts as f64 / RASHI_ARC) as usize).min(parts - 1);
 
     if varga == Varga::D2 {
         return hora(sign, part);
@@ -429,6 +448,63 @@ fn trimsamsa(sign: usize, within: f64) -> Rashi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The boundary D45 disagreed on, and the D30 boundaries the document asks
+    /// for by name.
+    ///
+    /// `vargas.md` §6.6 requires `d * n / 30`, multiplying first, and says the
+    /// order matters. It does: at D45's first boundary a degree built the way an
+    /// almanac writes one - 0 + 40/60 - is 0.66666666666666663, which times 45
+    /// is exactly 30.0 but divided by 30 first is 0.99999999999999989. The first
+    /// gives part one and the second part zero, and §7.15's table says
+    /// Vrishabha, which is part one. The existing test used the rounded decimal
+    /// 0.66667, which is above the boundary and passes either way.
+    ///
+    /// §7.13 asks for D30's four boundary vectors by name, noting that the odd
+    /// and even sets differ - 10/18/25 against 12/20/25 - "so both need
+    /// testing". They were the one division whose boundaries had none.
+    #[test]
+    fn the_boundaries_the_specification_names() {
+        // D45, exactly as §6.6 builds a degree.
+        let first = 40.0 / 60.0;
+        assert_eq!(
+            varga_rashi(Varga::D45, first),
+            Rashi::Vrishabha,
+            "D45 at Mesha 0°40′00″ is the second part, per §7.15"
+        );
+        assert_eq!(
+            varga_rashi(Varga::D45, first - 1e-9),
+            Rashi::Mesha,
+            "and a hair below it is still the first"
+        );
+
+        // D30, §7.13's four vectors. Odd sign: 5, 5, 8, 7, 5 from Mesha.
+        assert_eq!(varga_rashi(Varga::D30, 9.999_999), Rashi::Kumbha);
+        assert_eq!(varga_rashi(Varga::D30, 10.0), Rashi::Dhanu);
+        // Even sign: the blocks are reversed, so the same offset lands elsewhere.
+        assert_eq!(
+            varga_rashi(Varga::D30, RASHI_ARC + 11.999_999),
+            Rashi::Kanya
+        );
+        assert_eq!(varga_rashi(Varga::D30, RASHI_ARC + 12.0), Rashi::Meena);
+    }
+
+    /// A longitude a hair below zero is the start of Mesha, not the end of Meena.
+    ///
+    /// `rem_euclid` returns exactly 360.0 for anything in about (-2.3e-14, 0):
+    /// the true answer is too small to represent and rounds up to the divisor.
+    /// The part then clamped to the last rather than the first.
+    #[test]
+    fn a_longitude_a_hair_below_zero_is_the_start_of_the_zodiac() {
+        for varga in Varga::ALL {
+            assert_eq!(
+                varga_rashi(varga, -1e-15),
+                varga_rashi(varga, 0.0),
+                "{:?} disagrees with itself either side of zero",
+                varga
+            );
+        }
+    }
 
     /// Every worked example in `docs/design/vargas.md` §7, for the five vargas
     /// built here.

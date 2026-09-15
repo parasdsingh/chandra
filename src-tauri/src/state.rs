@@ -29,6 +29,12 @@ pub struct AppState {
     settings_error: Option<String>,
 }
 
+/// How far a month cursor may be asked to travel from its anchor.
+///
+/// Two centuries either way. The front end re-anchors once the offset passes
+/// six, so this bounds a hostile or corrupted value rather than a real one.
+const MONTH_OFFSET_LIMIT: i32 = 2_400;
+
 impl AppState {
     pub fn new(config_dir: PathBuf, ephemeris_dir: &std::path::Path) -> Result<Self> {
         // A settings file that cannot be read must not stop the app.
@@ -83,7 +89,19 @@ impl AppState {
     pub fn cursor(&self, anchor_unix_ms: i64, offset: i32, first_weekday: u8) -> MonthCursor {
         MonthCursor {
             anchor_unix_ms,
-            offset,
+            // Bounded here, where the webview's number enters.
+            //
+            // `first_weekday` was normalised and `offset` was not, though both
+            // arrive the same way. Downstream it is added to a month number
+            // (overflow: a wrap in release, a panic in debug) and, in a lunar
+            // month, it is a loop count over syzygy root searches - so
+            // `offset: 2_000_000` pinned a blocking thread, and `i32::MIN`
+            // silently returned the anchor month because `.abs()` wrapped.
+            //
+            // Nothing legitimate exceeds this: the front end re-anchors at six.
+            // Two centuries of months is past any scroll and far inside the
+            // arithmetic.
+            offset: offset.clamp(-MONTH_OFFSET_LIMIT, MONTH_OFFSET_LIMIT),
             system: self.settings().calendar.month_system,
             first_weekday: first_weekday % 7,
         }
