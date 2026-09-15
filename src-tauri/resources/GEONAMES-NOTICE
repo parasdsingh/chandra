@@ -1,0 +1,17 @@
+cities.tsv and admin1.tsv are derived from the GeoNames geographical database.
+
+    https://www.geonames.org/
+    Licensed under Creative Commons Attribution 4.0
+    https://creativecommons.org/licenses/by/4.0/
+
+Derived by tools/geonames.sh, which names every column it keeps. Nothing is
+added; columns are dropped and the coordinates are rounded to four decimal
+places.
+
+CC BY 4.0 requires that the credit be given where the work is used, so it is
+also in the app's About pane rather than only here.
+
+zone.tab and iso3166.tab are from the IANA tz database and are in the public
+domain. They are kept because a timezone is what the app falls back to before a
+location has been chosen (D-007), and because they pair a zone with a coordinate
+in a way the GeoNames export does not.

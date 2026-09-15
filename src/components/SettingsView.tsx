@@ -1184,6 +1184,19 @@ function About(props: { boot: Bootstrap }): JSX.Element {
         <span class="settings__label">Cities</span>
         <span class="settings__value">GeoNames, CC BY 4.0</span>
       </div>
+      {/* The copyright notice, not just the licence name. Astrodienst's own
+          conditions require that "the copyright notices and this notice be
+          preserved on all copies" - a line saying AGPL-3.0 satisfies neither.
+          The full text and the reproduced conditions ship beside the binary in
+          the bundle's Resources; this is the part a reader can see.
+
+          Their names appear here and nowhere promotional, which is the other
+          half of the same clause: the trademark may be used to promote a
+          product, the authors' and the copyright holder's names may not. */}
+      <p class="settings__hint">
+        Swiss Ephemeris © 1997–2021 Astrodienst AG. Chandra is not affiliated
+        with Astrodienst.
+      </p>
       <p class="settings__hint settings__hint--foot">
         Positions are computed on this Mac. Nothing is sent anywhere.
       </p>

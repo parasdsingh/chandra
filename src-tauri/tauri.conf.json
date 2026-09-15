@@ -27,10 +27,13 @@
       "icons/icon.icns"
     ],
     "resources": [
-      "resources/ephe/*"
+      "resources/ephe/*",
+      "resources/LICENSE",
+      "resources/THIRD-PARTY-NOTICES.md",
+      "resources/GEONAMES-NOTICE"
     ],
     "category": "Utility",
-    "copyright": "AGPL-3.0",
+    "copyright": "\u00a9 2026 Paras Deep Singh. Licensed under the GNU Affero General Public License v3.0.",
     "shortDescription": "Moon phases and navagraha transits",
     "longDescription": "A menu bar almanac: live moon phase, a month calendar with per-day detail, and sidereal transit calendars for the nine grahas. Computed locally with the Swiss Ephemeris.",
     "macOS": {
