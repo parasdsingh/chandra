@@ -86,13 +86,18 @@ export function MonthJump(props: Props): JSX.Element {
           </button>
         </div>
 
-        <div class="jump__months" role="list">
+        {/* No `role="list"` and no `role="listitem"`. They were here to say the
+            months are a set, and they cost more than they said: `listitem` on a
+            `<button>` replaces the button role outright, so twelve or thirteen
+            activatable controls were announced as list items - things to read
+            past rather than things to press. A group with a label says the same
+            thing and takes nothing away. */}
+        <div class="jump__months" role="group" aria-label="Months">
           <For each={index.latest?.months ?? []}>
             {(month) => (
               <button
                 class="jump__month"
                 classList={{ "is-current": month.offset === props.offset }}
-                role="listitem"
                 // The pressed state, not a colour: which month is in view behind
                 // the overlay is a fact a reader needs whether or not the accent
                 // reaches them.

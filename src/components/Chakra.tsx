@@ -20,6 +20,7 @@ import {
   createUniqueId,
   For,
   Index,
+  onCleanup,
   Show,
 } from "solid-js";
 
@@ -2296,12 +2297,21 @@ export function Chakra(props: {
     return found < 0 ? 0 : found;
   };
 
-  const compartments = (): Compartment[] =>
+  // A memo, and it has to be one. Two `Index`es read this - the clip paths and
+  // the contents - and each wraps its `each` in a memo of its own, so a plain
+  // accessor ran the whole layout twice per update and returned two unrelated
+  // arrays of fresh objects. That is twelve compartments, each choosing a route
+  // from seven candidates, done twice a second while the chart animates.
+  //
+  // The file already insists on memos inside the `Index` body for exactly this
+  // reason; the accessor feeding both `Index`es was the one that was missed.
+  const compartments = createMemo((): Compartment[] =>
     props.format === "north"
       ? // Routes always, for North Indian: the placement is built on them now,
         // not only the overlay. The argument is gone with the choice.
         northCompartments(props.data.rashis, lagnaSign(), props.numbered)
-      : gridCompartments(props.data.rashis, props.format);
+      : gridCompartments(props.data.rashis, props.format),
+  );
 
   return (
     <svg
@@ -2516,6 +2526,10 @@ export function Chakra(props: {
           let group: SVGGElement | undefined;
           let previous: string | undefined;
           let running: Animation | undefined;
+          // Left running, an animation on a detached node holds that node and
+          // keeps a callback on the document timeline until it finishes. Twelve
+          // of them survive leaving the chart view.
+          onCleanup(() => running?.cancel());
           createEffect(() => {
             const sign = each().rashi.name;
             const changed = previous !== undefined && previous !== sign;
@@ -2647,6 +2661,7 @@ export function Chakra(props: {
                   let held: string | undefined;
                   let at: number | undefined;
                   let sliding: Animation | undefined;
+                  onCleanup(() => sliding?.cancel());
                   createEffect(() => {
                     const now = spot();
                     const sign = each().rashi.name;
@@ -2897,37 +2912,45 @@ function DegreeGrid(props: {
           opacity: 0.22,
         }}
       />
-      <For each={lines()}>
+      {/* `Index`. `lines()` builds fresh objects, so `For` tore down and rebuilt
+          every lane polyline in all twelve compartments on every tick. */}
+      <Index each={lines()}>
         {(line) => (
           <polyline
-            points={polygon(line.at)}
-            data-lane={line.lane}
+            points={polygon(line().at)}
+            data-lane={line().lane}
             fill="none"
             style={{
               stroke: "var(--text-tertiary)",
-              "stroke-width": line.lane === 0 ? "0.75" : "0.6",
+              "stroke-width": line().lane === 0 ? "0.75" : "0.6",
               // The family is the mark that should read first, so it carries
               // the longest dashes and the most ink of anything drawn here.
-              "stroke-dasharray": line.lane === 0 ? "4 2" : "2 2",
+              "stroke-dasharray": line().lane === 0 ? "4 2" : "2 2",
               // Ground, not figure. In D60 nothing on the chart visibly moves,
               // so a grid drawn at reading strength becomes the loudest thing
               // in a view whose subject is the bodies. The hierarchy among the
               // marks is unchanged - extent, then rhythm, then weight, then
               // opacity - and the whole ladder is simply set lower.
-              opacity: line.lane === 0 ? 0.5 : 0.38,
+              opacity: line().lane === 0 ? 0.5 : 0.38,
             }}
           />
         )}
-      </For>
-      <For each={[0, 5, 10, 15, 20, 25, 30]}>
+      </Index>
+      {/* `Index`, not `For`. The array is seven identical numbers rebuilt on
+          every read, so `mapArray`'s diff saw no change and never re-ran the
+          child - and `tick` reads `props.progress`. The dotted lanes moved
+          every second while the marks they are measured against stayed where
+          they were when the chart mounted, on the one overlay whose stated job
+          is to show where the degrees are *at this instant*. */}
+      <Index each={[0, 5, 10, 15, 20, 25, 30]}>
         {(degree) => {
-          const mark = tick(degree);
+          const mark = () => tick(degree());
           return (
             <line
-              x1={mark.x1}
-              y1={mark.y1}
-              x2={mark.x2}
-              y2={mark.y2}
+              x1={mark().x1}
+              y1={mark().y1}
+              x2={mark().x2}
+              y2={mark().y2}
               style={{
                 // Neutral, not --glare. The token file allows the app exactly
                 // two hues and --glare is one of them: it means a body lost in
@@ -2935,15 +2958,15 @@ function DegreeGrid(props: {
                 // grid does not have, and puts a combustion-coloured mark
                 // through compartments where nothing is combust.
                 stroke: "var(--text-tertiary)",
-                "stroke-width": mark.major ? "0.6" : "0.5",
+                "stroke-width": mark().major ? "0.6" : "0.5",
                 // A long dash for the degree marks, a fine dot for the rest.
-                "stroke-dasharray": mark.major ? "2.5 2" : "0.75 2",
-                opacity: mark.major ? 0.42 : 0.28,
+                "stroke-dasharray": mark().major ? "2.5 2" : "0.75 2",
+                opacity: mark().major ? 0.42 : 0.28,
               }}
             />
           );
         }}
-      </For>
+      </Index>
       {/* The gates: where this compartment's route meets its neighbours'. The
           two are on the compartment's own boundary, which is why the band
           always stops short of them - a label centred on a wall is half

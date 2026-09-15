@@ -17,6 +17,7 @@ import {
   createEffect,
   createSignal,
   For,
+  on,
   onCleanup,
   Show,
 } from "solid-js";
@@ -475,6 +476,24 @@ function Location(props: SectionProps): JSX.Element {
     string | undefined
   >();
   const [coordinateError, setCoordinateError] = createSignal<string>();
+
+  // Forgotten whenever the location in force changes by any other route.
+  //
+  // They were kept, so typing a latitude and then searching and picking a city
+  // left the two boxes showing the typed numbers - which were no longer the
+  // place the app was using. The fields claimed to show the location in force
+  // and did not.
+  createEffect(
+    on(
+      () => [props.boot.location.latitude, props.boot.location.longitude],
+      () => {
+        setTypedLatitude(undefined);
+        setTypedLongitude(undefined);
+        setCoordinateError(undefined);
+      },
+      { defer: true },
+    ),
+  );
 
   async function applyCoordinates() {
     const latitude = Number(typedLatitude() ?? props.boot.location.latitude);
@@ -1011,6 +1030,24 @@ function Advanced(props: {
 
   return (
     <nav class="settings__list">
+      {/* Said where the choices are, because that is what it is about: the
+          settings on this screen are the defaults, not the reader's. The file
+          is left untouched rather than reset, so this stays until they fix it
+          or change something - which overwrites it deliberately. */}
+      <Show when={props.boot.settings_error}>
+        {(cause) => (
+          <div class="error-block">
+            <p class="error-block__headline">
+              Your saved settings could not be read.
+            </p>
+            <p class="error-block__cause">{cause()}</p>
+            <p class="error-block__cause">
+              Chandra is running on defaults. The file has been left as it is;
+              changing any setting here will overwrite it.
+            </p>
+          </div>
+        )}
+      </Show>
       <For each={rows}>
         {(row) => (
           <button class="settings__nav" onClick={() => props.onOpen(row.id)}>

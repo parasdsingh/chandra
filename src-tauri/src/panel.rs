@@ -20,6 +20,16 @@ pub const PANEL_LABEL: &str = "panel";
 /// Carries the subject to the already-running panel as it opens.
 pub const OPEN_EVENT: &str = "chandra://open";
 
+/// Told to the front end when the panel is dismissed.
+///
+/// The webview outlives a hidden panel - it is never reloaded - so without this
+/// nothing in the page knows it has stopped being looked at. The chart's own
+/// timer took that literally: opened once, it refetched and relaid out the whole
+/// chart every second for the life of the process, with the panel shut. Hiding
+/// is not a state the front end can observe any other way; `visibilitychange`
+/// does not fire for an AppKit window being ordered out.
+pub const HIDE_EVENT: &str = "chandra://hide";
+
 /// Panel width, fixed forever (`docs/DESIGN.md` 2.2).
 const PANEL_WIDTH: f64 = 320.0;
 
@@ -228,6 +238,9 @@ pub fn announce_subject(app: &AppHandle) {
 
 pub fn hide(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(PANEL_LABEL) {
+        // Announced before the window goes, so the page stops its timers while
+        // it still has a chance to run.
+        let _ = window.emit_to(PANEL_LABEL, HIDE_EVENT, ());
         let _ = window.hide();
     }
     let _ = app.hide();

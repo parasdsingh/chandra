@@ -116,9 +116,21 @@ export function Panel(props: Props): JSX.Element {
 
   const animating = () => props.boot.settings.chart.animate && !stillPreferred();
 
+  /**
+   * Whether the panel is on screen.
+   *
+   * The webview is never reloaded, so a hidden panel is a running page with
+   * nobody looking at it. `view()` stays `"chart"` after the panel is
+   * dismissed, so the chart's timer kept refetching and relaying out the whole
+   * chart every second for the life of the process - the panel's largest
+   * standing cost, and invisible. `visibilitychange` does not fire for an
+   * AppKit window being ordered out, so the back end says so instead.
+   */
+  const [shown, setShown] = createSignal(true);
+
   const [chartAt, setChartAt] = createSignal(Date.now());
   createEffect(() => {
-    if (view() !== "chart") return;
+    if (view() !== "chart" || !shown()) return;
     // One second while it moves, a minute while it does not. A chart costs 47
     // microseconds, so a second is 0.005% of a core - and the slowest division
     // takes two hours to cross a compartment, which is 7,200 steps at this rate.
@@ -588,14 +600,41 @@ export function Panel(props: Props): JSX.Element {
       PageDown: () => step(event.shiftKey ? 12 : 1),
       Home: () => selectEdge("first"),
       End: () => selectEdge("last"),
-      Enter: () => openDay(selected() ?? today()),
-      " ": () => openDay(selected() ?? today()),
+      // The cell that carries the tab stop, which is not always the selection:
+      // with nothing selected the grid puts the stop on today, and failing that
+      // on the first day of the month being displayed. Opening `selected() ??
+      // today()` instead meant tabbing into a grid scrolled two months forward
+      // and pressing Enter opened *today*, under a header still naming the
+      // month you had scrolled to.
+      Enter: () => openDay(keyboardDay()),
+      " ": () => openDay(keyboardDay()),
       t: jumpToToday,
       T: jumpToToday,
     };
 
     const handler = handlers[event.key];
     if (!handler) return;
+
+    // Not when a control has the focus.
+    //
+    // This is a window listener with no target check, and it called
+    // `preventDefault` before dispatching - which cancels the click a button
+    // synthesises from Enter or Space. Tabbing to the gear and pressing Enter
+    // opened a day instead of settings; the month title, whose only job is the
+    // jump overlay, could not be activated from the keyboard at all. Both were
+    // reachable by mouse only, and `Cmd+,` was the sole keyboard route to
+    // settings.
+    //
+    // A button, a link or a field owns its own keys. The grid does not: its
+    // cells are divs and the arrows are the panel's.
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("button, a, input, select, textarea")
+    ) {
+      return;
+    }
+
     // Unbound keys are silently ignored: no beep, no shake.
     event.preventDefault();
     handler();
@@ -608,6 +647,25 @@ export function Panel(props: Props): JSX.Element {
    * months, so Home in August selected 27 July and opened a day detail under an
    * August header.
    */
+  /**
+   * The day Enter opens, which is the cell the grid puts its tab stop on.
+   *
+   * The same three cases `MonthCells` uses, in the same order: the selection,
+   * else today if today is in the month being displayed, else that month's
+   * first day. Opening `selected() ?? today()` instead meant that tabbing into
+   * a grid scrolled two months away and pressing Enter opened today - a day the
+   * grid was not showing, under a header naming a different month.
+   */
+  function keyboardDay(): DateKey {
+    const chosen = selected();
+    if (chosen) return chosen;
+    const days = monthData()?.days.filter((day) => day.in_month);
+    if (!days || days.length === 0) return today();
+    const now = today();
+    const inMonth = days.some((day) => sameDate(day.date, now));
+    return inMonth ? now : days[0]!.date;
+  }
+
   function selectEdge(edge: "first" | "last") {
     const days = monthData()?.days.filter((day) => day.in_month);
     if (!days || days.length === 0) return;
@@ -666,10 +724,14 @@ export function Panel(props: Props): JSX.Element {
     window.addEventListener("keydown", listener);
     onCleanup(() => window.removeEventListener("keydown", listener));
 
-    const opened = listen<string>("chandra://open", (event) =>
-      open(event.payload as string),
-    );
+    const opened = listen<string>("chandra://open", (event) => {
+      setShown(true);
+      open(event.payload as string);
+    });
     onCleanup(() => void opened.then((unlisten) => unlisten()));
+
+    const hidden = listen("chandra://hide", () => setShown(false));
+    onCleanup(() => void hidden.then((unlisten) => unlisten()));
   });
 
   /** Whether the calendar in force names months by the Moon. */
@@ -688,7 +750,11 @@ export function Panel(props: Props): JSX.Element {
     // glance cannot recover from. The feature keeps its name in its settings
     // section and its tray tooltip.
     if (view() === "chart") {
-      const rising = chart()?.lagna.name;
+      // `chart.latest`, not `chart()`: an errored resource re-throws from its
+      // accessor, and this runs inside the header's title, so a failed chart
+      // fetch threw out of render and took the whole view with it - including
+      // the error block written to report exactly that.
+      const rising = chart.error ? undefined : chart.latest?.lagna.name;
       if (!rising) return "";
       // The division first, then the reading. With sixteen charts and several of
       // them in the menu bar at once, a window that says only what is rising
@@ -852,19 +918,25 @@ export function Panel(props: Props): JSX.Element {
               isToday={sameDate(selected(), today())}
               lunar={lunar()}
               error={error()}
+              // A Solid resource keeps its previous value while it refetches,
+              // so stepping a day left yesterday's tithi, rise, set and
+              // muhurtas on screen for the length of the round trip - under
+              // today's arrows, presented as current. Said, rather than hidden
+              // behind a blank the previous code was written to avoid.
+              stale={detail.loading}
               onStep={(delta) => moveSelection(delta)}
             />
           </Show>
 
           <Show when={locationIsSet(props.boot) && view() === "chart"}>
-            {/* `chart.latest`, not `chart()`. A Solid resource drops to
-                undefined while it refetches, so the sixty-second refresh
-                blanked the whole chart for a frame and put the error fallback
-                in its place. The previous reading stays on screen until the
-                next one lands, which is the same reason the month strip holds
-                its months by identity. */}
+            {/* `chart.latest`, not `chart()`, and not while it is errored. A
+                Solid resource re-throws from its accessor once it has failed,
+                so reading it here threw past the `error` prop below rather than
+                filling it in. `latest` also keeps the previous reading on
+                screen while the next is fetched, so the refresh does not blank
+                the chart for a frame. */}
             <ChartView
-              chart={chart.latest}
+              chart={chart.error ? undefined : chart.latest}
               error={chart.error ? toError(chart.error) : undefined}
               format={props.boot.settings.chart.format}
               numbered={props.boot.settings.chart.numbered}

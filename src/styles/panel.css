@@ -1191,3 +1191,13 @@
 .chakra__label.is-on-lagna {
   stroke: var(--sky-ground-lagna);
 }
+
+/* The day on screen is the previous one, still here while the one asked for is
+   fetched. Dimmed rather than blanked: a reader stepping through days wants to
+   see where they are, and an empty pane between every step is worse than a
+   pane that says it is a moment behind. `aria-busy` says the same thing to a
+   screen reader, which is the part that cannot see the dimming. */
+.detail.is-stale {
+  opacity: 0.45;
+  transition: opacity var(--d-hover-out) var(--ease-standard);
+}

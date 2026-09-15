@@ -120,10 +120,31 @@ export function MonthCells(props: Props): JSX.Element {
                     (props.month as GrahaMonth).events,
                     cell,
                   );
+                  // Getters, not values.
+                  //
+                  // An object literal evaluates its properties once, and this
+                  // one is built inside a `For` child - which `mapArray` runs
+                  // under `untrack`, so reading `props.selected` here subscribed
+                  // to nothing. Every cell's `selected`, `today` and `focused`
+                  // were frozen at the moment the cell was built, and the only
+                  // thing that rebuilt the cells was a new month.
+                  //
+                  // What that cost: pressing an arrow key inside the displayed
+                  // month moved the selection in the panel's state and the ring
+                  // did not move on screen. It worked when the step crossed a
+                  // month boundary, because that re-anchors and rebuilds the
+                  // grid, and it was always right after a round trip through the
+                  // day view - which is why it survived so long.
                   const common = {
-                    selected: sameDate(props.selected, cell.date),
-                    today: sameDate(props.today, cell.date),
-                    focused: props.active && sameDate(focusedDate(), cell.date),
+                    get selected() {
+                      return sameDate(props.selected, cell.date);
+                    },
+                    get today() {
+                      return sameDate(props.today, cell.date);
+                    },
+                    get focused() {
+                      return props.active && sameDate(focusedDate(), cell.date);
+                    },
                     onSelect: () => props.onSelect(cell.date),
                   };
 

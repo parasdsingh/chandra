@@ -1,7 +1,13 @@
 /** Loads the panel. There is only one window. */
 
 import type { JSX } from "solid-js";
-import { createResource, onCleanup, onMount, Show } from "solid-js";
+import {
+  createResource,
+  ErrorBoundary,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 
 import * as ipc from "./ipc";
@@ -62,29 +68,43 @@ function PanelWindow(): JSX.Element {
     onCleanup(() => void locationListener.then((unlisten) => unlisten()));
   });
 
+  // The error is tested *before* the value is read, and that ordering is the
+  // whole of it. A Solid resource in its errored state re-throws from the
+  // accessor, so `<Show when={boot()}>` threw out of render the moment the
+  // fetch rejected - past its own fallback, which never ran. The DOM was left
+  // at the previous frame, an empty `.panel-frame`: a panel that opens onto
+  // nothing, with no way to tell whether it is loading or permanently broken.
+  // The block below was unreachable code that described the bug it could not
+  // show.
   return (
-    <Show
-      when={boot()}
-      fallback={
-        // A failed bootstrap must say so. Rendering an empty fallback gives a
-        // panel that opens onto nothing, with no way to tell whether it is
-        // still loading or permanently broken.
-        <Show when={boot.error} fallback={<div class="panel-frame" />}>
-          <div class="panel-frame">
-            <div class="panel">
-              <div class="region">
-                <div class="error-block">
-                  <p class="error-block__headline">Chandra could not start.</p>
-                  <p class="error-block__cause">{describe(boot.error)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <ErrorBoundary fallback={(error) => <Stopped cause={describe(error)} />}>
+      <Show
+        when={!boot.error}
+        fallback={<Stopped cause={describe(boot.error)} />}
+      >
+        <Show when={boot()} fallback={<div class="panel-frame" />}>
+          {(ready) => (
+            <Panel boot={ready()} onSettingsApplied={(next) => mutate(next)} />
+          )}
         </Show>
-      }
-    >
-      <Panel boot={boot()!} onSettingsApplied={(next) => mutate(next)} />
-    </Show>
+      </Show>
+    </ErrorBoundary>
+  );
+}
+
+/** The panel, saying why there is nothing in it. */
+function Stopped(props: { cause: string }): JSX.Element {
+  return (
+    <div class="panel-frame">
+      <div class="panel">
+        <div class="region">
+          <div class="error-block">
+            <p class="error-block__headline">Chandra could not start.</p>
+            <p class="error-block__cause">{props.cause}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

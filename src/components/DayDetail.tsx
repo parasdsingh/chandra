@@ -77,6 +77,9 @@ interface Props {
   /** Steps the day being read, in days. Optional because the visual harness
    *  draws this pane without a calendar behind it to step through. */
   onStep?: (delta: number) => void;
+  /** Whether what is drawn is the previous day, still on screen while the one
+   *  asked for is fetched. */
+  stale?: boolean;
 }
 
 /** Which pane is showing. */
@@ -120,8 +123,10 @@ export function DayDetail(props: Props): JSX.Element {
   return (
     <div
       class="detail"
+      classList={{ "is-stale": props.stale }}
       role="region"
       aria-live="polite"
+      aria-busy={props.stale ? "true" : undefined}
       aria-label="Day detail"
     >
       {/* The two states the surface carries, drawn behind the fields rather than
