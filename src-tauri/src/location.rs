@@ -152,9 +152,15 @@ fn for_zone(zone_name: &str) -> Resolved {
             zone: place.zone.clone(),
             latitude: place.latitude,
             longitude: place.longitude,
-            // zone.tab carries no elevation. Sea level understates rise times by
-            // about four minutes at 900 m, which is why the setting exists -
-            // and why this reports itself as an assumption rather than a height.
+            // zone.tab carries no elevation, so this is an assumption and says
+            // so rather than presenting itself as a measurement.
+            //
+            // It does not currently move a rise time: the engine passes a
+            // literal atmospheric pressure, which disables the elevation
+            // scaling in Swiss Ephemeris, and measures 0.000 minutes of
+            // difference between sea level and 8,848 m. The distinction is kept
+            // because `elevation_known` is what the settings pane prints, and
+            // "not known" and "measured as zero" are different claims.
             elevation: 0.0,
             elevation_known: false,
             provenance: Provenance::TimeZone,
@@ -202,6 +208,8 @@ pub use platform::{release, request};
 #[cfg(target_os = "macos")]
 mod platform {
     use std::cell::RefCell;
+
+    use super::Ticket;
 
     use objc2::rc::Retained;
     use objc2::runtime::ProtocolObject;
@@ -332,13 +340,16 @@ mod platform {
         }
     }
 
+    /// One request, held alive: which request it is, and the two objects that
+    /// must outlive the call that started them.
+    type Pending = (Ticket, Retained<CLLocationManager>, Retained<Delegate>);
+
     // Keeps the manager and delegate alive for the duration of a request.
     // CoreLocation holds only a weak reference to its delegate, and a dropped
     // manager stops updating, so both must outlive the call that started them.
     // Neither type is `Send`, so they live in main-thread storage.
     thread_local! {
-        static IN_FLIGHT: RefCell<Option<(Retained<CLLocationManager>, Retained<Delegate>)>> =
-            const { RefCell::new(None) };
+        static IN_FLIGHT: RefCell<Option<Pending>> = const { RefCell::new(None) };
     }
 
     /// Asks macOS for the device's coordinates.
@@ -346,20 +357,21 @@ mod platform {
     /// Must be called on the main thread. `on_result` runs on the main thread
     /// too, exactly once, unless authorisation is never answered - the caller is
     /// responsible for giving up after a timeout.
-    pub fn request(on_result: impl FnMut(Outcome) + 'static) {
+    pub fn request(on_result: impl FnMut(Outcome) + 'static) -> Ticket {
+        let ticket = Ticket::next();
         let Some(marker) = MainThreadMarker::new() else {
             // Called off the main thread. Reporting unavailable is the honest
             // answer; starting CoreLocation here would deliver callbacks to a
             // run loop that never runs.
             let mut on_result = on_result;
             on_result(Outcome::Unavailable);
-            return;
+            return ticket;
         };
 
         if !unsafe { CLLocationManager::locationServicesEnabled_class() } {
             let mut on_result = on_result;
             on_result(Outcome::Unavailable);
-            return;
+            return ticket;
         }
 
         let delegate = Delegate::new(marker, Box::new(on_result));
@@ -378,15 +390,16 @@ mod platform {
             },
             _ => {
                 delegate.deliver(Outcome::Denied);
-                return;
+                return ticket;
             }
         }
 
         IN_FLIGHT.with(|slot| {
             // Replacing any previous request cancels it, which is what should
             // happen: only the newest answer is wanted.
-            *slot.borrow_mut() = Some((manager, delegate));
+            *slot.borrow_mut() = Some((ticket, manager, delegate));
         });
+        ticket
     }
 
     /// Releases whatever a finished request left alive.
@@ -397,23 +410,49 @@ mod platform {
     /// updating; held past it, an unanswered authorisation prompt kept a
     /// `CLLocationManager` and its delegate alive until the next request came,
     /// which for a user who never answers is for the life of the process.
-    pub fn release() {
+    pub fn release(ticket: Ticket) {
         IN_FLIGHT.with(|slot| {
-            *slot.borrow_mut() = None;
+            let mut held = slot.borrow_mut();
+            // Only the request this caller started.
+            //
+            // It used to clear whatever was there. Two overlapping asks - a
+            // second "Use this Mac" while the first is still waiting - then
+            // destroyed each other: the second replaced the first's sender, so
+            // the first's channel hung up at once, and the first's cleanup tore
+            // down the *second's* manager. The second then waited the full
+            // twenty seconds and reported nothing.
+            if held.as_ref().is_some_and(|(held, _, _)| *held == ticket) {
+                *held = None;
+            }
         });
+    }
+}
+
+/// Identifies one location request, so a caller releases only its own.
+///
+/// Two overlapping asks used to destroy each other; see [`release`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Ticket(u64);
+
+impl Ticket {
+    fn next() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        Ticket(NEXT.fetch_add(1, Ordering::Relaxed))
     }
 }
 
 /// Location services exist only on macOS in this build. Every other platform
 /// resolves through the timezone, which is a complete answer rather than a stub.
 #[cfg(not(target_os = "macos"))]
-pub fn request(mut on_result: impl FnMut(Outcome) + 'static) {
+pub fn request(mut on_result: impl FnMut(Outcome) + 'static) -> Ticket {
     on_result(Outcome::Unavailable);
+    Ticket::next()
 }
 
 /// Nothing is ever held alive off macOS, so there is nothing to release.
 #[cfg(not(target_os = "macos"))]
-pub fn release() {}
+pub fn release(_ticket: Ticket) {}
 
 #[cfg(test)]
 mod tests {

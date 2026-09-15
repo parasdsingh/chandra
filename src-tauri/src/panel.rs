@@ -331,10 +331,15 @@ fn place(window: &WebviewWindow, tray_rect: Rect, width: f64) -> Result<()> {
 /// bounded: an unanswered authorisation prompt must not leave the caller hanging.
 pub async fn request_device_location(app: &AppHandle) {
     let (sender, receiver) = mpsc::channel();
+    // The ticket comes back over its own channel, so the cleanup below releases
+    // the request this call started and not whichever one happens to be in the
+    // slot. Two overlapping asks used to tear down each other's manager.
+    let (ticket_out, ticket_in) = mpsc::channel();
     let dispatch = app.run_on_main_thread(move || {
-        crate::location::request(move |outcome| {
+        let ticket = crate::location::request(move |outcome| {
             let _ = sender.send(outcome);
         });
+        let _ = ticket_out.send(ticket);
     });
     if dispatch.is_err() {
         return;
@@ -350,7 +355,9 @@ pub async fn request_device_location(app: &AppHandle) {
     // Whatever the answer, the wait is over and nothing more will be read from
     // the manager. A request that timed out would otherwise hold it and its
     // delegate until the next one replaced them.
-    let _ = handle.run_on_main_thread(crate::location::release);
+    if let Ok(ticket) = ticket_in.recv_timeout(LOCATION_TIMEOUT) {
+        let _ = handle.run_on_main_thread(move || crate::location::release(ticket));
+    }
 
     if let Some(Outcome::Located {
         latitude,

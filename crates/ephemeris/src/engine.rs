@@ -40,7 +40,20 @@ const SE_CALC_RISE: i32 = 1;
 const SE_CALC_SET: i32 = 2;
 
 /// Standard atmosphere at sea level, used for the refraction model in rise and
-/// set calculations. Swiss Ephemeris scales this for the observer's elevation.
+/// set calculations.
+///
+/// **The observer's elevation has no effect on rise and set times as this is
+/// called**, and the comment here used to say the opposite. Swiss Ephemeris
+/// scales pressure for elevation only when `atpress` is passed as zero; passing
+/// a literal disables that path, and `swe_rise_trans` applies no horizon dip of
+/// its own. Measured at Bengaluru: sunrise at 920 m and at 8,848 m are both
+/// 0.000 minutes from sunrise at sea level. With `atpress = 0.0` they separate
+/// by 0.286 and 1.886 minutes.
+///
+/// Sea level is also the right horizon for an almanac (D-004), which is why
+/// this has never been wrong in its output - only in its explanation. Changing
+/// it would change every published rise and set time in the app and is a
+/// decision, not a fix.
 const ATMOSPHERIC_PRESSURE_MBAR: f64 = 1013.25;
 const ATMOSPHERIC_TEMPERATURE_C: f64 = 15.0;
 
@@ -356,15 +369,36 @@ impl Engine {
         let inner = self.inner.lock().map_err(|_| Error::Poisoned)?;
         let body = se_body_id(graha, inner.config.node_type);
 
-        // One position call for the body, purely to read the flags Swiss
-        // Ephemeris returns. It is asked for even when the body does not rise,
-        // so the provenance of the window is always stated rather than assumed.
         let flags = SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_SIDEREAL;
-        let (_, returned) = calc_raw(jd_ut_start, body, flags, graha.name())?;
-        let source = Some(Source::from_returned_flags(returned));
 
         let rise = calc_rise_event(jd_ut_start, body, SE_CALC_RISE, observer, graha)?;
         let set = calc_rise_event(jd_ut_start, body, SE_CALC_SET, observer, graha)?;
+
+        // Provenance read at the events, not at the start of the search.
+        //
+        // The search runs forward, so an event can land the other side of the
+        // data files' edge from where the window opened: a search begun on
+        // 2400-01-10 reported Swieph for a rise on the 11th, which is Moshier.
+        // That is precisely the claim D-006 exists to keep honest.
+        //
+        // Weakest of the instants that produced an answer, so a pair where one
+        // event is analytic is not reported as though both were precise. The
+        // window's own start is used when neither event exists, because the
+        // provenance of "it does not rise" is still worth stating.
+        let asked: Vec<f64> = [rise, set].into_iter().flatten().collect();
+        let source = Some(Source::weakest(
+            if asked.is_empty() {
+                vec![jd_ut_start]
+            } else {
+                asked
+            }
+            .into_iter()
+            .map(|at| -> Result<Source> {
+                let (_, returned) = calc_raw(at, body, flags, graha.name())?;
+                Ok(Source::from_returned_flags(returned))
+            })
+            .collect::<Result<Vec<_>>>()?,
+        ));
 
         // Swiss Ephemeris searches forward without bound, so a body that does
         // not rise inside the window would otherwise report the next day's rise
@@ -463,6 +497,11 @@ impl Engine {
 
     /// Ayanamsa in degrees at an instant, for display in settings.
     ///
+    /// Signed, and it has to be: the Lahiri ayanamsa crosses zero around 285 CE,
+    /// and `rem_euclid` turned a value a hair below it into 359.97 degrees - a
+    /// number that reads as an enormous ayanamsa rather than a tiny negative
+    /// one.
+    ///
     /// Computed as the difference between the tropical and sidereal longitude of
     /// the Sun rather than read from `swe_get_ayanamsa_ex_ut`. Those two differ
     /// by up to the nutation in longitude (~17 arcseconds) because they resolve
@@ -485,7 +524,19 @@ impl Engine {
         // every call is. Throwing the flag word away here made this the one
         // displayed figure that could be Moshier without saying so.
         Ok(Reading {
-            degrees: (tropical.0[0] - sidereal.0[0]).rem_euclid(360.0),
+            // Folded to (-180, 180], not to [0, 360). The ayanamsa is a signed
+            // quantity that passes through zero - around 285 CE for Lahiri -
+            // and `rem_euclid` turned a value a hair below zero into 359.97
+            // degrees, which reads as an enormous ayanamsa rather than a tiny
+            // negative one.
+            degrees: {
+                let difference = (tropical.0[0] - sidereal.0[0]).rem_euclid(360.0);
+                if difference > 180.0 {
+                    difference - 360.0
+                } else {
+                    difference
+                }
+            },
             source: Source::from_returned_flags(tropical.1)
                 .weaker(Source::from_returned_flags(sidereal.1)),
         })

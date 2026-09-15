@@ -9,6 +9,7 @@
 //! substituting a default is how a user's location gets reset without warning.
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use chandra_almanac::day::DayOptions;
@@ -435,20 +436,51 @@ impl Settings {
         let body = serde_json::to_string_pretty(self)
             .map_err(|e| AppError::Settings(format!("cannot serialise settings: {e}")))?;
 
-        // Write to a sibling then rename, so an interrupted write cannot leave a
-        // truncated settings file behind.
+        // Write to a sibling, flush it, then rename.
+        //
+        // `rename` is atomic for *visibility*: no reader ever sees a half file.
+        // It is not atomic for durability - without the flush, a crash or a
+        // power loss between the write and the disk can leave the new name
+        // pointing at a zero-length file. That file is then unreadable, and an
+        // unreadable settings file is the one this app has to start without.
+        //
+        // The directory is synced too, because the rename itself is a directory
+        // entry and can outlive the data otherwise.
         let temporary = path.with_extension("json.tmp");
-        fs::write(&temporary, body).map_err(|e| {
-            AppError::Settings(format!("cannot write {}: {e}", temporary.display()))
-        })?;
+        {
+            let mut file = fs::File::create(&temporary).map_err(|e| {
+                AppError::Settings(format!("cannot write {}: {e}", temporary.display()))
+            })?;
+            file.write_all(body.as_bytes()).map_err(|e| {
+                AppError::Settings(format!("cannot write {}: {e}", temporary.display()))
+            })?;
+            file.sync_all().map_err(|e| {
+                AppError::Settings(format!("cannot flush {}: {e}", temporary.display()))
+            })?;
+        }
         fs::rename(&temporary, &path)
             .map_err(|e| AppError::Settings(format!("cannot replace {}: {e}", path.display())))?;
+
+        // Best effort: a directory that cannot be opened for sync is not a
+        // reason to report a failed save, since the data is already flushed and
+        // the rename has already happened.
+        if let Ok(dir) = fs::File::open(config_dir) {
+            let _ = dir.sync_all();
+        }
 
         Ok(())
     }
 }
 
 /// Brings a settings document up to [`SCHEMA_VERSION`].
+///
+/// Every step writes with `entry().or_insert`, never `insert`. A migration runs
+/// against whatever is on disk, and a document can carry a key a later build
+/// added even while claiming an earlier version - a downgrade, a half-written
+/// file, a hand edit. `insert` overwrites it: a build that wrote `chart` at
+/// schema 6 would have silently reset a reader's `format: "south"` back to
+/// north. Four steps used `insert` and nine did not; the four are the ones this
+/// file already documents having got wrong once before.
 ///
 /// Each step is written explicitly. There is deliberately no "unknown version,
 /// use defaults" branch: that path is how a downgrade silently erases settings a
@@ -495,7 +527,8 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         value
             .as_object_mut()
             .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
-            .insert("appearance".into(), serde_json::json!({ "scale": 1.0 }));
+            .entry("appearance")
+            .or_insert_with(|| serde_json::json!({ "scale": 1.0 }));
         value["schema_version"] = serde_json::Value::from(3u32);
         version = 3;
     }
@@ -512,9 +545,9 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         value
             .as_object_mut()
             .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
-            .insert(
-                "panchanga".into(),
-                serde_json::json!({ "yogas": false, "karanas": false, "muhurtas": false }),
+            .entry("panchanga")
+            .or_insert_with(
+                || serde_json::json!({ "yogas": false, "karanas": false, "muhurtas": false }),
             );
         value["schema_version"] = serde_json::Value::from(4u32);
         version = 4;
@@ -528,7 +561,8 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
             .get_mut("calendar")
             .and_then(serde_json::Value::as_object_mut)
             .ok_or_else(|| AppError::Settings("settings schema 4 has no calendar block".into()))?
-            .insert("ingress".into(), serde_json::Value::from("off"));
+            .entry("ingress")
+            .or_insert_with(|| serde_json::Value::from("off"));
         value["schema_version"] = serde_json::Value::from(5u32);
         version = 5;
     }
@@ -568,9 +602,9 @@ fn migrate(mut value: serde_json::Value, from: u32) -> Result<serde_json::Value>
         value
             .as_object_mut()
             .ok_or_else(|| AppError::Settings("settings are not an object".into()))?
-            .insert(
-                "chart".into(),
-                serde_json::json!({ "tray": true, "format": "north", "numbered": false }),
+            .entry("chart")
+            .or_insert_with(
+                || serde_json::json!({ "tray": true, "format": "north", "numbered": false }),
             );
         value["schema_version"] = serde_json::Value::from(7u32);
         version = 7;
