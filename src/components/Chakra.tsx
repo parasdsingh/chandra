@@ -619,7 +619,9 @@ function cluster(
   //
   // The floor is 0.62, which is 11px down to about 7. Below that the ink is
   // thinner than the frame it sits in.
-  for (const scale of [1, 0.86, 0.74, 0.62]) {
+  // One size. See PATH_SIZES: two sizes in one chart read as a distinction, and
+  // the only thing they distinguish is which house is busier.
+  for (const scale of [1]) {
     const laid = arrange(points, centre, count, caption, scale);
     if (laid) return { at: laid, scale };
   }
@@ -628,7 +630,7 @@ function cluster(
   // can hold one and allowed to overlap, because a body drawn outside its
   // compartment is *wrong* - it reads as standing in a sign it is not in - and
   // overlapping text is only hard to read.
-  return { at: squeezed(points, centre, count, caption, 0.62), scale: 0.62 };
+  return { at: squeezed(points, centre, count, caption, 1), scale: 1 };
 }
 
 /** Where a compartment's bodies go, and how large they are set. */
@@ -1094,7 +1096,26 @@ const PATH_PROBE = 48;
 
 /** The type sizes a compartment steps down through, largest first. The packed
  *  layout's own ladder (D-033): 11px, then 86, 74 and 62 per cent of it. */
-const PATH_SIZES = [1, 0.86, 0.74, 0.62];
+/** The type sizes a compartment may use. One.
+ *
+ * A graha's name is two letters at 11px in a 318 point panel, and 11px is
+ * already the smallest this app sets anything. Shrinking it made a label that
+ * could be read into one that had to be decoded - and worse, it did so
+ * *per compartment*, so a chart showed two or three sizes at once and the
+ * difference read as meaning something. It meant only that one house was
+ * busier than another.
+ *
+ * What this costs is overlap. A compartment that cannot hold its bodies at full
+ * size now draws them overlapping instead of drawing them small. Measured over
+ * the harness's thirty chart cases: every chart that is not deliberately
+ * crowded draws with no overlapping labels at all, and the ones that do overlap
+ * are the seven- and eight-body compartments - which is D2 every day, where the
+ * bodies genuinely are on top of each other in the sky.
+ *
+ * The ladder is kept as a list of one rather than deleted, because the search
+ * that reads it is the same search either way and a future decision to trade
+ * legibility for density is then one constant. */
+const PATH_SIZES = [1];
 
 function midpoint(a: Point, b: Point): Point {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -1595,8 +1616,8 @@ function planFor(
     if (rows) options.push({ at: rows, scale });
   }
   options.push({
-    at: squeezed(points, centre, bodies.length, caption, 0.62),
-    scale: 0.62,
+    at: squeezed(points, centre, bodies.length, caption, 1),
+    scale: 1,
   });
 
   const weighed = options.map((option) => {

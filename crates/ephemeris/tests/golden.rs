@@ -38,7 +38,13 @@ fn engine() -> MutexGuard<'static, Engine> {
             Mutex::new(engine)
         })
         .lock()
-        .expect("engine lock poisoned by an earlier test failure")
+        // A failing test panics while holding this, which poisons the mutex and
+        // makes every later test in the file fail with a message about the
+        // lock rather than about itself - one real failure reported as five,
+        // and the first one buried. The engine's C state is not damaged by a
+        // failed assertion, so the guard is taken anyway and the first failure
+        // stays the only failure.
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 fn golden() -> &'static Value {
@@ -417,9 +423,20 @@ fn a_configuration_change_is_never_half_applied() {
     });
 
     let total = readings.load(Ordering::Relaxed);
+    // A sanity check that the race actually ran, not a performance assertion.
+    //
+    // This used to require more readings than flips, which is a statement about
+    // how fast this machine is: under load - another build running, which is
+    // exactly when a test suite runs - the readers get fewer turns and the test
+    // failed while the invariant it exists to protect was perfectly intact. It
+    // then panicked while holding the engine lock, poisoning it, so one flaky
+    // failure became five.
+    //
+    // The bar is now that the race happened at all. `mixed == 0` below is the
+    // assertion that matters and is not timing-dependent.
     assert!(
-        total > FLIPS,
-        "only {total} readings overlapped {FLIPS} changes; the race was never exercised"
+        total > 0,
+        "no readings overlapped {FLIPS} changes; the race was never exercised"
     );
     assert_eq!(
         mixed.load(Ordering::Relaxed),
