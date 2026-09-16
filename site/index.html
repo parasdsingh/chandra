@@ -164,22 +164,10 @@ figcaption b { color: var(--text); font-weight: 500; display: block; margin-bott
 /* ---------- support ---------- */
 
 .support { display: grid; gap: 32px; grid-template-columns: 1fr; max-width: var(--measure); }
-.upi {
+.donate {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 12px; padding: 24px;
 }
-.upi-id {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin: 16px 0 0; font: 500 16px/1 var(--mono);
-  background: var(--bg); border: 1px solid var(--line-2);
-  border-radius: 8px; padding: 14px 16px;
-}
-.upi-id button {
-  margin-left: auto; font: 500 13px/1 var(--body); color: var(--accent);
-  background: none; border: 1px solid var(--line-2); border-radius: 6px;
-  padding: 7px 12px; cursor: pointer;
-}
-.upi-id button:hover { border-color: var(--accent); }
 
 .note {
   border-left: 2px solid var(--annotate); padding: 2px 0 2px 18px;
@@ -391,19 +379,16 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
     you and you would like to put something behind it, this is the way.
   </p>
   <div class="support">
-    <div class="upi" id="upi-block" hidden>
-      <h3 style="margin:0 0 6px;font:600 17px/1.3 var(--body)">UPI</h3>
-      <p style="margin:0;color:var(--text-dim);font-size:15px">
-        Any amount, directly, with no platform in between and no fee taken out.
+    <div class="donate" id="donate-block" hidden>
+      <h3 style="margin:0 0 6px;font:600 17px/1.3 var(--body)">Pay what you like</h3>
+      <p style="margin:0 0 18px;color:var(--text-dim);font-size:15px">
+        Any amount, once. UPI, cards, net banking and wallets all work — you
+        pick the amount and the method on the next page.
       </p>
-      <p class="upi-id">
-        <span id="upi-id"></span>
-        <button type="button" id="upi-copy">Copy</button>
-      </p>
-      <p style="margin:14px 0 0"><a id="upi-link" href="#">Open in a UPI app ↗</a></p>
+      <a class="btn btn--primary" id="donate-link" href="#">Contribute ↗</a>
     </div>
     <p class="note" id="support-pending">
-      <strong>Not set up yet.</strong> A UPI ID will appear here once the app is
+      <strong>Not set up yet.</strong> This will appear once the app is
       released. Nothing is being collected in the meantime.
     </p>
   </div>
@@ -466,10 +451,14 @@ const RELEASE = {
      repository does not satisfy it. */
   sourceUrl: "",
   licenceUrl: "",
-  /* UPI. The QR is deliberately not generated from this: a wrong QR is worse
-     than no QR, so export one from your bank app and drop it in beside it. */
-  upiId: "",
-  upiName: "Chandra",
+  /* A Razorpay Payment Page. The hosted page handles the methods, the receipt
+     and the compliance; this only has to link to it.
+
+     A payment page rather than a UPI ID and a QR, because a landing page is
+     read on a laptop as often as a phone: a QR is unusable on the device it is
+     being read on, and a UPI ID typed by hand is a transcription error waiting
+     to happen. The page works on both. */
+  donateUrl: "",
 };
 
 (function apply() {
@@ -494,23 +483,13 @@ const RELEASE = {
     else el.closest("li").hidden = true;
   }
 
-  if (RELEASE.upiId) {
-    document.getElementById("upi-block").hidden = false;
+  if (RELEASE.donateUrl) {
+    document.getElementById("donate-block").hidden = false;
     document.getElementById("support-pending").hidden = true;
-    document.getElementById("upi-id").textContent = RELEASE.upiId;
-    document.getElementById("upi-link").href =
-      "upi://pay?pa=" + encodeURIComponent(RELEASE.upiId) +
-      "&pn=" + encodeURIComponent(RELEASE.upiName) + "&cu=INR";
-    document.getElementById("upi-copy").addEventListener("click", async (event) => {
-      const button = event.currentTarget;
-      try {
-        await navigator.clipboard.writeText(RELEASE.upiId);
-        button.textContent = "Copied";
-        setTimeout(() => (button.textContent = "Copy"), 1600);
-      } catch {
-        button.textContent = "Select it";
-      }
-    });
+    const link = document.getElementById("donate-link");
+    link.href = RELEASE.donateUrl;
+    link.rel = "noopener";
+    link.target = "_blank";
   }
 })();
 </script>
