@@ -454,14 +454,16 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
    stays hidden or disabled until they are filled in - so the page never offers
    a download that does not exist or a payment address nobody is watching. */
 const RELEASE = {
-  /* The .dmg on Cloudflare R2. */
+  /* The .dmg, published to Cloudflare R2. */
   downloadUrl: "",
   /* What the download button says beside its label. */
   version: "",
   sizeMb: "",
-  /* Where the source lives. AGPL-3.0 requires this to be reachable from
-     anywhere the binary is offered - the download button stays off until it is
-     set, because offering one without the other is a licence violation. */
+  /* The public GitHub repository. AGPL-3.0 requires the Corresponding Source to
+     be reachable from anywhere the binary is offered, so the download button
+     stays off until this is set: offering one without the other is a licence
+     violation, not an oversight to fix later. Public, not private - a private
+     repository does not satisfy it. */
   sourceUrl: "",
   licenceUrl: "",
   /* UPI. The QR is deliberately not generated from this: a wrong QR is worse

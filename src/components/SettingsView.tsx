@@ -1195,9 +1195,11 @@ function MenuBar(props: SectionProps): JSX.Element {
 function About(props: { boot: Bootstrap }): JSX.Element {
   return (
     <div class="settings__section">
+      {/* Served, not written here. A hardcoded version desynchronises at the
+          next bump and nothing catches it, because nothing compares the two. */}
       <div class="settings__row">
         <span class="settings__label">Chandra</span>
-        <span class="settings__value">0.1.0</span>
+        <span class="settings__value">{props.boot.app_version}</span>
       </div>
       <div class="settings__row">
         <span class="settings__label">Ephemeris</span>

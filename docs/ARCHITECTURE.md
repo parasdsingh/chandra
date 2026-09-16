@@ -178,13 +178,16 @@ Every command is `async`, returns `Result<T, AppError>`, and runs the engine cal
 
 | Command | Returns |
 |---|---|
-| `bootstrap()` | `Bootstrap`: settings, resolved location, subject, picker lists, glyphs |
+| `bootstrap()` | `Bootstrap`: settings, resolved location, subject, picker lists, glyphs, and why the stored settings were not used if they were not |
 | `moon_month(anchor_unix_ms, offset, first_weekday)` | `MoonMonth` |
 | `graha_month(graha, anchor_unix_ms, offset, first_weekday)` | `GrahaMonth` |
+| `month_index(anchor_unix_ms, first_weekday)` | `MonthIndex`: the months the jump overlay offers |
+| `chakra(unix_ms, varga)` | `Chakra`: one divisional chart for an instant |
 | `day_detail(graha, year, month, day)` | `DayDetail` |
 | `snapshot(unix_ms)` | `Snapshot`: what the menu bar draws |
 | `update_settings(settings)` | `Bootstrap`, re-read after applying |
 | `search_cities(query, limit)` | `Vec<Place>` |
+| `nearest_city(latitude, longitude)` | `Option<Place>`: what names a typed coordinate |
 | `request_device_location()` | `Resolved`, whatever the attempt left in force |
 | `close_panel()` | `()` |
 
@@ -205,7 +208,7 @@ exactly what to change in TypeScript.
 ```
 tray click
    -> panel.rs: position via TrayCenter, show window, AppHandle::show()
-   -> front end mounts, calls month_view(subject, y, m)
+   -> front end mounts, calls moon_month/graha_month(anchor_unix_ms, offset, first_weekday)
         -> cache hit?  return immediately
         -> miss: spawn_blocking
               -> lock engine
@@ -289,9 +292,17 @@ location { mode: automatic|manual,
            place?: {label, zone, lat, lon, elevation},
            elevation?: metres, applied on top of whichever step resolved },
 sidereal { ayanamsa, node_type },
-calendar { month_system: solar|amanta|purnimanta },
-tray { subjects: [Graha], colour_mode: bool }
+calendar { month_system: solar|amanta|purnimanta,
+           ingress: off|rashi|nakshatra },
+panchanga { yogas, karanas, muhurtas },
+chart { format: north|south|east, numbered, animate, grid, sky,
+        vargas: [Varga] },
+tray { subjects: [Graha], colour_mode: bool },
+appearance { scale }
 ```
+
+The chart has no `tray` field: it is the one status item always present and has
+no switch (D-030). Each enabled division gets its own item, from `chart.vargas`.
 
 `launch_at_login` and `time_format` were defined here and never wired to anything - no UI
 could set either, and nothing called the autostart plugin - so both are gone rather than
@@ -305,10 +316,11 @@ Progressive disclosure. Each surface does one thing.
 
 | Level | Surface | Contains |
 |---|---|---|
-| 0 | menu bar | live moon disc; enabled graha glyphs |
-| 1 | panel, month grid | date + phase glyph per cell; today ringed; month switcher |
-| 2 | panel, day view | one field stack for the selected day (D-025) |
-| 3 | panel, settings | root, calendar, location, astrology, menubar, size, about |
+| 0 | menu bar | the chart, always; live moon disc and enabled graha glyphs, each switchable |
+| 1 | panel, month grid | date + phase glyph per cell; today ringed |
+| 1 | panel, chart | the Lagna Kundali for now, in the chosen division |
+| 2 | panel, day view | one field stack for the selected day (D-025); arrows step a day |
+| 3 | panel, settings | root, calendar, panchanga, ingress, location, astrology, chart, compartments, motion, grid, sky, menubar, size, advanced, about |
 
 - **There is no settings window.** Settings are a drill-down inside the same 264px region the
   calendar and the day view use, with the header carrying the way back. The panel is the only
@@ -342,9 +354,16 @@ Zero-regression is a hard requirement, so the domain is tested before the UI exi
 | `almanac` events | full-year runs for every graha; assert no missed or duplicated stations |
 | accuracy | assertions carry explicit documented tolerances, not eyeballed constants |
 | `src-tauri` | command-level tests with a fixed clock and fixed location |
-| front end | component tests; no snapshot tests of times (they would encode a timezone) |
+| front end | **none.** `npx tsc --noEmit` is the only automated check |
 
-All domain tests run on Linux in CI. macOS runners only build the DMG on a release tag.
+**The front end has no automated test of any kind.** `src/dev/preview.tsx` renders
+every view against real almanac output and is where layout, crowding and degraded
+states are inspected — but nothing in it asserts, so it catches what a person
+looking at it catches. The geometric checks the chart's comments refer to are run
+from a browser console against that harness, and are not in the repository.
+
+**There is no CI.** No `.github/`, no runners, no release job. `make check` is
+what a green build means, and it means it on one machine.
 
 ---
 
@@ -352,13 +371,22 @@ All domain tests run on Linux in CI. macOS runners only build the DMG on a relea
 
 ```
 make dev        cargo tauri dev
-make build      cargo tauri build --bundles app,dmg
+make build      cargo tauri build --bundles app              (this machine's arch)
+make universal  cargo tauri build --target universal-apple-darwin
+make dmg        universal, + dmg, then assert both architectures are in it
 make install    build, ad-hoc codesign, copy to /Applications, clear quarantine
-make test       cargo test --workspace  +  front-end tests
-make lint       cargo fmt --check, cargo clippy -D warnings, eslint, tsc --noEmit
+make test       cargo test --workspace  +  tsc --noEmit
+make lint       cargo fmt --check, cargo clippy -D warnings, tsc, check-tokens.sh
 ```
 
-- Ad-hoc signature (`codesign -s -`) so first launch is right-click-Open, not a hard block.
+- `build` and `install` are native; only the distributable is universal, because
+  a universal build is roughly twice the wait and a development loop does not
+  need one.
+- Ad-hoc signature (`codesign -s -`) on the *installed copy only*, for local use.
+  **The distributable is unsigned and un-notarised** (I-051). On macOS 15 and
+  later, Control-click then Open no longer works: a downloader must go through
+  System Settings › Privacy & Security. The landing page says so, after the
+  download rather than before it.
 - Tray items are built in Rust only; `tauri.conf.json` declares none, to avoid the duplicate
   tray icon bug (R-05).
 - CI on push: fmt, clippy, workspace tests — Ubuntu.
@@ -370,7 +398,7 @@ make lint       cargo fmt --check, cargo clippy -D warnings, eslint, tsc --noEmi
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| CoreLocation unreliable when ad-hoc signed (R-06) | no auto location | fallback chain D-007; app fully usable without it |
+| CoreLocation unreliable when ad-hoc signed (R-06) | no auto location | fallback chain D-007. **A location is required** (D-029): without one the app refuses to draw and asks for a city. It is usable without CoreLocation, not without a location. |
 | `swiss-eph` is young (0.2.1) | upstream churn | pinned `=0.2.1`, lockfile committed, isolated behind `engine.rs` |
 | Tray icon may render at 44 pt instead of 22 pt | blurry or oversized glyph | verified in milestone M1 before any glyph design work; fallback is 22x22 |
 | Tauri duplicate tray icon on macOS | two icons | build tray in Rust only (R-05) |

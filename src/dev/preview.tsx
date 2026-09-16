@@ -111,6 +111,7 @@ export const previewBoot: Bootstrap = {
   // panel paints its own ground here exactly as it does when vibrancy fails.
   panel_material: false,
   library_version: "2.10.03",
+  app_version: "0.1.0",
   ayanamsas: [
     { key: "lahiri", label: "Lahiri (Chitrapaksha)" },
     { key: "raman", label: "Raman" },

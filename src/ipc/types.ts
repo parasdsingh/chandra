@@ -607,6 +607,8 @@ export interface Bootstrap {
    *  defaults and not the reader's. The file is left as it is rather than reset,
    *  so this says what happened until they fix it or change a setting. */
   settings_error: string | null;
+  /** Chandra's own version, from the bundle. */
+  app_version: string;
 }
 
 export interface VargaInfo {

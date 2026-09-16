@@ -43,7 +43,7 @@ the rashi holding the lagna.
 | 1.6a | ~~Location quality gate~~ | superseded | Answered by **E4**: a location becomes mandatory, so there is no centroid case to gate |
 | 1.7 | ~~Chart format setting, and the schema migration~~ | done | §6. Schema **8** — 7 was published without a bump for `numbered` and refused to start on installs already at 7 |
 | 1.8 | ~~Panel view and the header title~~ | done | §5.1–5.3. The pane is `ChartView`, shared with the visual harness |
-| 1.9 | ~~Tray item, **on by default**, live lagna in the tooltip~~ | done | §5.4, D-028 for the tooltip. First time a new install gets two menu bar items |
+| 1.9 | ~~Tray item, live lagna in the tooltip~~ | done | §5.4, D-028 for the tooltip. **D-030** later made it permanent rather than a switch, and put it furthest right rather than leftmost |
 | 1.10 | ~~Spoken form of the chart~~ | done | §7. A list, not a grid |
 | 1.11 | ~~Degraded states: outside the range, polar~~ | done | **There is no no-lagna case** — the ascendant is the ecliptic's crossing of the horizon and always exists, so §8's third state was never real. Tested at Longyearbyen (78°N) and Vostok (78.4°S) on both solstices and an equinox: the chart is drawn at every one. What degrades is the *day*, and it found a defect — see below |
 | 1.12 | ~~Decide what the feature is called~~ | done | **`Lagna Kundali`**, glossed `Ascendant chart`. Not `Gochara` — see below |
@@ -51,13 +51,14 @@ the rashi holding the lagna.
 
 ### E1 parked
 
-**Graha placement inside a compartment.** They currently sit on fixed rows
-offset from the compartment's centre, so across the chart they land on the same
-few horizontal bands and the whole drawing reads as gridded. Placing each graha
-by its own degree within the sign would break that up *and* mean something -
-position in the compartment showing position in the sign - and it is the same
-mapping the animation needs, since a graha's degree is what moves. So it belongs
-with that work rather than being solved twice.
+~~**Graha placement inside a compartment.**~~ **Done, in 6.5.** They used to sit
+on fixed rows offset from the compartment's centre, so across the chart they
+landed on the same few horizontal bands and the whole drawing read as gridded.
+Each one now stands at its own degree along a route through its compartment, so
+position in the compartment shows position in the sign — and it is the same
+mapping the motion needed, which is why it was moved to E6 rather than solved
+twice. South and East Indian still pack into rows: their compartments are cells
+in a grid with no route through them.
 
 
 
@@ -101,7 +102,7 @@ bar of every existing install and a test that fails without it.
 | | Question | Answer |
 |---|---|---|
 | a | Default format | **North Indian.** All three supported, chosen in settings |
-| b | Its own status item, or reached from the moon panel? | **Its own**, toggleable in settings, **on by default** |
+| b | Its own status item, or reached from the moon panel? | **Its own.** Since **D-030** it is permanent and has no switch — it is the one item always in the menu bar — and each enabled division gets its own |
 | c | What is it called? | **`Lagna Kundali`**, glossed **`Ascendant chart`** |
 
 **On the name.** `Gochara` was accepted and then withdrawn on evidence. In
@@ -254,9 +255,9 @@ none yet.
 | 6.3 | ~~D1, D3, D7, D9, D12~~ | done | `crates/almanac/src/varga.rs`. Schema 10 carries the choice; the caption names the scheme on hover |
 | 6.4 | ~~The other eleven~~ | done | All sixteen. D2 and D30 have their own shapes as expected; the other nine are the same arithmetic with a different multiplier. 95 worked examples from the specification, plus the occupancy property (D2 reaches 2 signs, D30 reaches 10 and never Karka or Simha) and the node property (together in seven divisions, opposite in nine) |
 | 6.4a | ~~Several divisions at once~~ | done | **D-033.** Each is a switch with its own status item, its own panel and its own numbered icon. Crowded compartments set smaller type, which D2 forced: it puts eight bodies in one compartment every day |
-| 6.5 | Graha placement by degree within the sign | queued | Moved here from E1. It is the animation's own mapping, so solving it separately would be solving it twice |
-| 6.6a | ~~The drift~~ | done | The compartments' contents slide across the slack the layout leaves them, so every containment invariant holds at every instant with nothing clipped. Schema 12; **Advanced › Motion**, on by default, `prefers-reduced-motion` over it. The harness draws the run at 0, 25, 50, 75 and 100 per cent and the geometric check walks all of them |
-| 6.6b | ~~The handover slide~~ | done | The arriving group comes through the wall it came from, clipped by the compartment's own outline, over 260 ms. This is the only motion in the chart anyone can see - the drift is a position, at a pixel per ten seconds in D60. The harness alternates two charts two hours apart so it can be watched without waiting |
+| 6.5 | ~~Graha placement by degree within the sign~~ | done | `docs/design/traversal.md`. Each body stands at its own degree along a route through its compartment, and the whole ring advances as the lagna crosses. It is now the **only** way a North Indian chart is laid out; the degree grid draws the scale the bodies already stand on |
+| 6.6a | ~~The drift~~ | **removed** | Built, shipped, then deleted by 6.5: it slid the packed group across whatever slack was left, which meant nothing, and having two movement mechanisms selected by a setting meant a chart moved differently depending on a toggle. The traversal replaced it. Schema 12 and **Advanced › Motion** survive it |
+| 6.6b | ~~The handover slide~~ | done | The arriving group comes through the wall it came from, clipped by the compartment's own outline, over 260 ms. The harness alternates two charts two hours apart so it can be watched without waiting. It is no longer the only visible motion: the degree share fell from 0.80 to 0.40, and a body now crosses 28.8 units in D60's two minutes — a pixel every four seconds, against one every fifteen |
 | 6.6c | Does South Indian move at all? | open | Its lagna mark is a diagonal stroke across a cell. §6 question 1 |
 
 **Measured, for 6.6.** One chart costs 47 µs (`bench_chakra`), so recomputing at
@@ -425,8 +426,8 @@ given §7:
   so the line is. Suppressed for Rahu and Ketu, which are retrograde on roughly
   95% of days — a mark that is true almost always is the subject's identity, not
   its state. **Both halves of that were wrong and the exclusion is gone.** A
-  mean node is retrograde on 100% of days and a true node — the default — on
-  74.1%, turning direct about twenty-five times a year for under four days at a
+  mean node — which is the default since D-027 — is retrograde on 100% of days,
+  and a true node on 74.1%, turning direct about twenty-five times a year for under four days at a
   time. It was also a disagreement with the grid, which never excluded them.
 
 Both are fixed to the panel rather than scrolled with the content: they are

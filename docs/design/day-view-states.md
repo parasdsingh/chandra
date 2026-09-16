@@ -1,7 +1,8 @@
 # Combustion and retrograde in the day view
 
-Status: **proposed.** Design only; the two treatments this document specifies are still not
-built (`docs/TODO.md` §5.1).
+Status: **built.** Both treatments this document specifies ship; `docs/TODO.md`
+§5.1 records them, and the predicates are `isCombust` and `hasRetrogradeRail` in
+`src/components/DayDetail.tsx`.
 Answers: "combustion in day view should be done beautifully, and aesthetically. similarly retro
 should also produce a different day view."
 Works under [D-011](../DECISIONS.md#d-011) (revised: popover material + scrim),

@@ -3,8 +3,13 @@
 Requested: "a visual kundali for the current date and time, accessed as a menu bar icon,
 enabled in settings."
 
-Status: **proposed.** Nothing here is built. Five decisions in §9 need the user before any of
-it is.
+Status: **built**, and this is the specification it was built to — see
+`docs/design/kundali-ux.md`, which says so too. The five decisions §9 asked for
+were made; where a later decision reversed one, the section says so inline.
+
+Two things below were overtaken and are marked where they appear: the feature is
+called the **Lagna Kundali**, not Gochara (§9), and its status item is
+**permanent and leftmost**, not a tenth item off by default (D-030).
 
 The request leaves the hard parts open — which chart style, whether it draws houses, where it
 lives, and what "for the current date and time" means when a kundali normally needs a birth.
@@ -637,6 +642,13 @@ is not one.
 
 ### 5.3 The header title
 
+> **Overtaken.** The feature shipped as the **Lagna Kundali**, and the header
+> names the reading rather than the genre: `Mesha Lagna`, and for a division
+> `Navamsa · Mesha Lagna`. `docs/TODO.md` records the reversal. The reasoning
+> below is kept because the concern was real — that a reader could take this for
+> a natal chart — and it is now answered by the caption under the chart, which
+> prints the instant and the place.
+
 `Gochara`, not `Kundali`. The word states that this is the transiting sky and not a natal
 chart (§1.1), which is the one thing about this feature a user could misread.
 
@@ -644,6 +656,12 @@ The truncation ladder (DESIGN §5.2) has nothing to shorten — one word always 
 view has no ladder.
 
 ### 5.4 The menu bar item
+
+> **Overtaken by D-030.** The chart is **permanent and has no switch** — it is
+> the one status item always present — and each enabled division has its own
+> item. `tray::build` creates the charts *first* so they sit furthest right, not
+> last and leftmost. The reasoning below about keeping the graha run contiguous
+> still holds; the conclusion about which end is where it was applied changed.
 
 A tenth status item, off by default.
 

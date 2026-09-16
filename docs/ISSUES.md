@@ -9,45 +9,55 @@ New issues append to the table and get a detail section only when they need one.
 |---|---|---|---|---|
 | I-001 | question | Product name and bundle identifier | M0 | done |
 | I-002 | question | Front-end framework selection | M0 | done |
-| I-003 | chore | Workspace skeleton, Makefile, Ubuntu CI | M0 | open |
-| I-004 | feat | `Engine` wrapper over `swiss-eph` with provenance | M0 | open |
-| I-005 | chore | Generate and commit `swetest` golden vectors | M0 | open |
-| I-006 | risk | Tray icon scale: 22 pt vs 44 pt RGBA | M1 | open |
-| I-007 | feat | Tray item + live moon disc rendering | M1 | open |
-| I-008 | feat | Panel window: position, auto-hide, no dock/Cmd-Tab | M1 | open |
-| I-009 | risk | Duplicate tray icon on macOS | M1 | open |
-| I-010 | feat | Zodiac: rashi, nakshatra, pada, boundary arithmetic | M2 | open |
-| I-011 | feat | Root finder: bracket + Brent | M2 | open |
-| I-012 | feat | `DayDetail` assembly, v1 fields only | M2 | open |
-| I-013 | feat | `MonthView` assembly + LRU cache + prefetch | M2 | open |
-| I-014 | feat | Location chain incl. tz centroid fallback | M2 | open |
+| I-003 | chore | Workspace skeleton and Makefile — **CI not built** | M0 | open |
+| I-004 | feat | `Engine` wrapper over `swiss-eph` with provenance | M0 | done |
+| I-005 | chore | Generate and commit `swetest` golden vectors | M0 | done |
+| I-006 | risk | Tray icon scale: 22 pt vs 44 pt RGBA | M1 | done |
+| I-007 | feat | Tray item + live moon disc rendering | M1 | done |
+| I-008 | feat | Panel window: position, auto-hide, no dock/Cmd-Tab | M1 | done |
+| I-009 | risk | Duplicate tray icon on macOS | M1 | done |
+| I-010 | feat | Zodiac: rashi, nakshatra, pada, boundary arithmetic | M2 | done |
+| I-011 | feat | Root finder: bracket + Brent | M2 | done |
+| I-012 | feat | `DayDetail` assembly, v1 fields only | M2 | done |
+| I-013 | feat | `MonthView` assembly + LRU cache + prefetch | M2 | done |
+| I-014 | feat | Location chain incl. tz centroid fallback | M2 | done |
 | I-015 | risk | CoreLocation reliability when ad-hoc signed | M2 | open |
-| I-016 | feat | City search over bundled GeoNames index | M2 | open |
-| I-017 | feat | Month grid UI + switcher + keyboard nav | M2 | open |
-| I-018 | feat | Day detail panel + height animation | M2 | open |
-| I-019 | feat | Settings window and versioned store | M2 | open |
-| I-020 | feat | Graha tray glyphs, hand-drawn vector paths | M3 | open |
-| I-021 | feat | Graha events: ingress, station, combustion | M3 | open |
-| I-022 | feat | Graha panel content | M3 | open |
+| I-016 | feat | City search over bundled GeoNames index | M2 | done |
+| I-017 | feat | Month grid UI + switcher + keyboard nav | M2 | done |
+| I-018 | feat | Day detail panel + height animation | M2 | done |
+| I-019 | feat | Settings inside the panel, and a versioned store | M2 | done |
+| I-020 | feat | Graha tray glyphs, hand-drawn vector paths | M3 | done |
+| I-021 | feat | Graha events: ingress, station, combustion | M3 | done |
+| I-022 | feat | Graha panel content | M3 | done |
 | I-023 | chore | Accessibility and contrast audit | M4 | open |
-| I-024 | chore | `make install`, ad-hoc signing | M4 | open |
-| I-025 | chore | Release workflow, DMG on tag | M4 | open |
+| I-024 | chore | `make install`, ad-hoc signing | M4 | done |
+| I-025 | chore | Release workflow, DMG on tag — `make dmg` done, no workflow | M4 | open |
 | I-027 | bug | White ring around the panel | M2 | done |
 | I-028 | bug | Week started on Tuesday in every locale | M2 | done |
 | I-029 | bug | Calendar invisible to VoiceOver: gridcells had no rows | M2 | done |
-| I-030 | feat | Day detail inside the calendar region, not a taller panel | M2 | open |
-| I-031 | feat | Settings inside the panel, reorganised for the surface | M2 | open |
-| I-032 | feat | Lunar month flow alongside solar, with correct names | M2 | open |
-| I-033 | feat | Month change by scroll and drag, not arrow buttons | M2 | open |
-| I-034 | bug | Moonset absence reshapes the detail with a dash and a new line | M2 | open |
-| I-035 | bug | Selected day is hard to see; today needs a second attribute | M2 | open |
+| I-030 | feat | Day detail inside the calendar region, not a taller panel | M2 | done |
+| I-031 | feat | Settings inside the panel, reorganised for the surface | M2 | done |
+| I-032 | feat | Lunar month flow alongside solar, with correct names | M2 | done |
+| I-033 | feat | Month change by scroll and drag, not arrow buttons | M2 | done |
+| I-034 | bug | Moonset absence reshapes the detail with a dash and a new line | M2 | done |
+| I-035 | bug | Selected day is hard to see; today needs a second attribute | M2 | done |
 | I-036 | bug | Tray glyph weight does not match system menu bar icons | M2 | done |
 | I-037 | bug | Enabling a graha crashed the app | M2 | done |
 | I-038 | bug | A graha's tray item opened the Moon's calendar | M2 | done |
 | I-039 | feat | Panel uses the system popover material | M2 | done |
 | I-040 | feat | Continuous month scrolling, settling on release | M2 | done |
 | I-041 | bug | Clicking below the panel did not close it | M2 | done |
-| I-026 | chore | Create private GitHub remote and push | M4 | blocked |
+| I-042 | bug | Month scrolling stalled and lost its place | M2 | done |
+| I-043 | feat | Combustion and retrograde in the day view | M2 | done |
+| I-044 | bug | The month system read as a per-graha setting | M2 | done |
+| I-045 | bug | Lunar mode still showed Gregorian dates | M2 | done |
+| I-046 | feat | The menu bar shows the reading, not just a glyph | M2 | done |
+| I-047 | feat | Lagna Kundali, sixteen divisions, degree placement | M3 | done |
+| I-048 | chore | Licence and third-party notices ship with the binary | M4 | done |
+| I-049 | chore | Universal binary for Apple Silicon and Intel | M4 | done |
+| I-050 | chore | Landing page, screenshots, download and donations | M4 | in-progress |
+| I-051 | chore | Sign and notarise with a Developer ID | M4 | open |
+| I-026 | chore | Create public GitHub remote and push | M4 | in-progress |
 
 ---
 
@@ -79,8 +89,16 @@ Not a blocker: [D-007](DECISIONS.md#d-007) makes the app fully correct without i
 Outcome to record here once M2 builds a real bundle.
 
 ### I-026 — GitHub remote
-Deferred by choice ([D-018](DECISIONS.md#d-018)). CI workflows are written in M0 but stay
-inert until a remote exists. Unblock with `gh repo create moon-phases --private`.
+Deferred by choice ([D-018](DECISIONS.md#d-018)), and no longer deferrable: the app
+bundles Swiss Ephemeris under the AGPL, which requires the Corresponding Source to
+be reachable from wherever the binary is offered. **Public**, not private — a
+private repository does not satisfy that. Releases are published to Cloudflare R2;
+the source lives on GitHub.
+
+The landing page enforces the pairing: its download button stays disabled until
+both a download URL and a source URL are set (`site/index.html`).
+
+The CI workflows this issue says are "written in M0" do not exist — see I-003.
 
 ### I-027 — White ring around the panel — done
 A blanket `:focus-visible { outline: 2px solid var(--focus) }` in `base.css`

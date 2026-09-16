@@ -506,8 +506,7 @@ mod tests {
         }
     }
 
-    /// Every worked example in `docs/design/vargas.md` §7, for the five vargas
-    /// built here.
+    /// Every worked example in `docs/design/vargas.md` §7, for all sixteen.
     ///
     /// Transcribed from the document rather than computed from this code, which
     /// is the point of them: a table generated from the implementation it is

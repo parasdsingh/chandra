@@ -38,6 +38,9 @@ pub struct Bootstrap {
     /// paint an opaque ground instead of letting the desktop through.
     pub panel_material: bool,
     pub library_version: String,
+    /// Chandra's own version, from the bundle rather than written into the
+    /// front end - where it silently desynchronised at every bump.
+    pub app_version: String,
     /// Names for the settings pickers, so the front end holds no duplicate list
     /// that could fall out of step with the ephemeris.
     pub ayanamsas: Vec<Choice>,
@@ -114,6 +117,7 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
         subjects: state.tray_subjects(),
         panel_material: panel::has_material(&app),
         library_version: state.almanac.library_version().map_err(AppError::from)?,
+        app_version: app.package_info().version.to_string(),
         ayanamsas: Ayanamsa::ALL
             .into_iter()
             .map(|a| Choice {

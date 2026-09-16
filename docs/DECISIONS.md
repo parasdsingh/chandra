@@ -7,7 +7,7 @@ Decisions marked **open** block implementation of the areas they touch.
 |---|---|---|
 | [D-001](#d-001) | Tauri v2 (Rust + web UI), not native Swift | accepted |
 | [D-002](#d-002) | Swiss Ephemeris via `swiss-eph` crate, SWIEPH data files bundled | accepted |
-| [D-003](#d-003) | Sidereal, Lahiri ayanamsa, True Rahu/Ketu as defaults | accepted |
+| [D-003](#d-003) | Sidereal, Lahiri ayanamsa, node default | accepted, **amended by D-027** |
 | [D-004](#d-004) | Geocentric for panchanga, topocentric for rise/set | accepted |
 | [D-005](#d-005) | Engine is a `Mutex`-guarded singleton on a blocking pool | accepted |
 | [D-006](#d-006) | Ephemeris provenance is reported per result, never silent | accepted |
@@ -21,14 +21,14 @@ Decisions marked **open** block implementation of the areas they touch.
 | [D-014](#d-014) | SolidJS + Vite + TypeScript, hand-written CSS | accepted |
 | [D-015](#d-015) | Time scale handling: UT vs TT | accepted |
 | [D-016](#d-016) | Event times found by bracket + Brent refinement | accepted |
-| [D-017](#d-017) | No background work, no notifications in v1 | accepted |
+| [D-017](#d-017) | No background work, no notifications in v1 | **superseded by D-028** |
 | [D-018](#d-018) | GitHub remote deferred; local VC for now | accepted |
 | [D-019](#d-019) | Every state the grid draws is named in the day view; combustion judged at local noon | accepted, amended by D-024, D-025 |
 | [D-020](#d-020) | One hue. Retrograde is written, not coloured; combustion never dims | accepted, amended by D-023, D-024 |
 | [D-021](#d-021) | Lunar mode names days by tithi; Vikram Samvat years; grid laid out by the back end | accepted, amended by D-024, D-025 |
 | [D-022](#d-022) | The menu bar carries retrograde, and nothing else | accepted |
 | [D-023](#d-023) | Colour may depict, never encode; `--text-tertiary` carries no text | accepted |
-| [D-024](#d-024) | One mark vocabulary for both calendars: no underlines, a combustion wash, a retrograde bracket | accepted |
+| [D-024](#d-024) | One mark vocabulary for both calendars: no underlines, a combustion wash, a retrograde bracket | accepted, Rahu/Ketu clauses **superseded by D-026** |
 | [D-025](#d-025) | The day view is one field stack for all nine subjects | accepted |
 | [D-026](#d-026) | The nodes are not a special case for retrograde motion | accepted, amended by D-027 |
 | [D-027](#d-027) | A fresh install computes Rahu and Ketu the way a panchanga does | accepted, amends D-026 |
@@ -61,7 +61,12 @@ Decisions marked **open** block implementation of the areas they touch.
 - Version is pinned exactly (`=0.2.1`) and `Cargo.lock` is committed.
 
 ### D-003
-**Sidereal zodiac. Lahiri (Chitrapaksha) ayanamsa. True Rahu/Ketu.**
+**Sidereal zodiac. Lahiri (Chitrapaksha) ayanamsa.**
+
+> **Amended by [D-027](#d-027): the default node is the mean node, not the true
+> node.** A panchanga is computed with the mean node, and this record is the one
+> a reader looking up the default lands on. The reasoning below for offering
+> both still stands; only which one ships unasked changed.
 
 - Lahiri is the Indian government standard and the most widely used.
 - True node shows real retrograde wobble; mean node moves uniformly at -3'11"/day.
@@ -232,11 +237,21 @@ all drawn on the same translucent, blurred backdrop.
 ### D-017
 **No background timers, no notifications, no permission prompts in v1.**
 
+> **Superseded by [D-028](#d-028).** The tray redraws hourly, not only on a
+> midnight rollover, because the menu bar now shows a reading that changes
+> within a day. Notifications and permission prompts are still out.
+
 - Compute happens only when a panel opens or the displayed day rolls over.
 - Idle CPU target: 0%.
 
 ### D-018
 **GitHub remote is deferred. Version control is local until asked.**
+
+> **No longer deferrable.** The app bundles Swiss Ephemeris under the AGPL,
+> which requires the Corresponding Source to be reachable from wherever the
+> binary is offered — so a public repository is a condition of releasing at all,
+> and a private one does not satisfy it. Source goes to GitHub; releases are
+> published to Cloudflare R2. See I-026.
 
 - The repo is initialised and committed locally on `main`.
 - `gh repo create moon-phases --private` and the first push happen on request, not
@@ -684,6 +699,10 @@ public domain.
 
 ### D-032
 **One varga scheme, Parashari, named on the chart**
+
+> **Amended by [D-033](#d-033):** divisions are switches rather than a single
+> choice, so several charts sit in the menu bar at once. The scheme is still one
+> and is still named — on the caption's hover.
 
 
 **The divisional charts compute the Parashari rule and nothing else. No variant setting.** The

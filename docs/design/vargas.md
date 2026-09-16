@@ -1,12 +1,12 @@
 # Vargas — the sixteen divisional charts
 
-Status: **the specification.** D1, D3, D7, D9 and D12 are built against it
-(`crates/almanac/src/varga.rs`, whose tests are the worked examples in §7). The
-other eleven are not built. D-032 records the three choices §8 left open.
+Status: **the specification, and all sixteen are built against it**
+(`crates/almanac/src/varga.rs`, whose tests are the worked examples in §7, and
+`Varga::ALL`). D-032 records the three choices §8 left open.
 
-Scope: **D1, D3, D7, D9 and D12 are approved for the first pass.** All sixteen
-of the Shodasavarga are documented here, because the rules are a single family
-and writing five of them without the other eleven would mean discovering the
+The first pass was D1, D3, D7, D9 and D12; the other eleven followed. All
+sixteen were documented here from the start, because the rules are a single
+family and writing five of them without the rest would mean discovering the
 shared structure twice.
 
 ---

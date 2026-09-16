@@ -1,5 +1,10 @@
 # Chandra - development and release tasks.
 #
+# There is no CI. This file used to claim "every target here is also what CI
+# runs, so a green `make check` locally means a green pipeline" - there is no
+# pipeline, and three documents repeated the claim. `make check` is what a green
+# build means, and it means it on this machine.
+#
 # `build` and `install` build for this machine only, because that is what a
 # development loop wants. `dmg` builds universal, because that is what is handed
 # to strangers: a Mac sold since 2020 is Apple Silicon, and an Intel-only binary
