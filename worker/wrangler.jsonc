@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chandra-downloads",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-17",
+  "observability": { "enabled": true },
+
+  // The disk images. Shared bucket, own prefix: `chandra/`.
+  "r2_buckets": [
+    { "binding": "DOWNLOADS", "bucket_name": "naksha-downloads" }
+  ],
+
+  // Events. D1 rather than Analytics Engine because the questions in
+  // `insights.sql` are joins and distinct counts over a few thousand rows,
+  // which is SQL's job, and because a release that gets ten thousand downloads
+  // would be a very good year.
+  "d1_databases": [
+    {
+      "binding": "ANALYTICS",
+      "database_name": "chandra-analytics",
+      "database_id": "a559f271-1c94-40fb-903a-07afa6cca153"
+    }
+  ]
+}

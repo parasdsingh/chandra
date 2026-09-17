@@ -1,0 +1,14 @@
+{
+  "name": "chandra-downloads",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260917.1",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.0.0"
+  }
+}

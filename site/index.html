@@ -422,6 +422,12 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
       </div>
     </div>
     <p class="fine">
+      This page counts a visit and a download — the country, the referring host
+      and nothing else. No cookie, no third-party script, no advertising
+      network. <strong>The app itself sends nothing at all</strong>, which is
+      why it has no network code.
+    </p>
+    <p class="fine" style="margin-top:0;padding-top:0;border-top:0">
       Chandra is licensed under the GNU Affero General Public License v3.0.
       Planetary positions are computed with the
       <a href="https://www.astro.com/swisseph/">Swiss Ephemeris</a>,
@@ -434,12 +440,37 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
 </footer>
 
 <script>
+/* One request, no cookie, nothing stored on the visitor's machine and no
+   third-party script. It records that a page was viewed, from which country,
+   and which host linked here - the host only, never the full referrer.
+
+   This exists so the one number worth knowing can be computed at all: of the
+   people who looked, how many took it. Without the view there is no
+   denominator and a download count says nothing.
+
+   `keepalive` so it survives the navigation if somebody clicks straight
+   through, and a failure is swallowed: a counter must never be something a
+   reader notices. */
+(function count() {
+  try {
+    fetch(
+      "https://chandra-downloads.parasdeep29.workers.dev/beacon?p=" +
+        encodeURIComponent(location.pathname),
+      { method: "GET", keepalive: true, mode: "no-cors" },
+    ).catch(() => {});
+  } catch {}
+})();
+
 /* The two things this page cannot know until the release exists.
    Both are read in one place, and every part of the page that depends on them
    stays hidden or disabled until they are filled in - so the page never offers
    a download that does not exist or a payment address nobody is watching. */
 const RELEASE = {
-  /* The .dmg, published to Cloudflare R2. */
+  /* The download endpoint, not the object.
+     `/download` resolves to whatever the newest release in the bucket is, so a
+     new version needs one upload and no change here - and a link shared
+     anywhere keeps working. It is also where a download is counted; the app
+     itself reports nothing, and says so. */
   downloadUrl: "",
   /* What the download button says beside its label. */
   version: "",

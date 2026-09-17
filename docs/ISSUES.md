@@ -57,6 +57,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-049 | chore | Universal binary for Apple Silicon and Intel | M4 | done |
 | I-050 | chore | Landing page, screenshots, download and donations | M4 | in-progress |
 | I-052 | chore | Commit author email rewritten to a GitHub noreply | M4 | done |
+| I-053 | feat | Download counting that excludes bots; server side only | M4 | done |
 | I-051 | chore | Sign and notarise with a Developer ID | M4 | open |
 | I-026 | chore | Create public GitHub remote and push | M4 | done |
 
