@@ -42,8 +42,7 @@ function DevShots(): JSX.Element {
     await import("./dev/preview.css");
     await import("./dev/shots.css");
     const { Shots } = await import("./dev/shots");
-    const { previewBoot } = await import("./dev/preview");
-    return () => <Shots boot={previewBoot} />;
+    return () => <Shots />;
   });
   return <Show when={module()}>{(view) => view()()}</Show>;
 }

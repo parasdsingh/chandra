@@ -64,6 +64,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-057 | chore | Rewrite the copy that reads as machine-written | M4 | open |
 | I-051 | chore | Sign and notarise with a Developer ID — **blocked on funding** | M4 | blocked |
 | I-026 | chore | Create public GitHub remote and push | M4 | done |
+| I-058 | chore | Project-wide code review: 47 findings, all addressed | M4 | done |
 
 ---
 
@@ -110,6 +111,55 @@ someone has clicked download.
 
 Fixes I-015 as a side effect, and removes the System Settings walkthrough that
 macOS 15 and later otherwise force on every first launch.
+
+### I-058 — Project-wide code review — done
+Forty-seven findings from a subagent sweep, plus an unnumbered tail. All are
+addressed; the commits between `2e30a47` and here carry them one batch at a
+time, each with the measurement or the test that establishes it.
+
+The ones that were user-visible defects rather than tidiness:
+
+- `/download` served `cache-control: immutable, max-age=31536000` on the
+  *pointer*, so the first release anyone saw would have been the only one they
+  could get for a year.
+- `accept_device_location` did its read-modify-write outside the lock that
+  exists to serialise it, so a settings change made while a CoreLocation fix was
+  in flight was silently reverted on disk and in the engine.
+- An observer that is not on Earth was written to disk and adopted, failing only
+  *some* views — so a hand-edited `latitude: 91` drew the moon calendar and made
+  every chart say "ephemeris".
+- `grid_days` walked by Julian Day, so the three zones that skipped a calendar
+  date drew every later cell one column left of its own weekday.
+- `month_index` re-walked from the anchor for each of up to twenty-nine months:
+  79 seconds at the clamped extreme, with the engine mutex held.
+- `chart_icon` returned premultiplied bytes under a type documented as straight
+  RGBA, so the chart mark composited darker than the glyphs beside it whenever
+  coloured icons were on.
+- The feedback form was CORS-blocked on the host it is served from, storing every
+  report and telling its author it had failed.
+- A report over 4,000 characters lost its tail in silence.
+- `Error::TimeZone` was the almanac's catch-all, so a chart that lost a
+  generation race said `ephemeris: time zone: …` under code `ENGINE`.
+
+What the sweep says about the codebase, which is the part worth keeping: almost
+every finding was a **claim that had stopped being true** — a comment, a doc
+block, a decision entry or a test name that described code that had since
+changed. The zone count was wrong in twelve places because it was written once
+and copied; the guard that would have caught it asserted `> 380`. Four checks
+now exist where a number is written twice and nothing compared them
+(`check-limits.sh`, `check-wire.sh`, and exact table sizes in `chandra-geo`),
+and the contract test covers every payload type rather than eight of fifteen.
+
+Three findings were wrong, and are recorded because a review that is never
+disputed is not being read: the ayanamsa guard for `houses_raw` does exist, in
+`crates/ephemeris/tests/ascendant.rs` rather than in `engine.rs`; and
+`appicon.rs` and `examples/icon_candidates.rs`, named as sites of duplicated
+constants, are not files in this repository.
+
+Left open deliberately: `src/dev/shots.tsx` renders a navamsa shot that
+`site/index.html` does not use, while the page's hero claims "all sixteen
+divisional charts" and shows no divisional chart. Capturing it needs a browser
+on this machine (see I-050).
 
 ### I-057 — Copy that reads as machine-written — open
 `docs/copy-notes.md` lists seventeen passages and, more usefully, four habits

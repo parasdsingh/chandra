@@ -31,7 +31,6 @@ import { Header } from "../components/Header";
 import { MonthCells, WeekdayRow } from "../components/MonthGrid";
 import { SettingsView } from "../components/SettingsView";
 import type {
-  Bootstrap,
   Chakra,
   DayDetail as Detail,
   GrahaInfo,
@@ -40,6 +39,7 @@ import type {
   Snapshot,
 } from "../ipc/types";
 import fixture from "./fixture.json";
+import { previewBoot } from "./preview";
 
 const data = fixture as unknown as {
   timeZone: string;
@@ -64,7 +64,12 @@ const data = fixture as unknown as {
  *  pixels wide. Both were left from the earlier value. */
 const SHOT_SCALE = 1.6;
 
-export function Shots(props: { boot: Bootstrap }): JSX.Element {
+/// The bootstrap the panes are drawn against.
+///
+/// Imported, not taken as a prop. `App.tsx` was importing it from `preview` and
+/// passing it in, and this module already imports `fixture.json` from the same
+/// place - so the prop was a parameter with exactly one possible value.
+export function Shots(): JSX.Element {
   const shots: { id: string; caption: string; view: () => JSX.Element }[] = [
     {
       id: "chart",
@@ -228,7 +233,7 @@ export function Shots(props: { boot: Bootstrap }): JSX.Element {
           <Chrome title="Settings" division={1} view="settings" />
           <div class="region">
             <SettingsView
-              boot={props.boot}
+              boot={previewBoot}
               section="root"
               onOpen={() => {}}
               apply={() => {}}

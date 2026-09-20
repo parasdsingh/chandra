@@ -70,13 +70,12 @@ fi
 
 # Both architectures, asserted again here rather than trusted from the build
 # that produced it - this is the last point before it reaches a stranger.
-archs=$(lipo -archs "$app/Contents/MacOS/chandra")
-case " $archs " in
-  *" x86_64 "*) ;; *) echo "missing x86_64: $archs" >&2; exit 1 ;;
-esac
-case " $archs " in
-  *" arm64 "*) ;; *) echo "missing arm64: $archs" >&2; exit 1 ;;
-esac
+#
+# Through the `archs` target rather than re-implemented. This script had its own
+# copy of the same two `case` statements against the same binary, so the check
+# and the check existed twice and could have disagreed about what "universal"
+# means.
+make --no-print-directory archs BIN="$app/Contents/MacOS/chandra"
 
 size=$(( ($(wc -c < "$dmg") + 524288) / 1048576 ))
 
