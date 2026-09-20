@@ -37,6 +37,37 @@ impl DateKey {
         })
     }
 
+    /// The calendar date after this one.
+    ///
+    /// Calendar arithmetic, not clock arithmetic. A zone that crossed the
+    /// international date line skipped a date - Kiritimati has no 1994-12-31,
+    /// Apia no 2011-12-30 - and stepping through a zone therefore steps over
+    /// it, taking Friday straight to Sunday. A month grid is a grid of calendar
+    /// dates in seven fixed columns, so a step that can skip one puts every
+    /// later cell in the wrong column.
+    pub fn next(self) -> Result<Self> {
+        let civil = self.to_civil()?;
+        Ok(Self::from_civil(civil.tomorrow().map_err(|_| {
+            Error::InvalidDate {
+                year: self.year,
+                month: self.month,
+                day: self.day,
+            }
+        })?))
+    }
+
+    /// The calendar date before this one. See [`DateKey::next`].
+    pub fn previous(self) -> Result<Self> {
+        let civil = self.to_civil()?;
+        Ok(Self::from_civil(civil.yesterday().map_err(|_| {
+            Error::InvalidDate {
+                year: self.year,
+                month: self.month,
+                day: self.day,
+            }
+        })?))
+    }
+
     fn from_civil(date: Date) -> Self {
         Self {
             year: date.year(),
@@ -222,19 +253,28 @@ pub fn grid_days(
 ) -> Result<Vec<(CivilDay, bool)>> {
     let leading = (first_weekday_of(first)? + 7 - (first_weekday % 7)) % 7;
 
-    let mut start = CivilDay::new(first, zone)?;
+    // Walked by calendar date, never by Julian Day.
+    //
+    // `date_of(end_jd + 0.5)` is the right way to ask "what day is it now" and
+    // the wrong way to fill a grid. Three zones crossed the international date
+    // line and have a calendar date that never occurred in them - Kiritimati
+    // has no 1994-12-31, Apia no 2011-12-30, Kwajalein no 1993-08-21 - and a
+    // clock walk steps over the missing date while the grid still draws exactly
+    // forty-two cells. Every cell after the hole then sat one column to the
+    // left of its own weekday: Kiritimati's 1995-01-01 is a Sunday and was
+    // drawn under Saturday, with `vara()` naming it Ravivara in the Saturday
+    // column. The date that did not happen there is drawn, in its own column,
+    // as a day of zero length.
+    let mut date = first;
     for _ in 0..leading {
-        let previous = start.date_of(start.start_jd - 0.5)?;
-        start = CivilDay::new(previous, zone)?;
+        date = date.previous()?;
     }
 
     let mut cells = Vec::with_capacity(GRID_CELLS);
-    let mut day = start;
     for _ in 0..GRID_CELLS {
-        let inside = day.date >= first && day.date <= last;
-        let next = day.date_of(day.end_jd + 0.5)?;
-        cells.push((day, inside));
-        day = CivilDay::new(next, zone)?;
+        let inside = date >= first && date <= last;
+        cells.push((CivilDay::new(date, zone)?, inside));
+        date = date.next()?;
     }
     Ok(cells)
 }
@@ -340,6 +380,82 @@ mod grid_tests {
         TimeZone::get("Asia/Kolkata").expect("tz database")
     }
 
+    /// A zone that skipped a calendar date still draws a square grid.
+    ///
+    /// Three zones crossed the international date line and have a date that
+    /// never occurred in them. Walking by Julian Day steps over it, so the grid
+    /// still emitted forty-two cells but every one after the hole was in the
+    /// wrong column: Kiritimati's 1995-01-01 is a Sunday and was drawn under
+    /// Saturday, while `vara()` - which reads the calendar date - called it
+    /// Ravivara. The column header and the cell disagreed about the same day.
+    #[test]
+    fn a_date_a_zone_skipped_keeps_its_column() {
+        let cases = [
+            // Pacific/Kiritimati jumped from 1994-12-30 to 1995-01-01.
+            ("Pacific/Kiritimati", (1994, 12, 1), (1994, 12, 31)),
+            ("Pacific/Kiritimati", (1995, 1, 1), (1995, 1, 31)),
+            // Pacific/Apia jumped from 2011-12-29 to 2011-12-31.
+            ("Pacific/Apia", (2011, 12, 1), (2011, 12, 31)),
+            ("Pacific/Apia", (2012, 1, 1), (2012, 1, 31)),
+            // Pacific/Kwajalein jumped from 1993-08-20 to 1993-08-22.
+            ("Pacific/Kwajalein", (1993, 8, 1), (1993, 8, 31)),
+        ];
+
+        for (name, (fy, fm, fd), (ly, lm, ld)) in cases {
+            let zone = TimeZone::get(name).expect("tz database");
+            let first = DateKey::new(fy, fm, fd).unwrap();
+            let last = DateKey::new(ly, lm, ld).unwrap();
+
+            for first_weekday in 0..7u8 {
+                let cells = grid_days(first, last, first_weekday, &zone).expect("grid");
+                assert_eq!(cells.len(), GRID_CELLS, "{name} {first:?}");
+
+                for (index, (day, _)) in cells.iter().enumerate() {
+                    assert_eq!(
+                        first_weekday_of(day.date).unwrap(),
+                        ((first_weekday % 7) as usize + index) as u8 % 7,
+                        "{name} {first:?} start {first_weekday}: cell {index} is {:?}",
+                        day.date
+                    );
+                    // `vara` counts from Sunday, the column from Monday.
+                    assert_eq!(
+                        vara(day.date).unwrap(),
+                        (((first_weekday % 7) as usize + index) as u8 % 7 + 1) % 7,
+                        "{name}: the vara and the column disagree at cell {index}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The date that did not happen is drawn, and is zero days long.
+    ///
+    /// It has to be drawn: leaving it out is what moved every later cell. Its
+    /// length is the honest answer to how much of it there was.
+    #[test]
+    fn the_skipped_date_is_a_day_of_no_length() {
+        let zone = TimeZone::get("Pacific/Kiritimati").expect("tz database");
+        let cells = grid_days(
+            DateKey::new(1994, 12, 1).unwrap(),
+            DateKey::new(1994, 12, 31).unwrap(),
+            0,
+            &zone,
+        )
+        .expect("grid");
+
+        let (skipped, _) = cells
+            .iter()
+            .find(|(day, _)| day.date == DateKey::new(1994, 12, 31).unwrap())
+            .expect("31 December is a cell in the grid");
+        assert_eq!(skipped.length(), 0.0, "a date the zone never had");
+
+        let (present, _) = cells
+            .iter()
+            .find(|(day, _)| day.date == DateKey::new(1994, 12, 30).unwrap())
+            .expect("30 December");
+        assert_eq!(present.length(), 1.0);
+    }
+
     #[test]
     fn a_grid_is_always_forty_two_cells_whatever_the_month_holds() {
         let cases = [
@@ -365,19 +481,31 @@ mod grid_tests {
                 let cells = grid_days(first, last, first_weekday, &zone()).expect("grid");
                 assert_eq!(cells.len(), GRID_CELLS, "{first:?} start {first_weekday}");
 
-                // Every cell sits one day after the last, with no gap or repeat.
+                // Every cell sits one calendar date after the last.
+                //
+                // Asserted with `DateKey::next`, not with the Julian Day walk
+                // the function used to use - the old version of this check
+                // advanced the same way the code did, so the one case where
+                // that walk is wrong could never fail it.
                 for pair in cells.windows(2) {
-                    let advanced = pair[0].0.date_of(pair[0].0.end_jd + 0.5).unwrap();
-                    assert_eq!(advanced, pair[1].0.date, "consecutive days");
+                    assert_eq!(
+                        pair[0].0.date.next().unwrap(),
+                        pair[1].0.date,
+                        "consecutive dates"
+                    );
                 }
 
-                // The first cell falls in the grid's opening column.
-                let opening = first_weekday_of(cells[0].0.date).unwrap();
-                assert_eq!(
-                    opening,
-                    first_weekday % 7,
-                    "{first:?} start {first_weekday}"
-                );
+                // *Every* cell falls in its own weekday's column, not only the
+                // first. Checking `cells[0]` alone is what let a whole grid sit
+                // one column left of itself from the fourth row onward.
+                for (index, (day, _)) in cells.iter().enumerate() {
+                    assert_eq!(
+                        first_weekday_of(day.date).unwrap(),
+                        ((first_weekday % 7) as usize + index) as u8 % 7,
+                        "{first:?} start {first_weekday}, cell {index} ({:?})",
+                        day.date
+                    );
+                }
 
                 // Every day of the month is present, and nothing else is inside.
                 let inside: Vec<_> = cells.iter().filter(|c| c.1).map(|c| c.0.date).collect();

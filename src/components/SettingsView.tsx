@@ -574,6 +574,14 @@ function Location(props: SectionProps): JSX.Element {
             class="settings__number"
             type="number"
             step="10"
+            // The range Swiss Ephemeris accepts an observer in, and the range
+            // `usable_metres` clamps to. Declared here so the browser's own
+            // stepper cannot leave it, and so a typed 99999 is marked invalid
+            // rather than silently becoming 25000 three layers down. The
+            // coordinate field beside this one has always validated; this one
+            // did not, which made two neighbouring fields behave differently.
+            min="-500"
+            max="25000"
             placeholder="not set"
             // The correction the user typed, not the resolved elevation.
             // Showing the resolved figure put a number in a field the user had
@@ -592,6 +600,11 @@ function Location(props: SectionProps): JSX.Element {
                   // so clearing the field used to assert sea level - the same
                   // confusion `Option<f64>` exists to prevent, arriving from
                   // the keyboard.
+                  // Passed through whatever it is. `min`/`max` above mark it
+                  // invalid, `usable_metres` clamps it, and the resolved height
+                  // printed above this field is the clamped one - so a number
+                  // outside the range shows as the number in force rather than
+                  // as the number typed.
                   elevation: typed === "" ? null : Number(typed),
                 },
               });
@@ -601,7 +614,7 @@ function Location(props: SectionProps): JSX.Element {
 
         {/* Coordinates typed by hand: the last resort for somewhere no dataset
             has, and the only way to be exact. 34,129 cities is a great many more
-            than 448, and it is still every place over 15,000 people - a village
+            than 418, and it is still every place over 15,000 people - a village
             is not in it, and somebody living in one has no other way to say so.
 
             Applied only when both fields parse and both are on the globe. A

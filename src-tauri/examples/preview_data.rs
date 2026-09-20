@@ -129,7 +129,10 @@ fn main() {
         },
         SiderealConfig {
             ayanamsa: Ayanamsa::Lahiri,
-            node_type: NodeType::True,
+            // Mean, like `Settings::default()` and D-027. Built with the true
+            // node, this fixture - and every screenshot cut from it - put Rahu
+            // and Ketu up to 1.7 degrees from where a new install draws them.
+            node_type: NodeType::Mean,
         },
     )
     .expect("almanac");
@@ -176,6 +179,15 @@ fn main() {
     let document = json!({
         "timeZone": "Asia/Kolkata",
         "grahas": chandra_lib::graha_info(),
+        // The four pickers, from the same functions `bootstrap` builds them
+        // with. They were hand-written here - four ayanamsas against twelve,
+        // four vargas against sixteen - so the two longest lists in the app
+        // were the two the harness never drew at full length, which is the
+        // opposite of what a harness is for.
+        "ayanamsas": chandra_lib::ayanamsa_choices(),
+        "nodeTypes": chandra_lib::node_type_choices(),
+        "monthSystems": chandra_lib::month_system_choices(),
+        "vargas": chandra_lib::varga_info(),
         "moonMonth": almanac
             .moon_month(cursor(2026, 8, MonthSystem::Solar))
             .expect("moon month"),

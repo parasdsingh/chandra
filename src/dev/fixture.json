@@ -1,4 +1,54 @@
 {
+  "ayanamsas": [
+    {
+      "key": "lahiri",
+      "label": "Lahiri (Chitrapaksha)"
+    },
+    {
+      "key": "lahiri_icrc",
+      "label": "Lahiri (ICRC)"
+    },
+    {
+      "key": "raman",
+      "label": "Raman"
+    },
+    {
+      "key": "krishnamurti",
+      "label": "Krishnamurti (KP)"
+    },
+    {
+      "key": "true_chitra",
+      "label": "True Chitra"
+    },
+    {
+      "key": "true_revati",
+      "label": "True Revati"
+    },
+    {
+      "key": "true_pushya",
+      "label": "True Pushya"
+    },
+    {
+      "key": "yukteshwar",
+      "label": "Yukteshwar"
+    },
+    {
+      "key": "jn_bhasin",
+      "label": "J. N. Bhasin"
+    },
+    {
+      "key": "fagan_bradley",
+      "label": "Fagan-Bradley"
+    },
+    {
+      "key": "suryasiddhanta",
+      "label": "Surya Siddhanta"
+    },
+    {
+      "key": "aryabhata",
+      "label": "Aryabhata"
+    }
+  ],
   "chakra": {
     "lagna": {
       "degrees_in_rashi": [
@@ -109,14 +159,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.59957252877797,
+            "longitude": 125.66960397896099,
             "name": "Ketu",
-            "progress": 0.1866524176259323,
+            "progress": 0.18898679929869974,
             "retrograde": true,
             "short": "Ke"
           }
@@ -199,14 +249,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.59957252877797,
+            "longitude": 305.669603978961,
             "name": "Rahu",
-            "progress": 0.1866524176259323,
+            "progress": 0.18898679929869974,
             "retrograde": true,
             "short": "Ra"
           }
@@ -286,15 +336,15 @@
             "combust": false,
             "degrees_in_rashi": [
               24,
-              42,
-              21.115148419021352
+              47,
+              15.642766875940879
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 114.70586531900528,
+            "longitude": 114.78767854635443,
             "name": "Rahu",
-            "progress": 0.8235288439668428,
-            "retrograde": false,
+            "progress": 0.8262559515451476,
+            "retrograde": true,
             "short": "Ra"
           }
         ],
@@ -404,15 +454,15 @@
             "combust": false,
             "degrees_in_rashi": [
               24,
-              42,
-              21.115148419021352
+              47,
+              15.64276687588972
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 294.7058653190053,
+            "longitude": 294.7876785463544,
             "name": "Ketu",
-            "progress": 0.8235288439668428,
-            "retrograde": false,
+            "progress": 0.8262559515451471,
+            "retrograde": true,
             "short": "Ke"
           },
           {
@@ -528,15 +578,15 @@
             "combust": false,
             "degrees_in_rashi": [
               24,
-              42,
-              19.98938389575528
+              48,
+              32.746197333115106
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 114.70555260663771,
+            "longitude": 114.80909616592587,
             "name": "Rahu",
-            "progress": 0.823518420221257,
-            "retrograde": false,
+            "progress": 0.8269698721975288,
+            "retrograde": true,
             "short": "Ra"
           }
         ],
@@ -646,15 +696,15 @@
             "combust": false,
             "degrees_in_rashi": [
               24,
-              42,
-              19.989383895704123
+              48,
+              32.746197333217424
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 294.7055526066377,
+            "longitude": 294.8090961659259,
             "name": "Ketu",
-            "progress": 0.8235184202212565,
-            "retrograde": false,
+            "progress": 0.8269698721975298,
+            "retrograde": true,
             "short": "Ke"
           },
           {
@@ -852,14 +902,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.59957252877797,
+            "longitude": 125.66960397896099,
             "name": "Ketu",
-            "progress": 0.6866524176259323,
+            "progress": 0.6889867992986998,
             "retrograde": true,
             "short": "Ke"
           },
@@ -882,14 +932,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.59957252877797,
+            "longitude": 305.669603978961,
             "name": "Rahu",
-            "progress": 0.6866524176259323,
+            "progress": 0.6889867992986998,
             "retrograde": true,
             "short": "Ra"
           },
@@ -988,15 +1038,15 @@
           {
             "combust": false,
             "degrees_in_rashi": [
-              22,
-              48,
-              2.275173752695707
+              23,
+              8,
+              12.53384360974053
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 22.800631992709082,
+            "longitude": 23.13681495655826,
             "name": "Rahu",
-            "progress": 0.7600210664236361,
+            "progress": 0.7712271652186087,
             "retrograde": true,
             "short": "Ra"
           }
@@ -1156,15 +1206,15 @@
           {
             "combust": false,
             "degrees_in_rashi": [
-              22,
-              48,
-              2.275173752657338
+              23,
+              8,
+              12.53384360971495
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 202.80063199270907,
+            "longitude": 203.13681495655825,
             "name": "Ketu",
-            "progress": 0.7600210664236358,
+            "progress": 0.7712271652186085,
             "retrograde": true,
             "short": "Ke"
           }
@@ -1257,14 +1307,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.59957252877797,
+            "longitude": 125.66960397896099,
             "name": "Ketu",
-            "progress": 0.6798717586333902,
+            "progress": 0.7008811936882973,
             "retrograde": true,
             "short": "Ke"
           }
@@ -1347,14 +1397,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.59957252877797,
+            "longitude": 305.669603978961,
             "name": "Rahu",
-            "progress": 0.6798717586333887,
+            "progress": 0.7008811936882955,
             "retrograde": true,
             "short": "Ra"
           }
@@ -1571,14 +1621,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.12952599678738
+              39,
+              54.67672883342857
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.599480423888,
+            "longitude": 125.66518798023151,
             "name": "Ketu",
-            "progress": 0.1866493474629332,
+            "progress": 0.18883959934105027,
             "retrograde": true,
             "short": "Ke"
           }
@@ -1661,14 +1711,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.12952599678738
+              39,
+              54.67672883342857
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.599480423888,
+            "longitude": 305.6651879802315,
             "name": "Rahu",
-            "progress": 0.1866493474629332,
+            "progress": 0.18883959934105027,
             "retrograde": true,
             "short": "Ra"
           }
@@ -1795,14 +1845,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.59957252877797,
+            "longitude": 125.66960397896099,
             "name": "Ketu",
-            "progress": 0.19914505755593837,
+            "progress": 0.3392079579219853,
             "retrograde": true,
             "short": "Ke"
           },
@@ -1899,14 +1949,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.59957252877797,
+            "longitude": 305.669603978961,
             "name": "Rahu",
-            "progress": 0.19914505755593837,
+            "progress": 0.3392079579219853,
             "retrograde": true,
             "short": "Ra"
           }
@@ -2040,14 +2090,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.455810189207114
+              40,
+              10.309364325439674
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.59957105838589,
+            "longitude": 125.66953037897929,
             "name": "Ketu",
-            "progress": 0.19914211677178173,
+            "progress": 0.3390607579585776,
             "retrograde": true,
             "short": "Ke"
           },
@@ -2144,14 +2194,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.455810189207114
+              40,
+              10.309364325439674
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.5995710583859,
+            "longitude": 305.6695303789793,
             "name": "Rahu",
-            "progress": 0.19914211677178173,
+            "progress": 0.3390607579585776,
             "retrograde": true,
             "short": "Ra"
           }
@@ -2351,14 +2401,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 125.59957252877797,
+            "longitude": 125.66960397896099,
             "name": "Ketu",
-            "progress": 0.11991450575559384,
+            "progress": 0.13392079579219854,
             "retrograde": true,
             "short": "Ke"
           },
@@ -2366,14 +2416,14 @@
             "combust": false,
             "degrees_in_rashi": [
               5,
-              35,
-              58.46110360068906
+              40,
+              10.574324259573586
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 305.59957252877797,
+            "longitude": 305.669603978961,
             "name": "Rahu",
-            "progress": 0.11991450575559384,
+            "progress": 0.13392079579219854,
             "retrograde": true,
             "short": "Ra"
           }
@@ -2483,15 +2533,15 @@
             "combust": false,
             "degrees_in_rashi": [
               24,
-              42,
-              20.816690809469947
+              47,
+              33.13014295311973
             ],
             "dignity": null,
             "graha": "rahu",
-            "longitude": 114.70578241411374,
+            "longitude": 114.79253615082031,
             "name": "Rahu",
-            "progress": 0.823526080470458,
-            "retrograde": false,
+            "progress": 0.8264178716940104,
+            "retrograde": true,
             "short": "Ra"
           }
         ],
@@ -2601,15 +2651,15 @@
             "combust": false,
             "degrees_in_rashi": [
               24,
-              42,
-              20.816690809469947
+              47,
+              33.13014295306857
             ],
             "dignity": null,
             "graha": "ketu",
-            "longitude": 294.70578241411374,
+            "longitude": 294.7925361508203,
             "name": "Ketu",
-            "progress": 0.823526080470458,
-            "retrograde": false,
+            "progress": 0.8264178716940099,
+            "retrograde": true,
             "short": "Ke"
           },
           {
@@ -5005,6 +5055,20 @@
     "name": "Shravana",
     "source": "swieph"
   },
+  "monthSystems": [
+    {
+      "key": "solar",
+      "label": "Solar (Gregorian)"
+    },
+    {
+      "key": "amanta",
+      "label": "Lunar, amanta (new moon)"
+    },
+    {
+      "key": "purnimanta",
+      "label": "Lunar, purnimanta (full moon)"
+    }
+  ],
   "moonDay": {
     "combustion": {
       "combust": false,
@@ -6466,6 +6530,16 @@
       "war": null
     }
   },
+  "nodeTypes": [
+    {
+      "key": "mean",
+      "label": "Mean node"
+    },
+    {
+      "key": "true",
+      "label": "True node"
+    }
+  ],
   "polarDay": {
     "combustion": {
       "combust": false,
@@ -6726,5 +6800,103 @@
     "tithi": "Krishna Chaturthi",
     "unix_ms": 1755000000000
   },
-  "timeZone": "Asia/Kolkata"
+  "timeZone": "Asia/Kolkata",
+  "vargas": [
+    {
+      "division": 1,
+      "key": "d1",
+      "label": "D1 · Rashi",
+      "name": "Rashi"
+    },
+    {
+      "division": 2,
+      "key": "d2",
+      "label": "D2 · Hora",
+      "name": "Hora"
+    },
+    {
+      "division": 3,
+      "key": "d3",
+      "label": "D3 · Drekkana",
+      "name": "Drekkana"
+    },
+    {
+      "division": 4,
+      "key": "d4",
+      "label": "D4 · Chaturthamsa",
+      "name": "Chaturthamsa"
+    },
+    {
+      "division": 7,
+      "key": "d7",
+      "label": "D7 · Saptamsa",
+      "name": "Saptamsa"
+    },
+    {
+      "division": 9,
+      "key": "d9",
+      "label": "D9 · Navamsa",
+      "name": "Navamsa"
+    },
+    {
+      "division": 10,
+      "key": "d10",
+      "label": "D10 · Dasamsa",
+      "name": "Dasamsa"
+    },
+    {
+      "division": 12,
+      "key": "d12",
+      "label": "D12 · Dwadasamsa",
+      "name": "Dwadasamsa"
+    },
+    {
+      "division": 16,
+      "key": "d16",
+      "label": "D16 · Shodasamsa",
+      "name": "Shodasamsa"
+    },
+    {
+      "division": 20,
+      "key": "d20",
+      "label": "D20 · Vimsamsa",
+      "name": "Vimsamsa"
+    },
+    {
+      "division": 24,
+      "key": "d24",
+      "label": "D24 · Chaturvimsamsa",
+      "name": "Chaturvimsamsa"
+    },
+    {
+      "division": 27,
+      "key": "d27",
+      "label": "D27 · Bhamsa",
+      "name": "Bhamsa"
+    },
+    {
+      "division": 30,
+      "key": "d30",
+      "label": "D30 · Trimsamsa",
+      "name": "Trimsamsa"
+    },
+    {
+      "division": 40,
+      "key": "d40",
+      "label": "D40 · Khavedamsa",
+      "name": "Khavedamsa"
+    },
+    {
+      "division": 45,
+      "key": "d45",
+      "label": "D45 · Akshavedamsa",
+      "name": "Akshavedamsa"
+    },
+    {
+      "division": 60,
+      "key": "d60",
+      "label": "D60 · Shashtiamsa",
+      "name": "Shashtiamsa"
+    }
+  ]
 }

@@ -87,7 +87,7 @@ fn rank(entry: &crate::parse::City, needle: &str) -> Option<u8> {
         return Some(1);
     }
 
-    // No rule matches the IANA zone. It did when this searched the 448-row zone
+    // No rule matches the IANA zone. It did when this searched the 418-row zone
     // table, where a zone name identified one row - but 34,129 cities share about
     // 356 zones, so one zone match returned thousands of equal-scoring rows.
     // `denver` answered with El Paso and Salt Lake City; `york` answered with
@@ -127,7 +127,7 @@ mod tests {
     /// field, so the question is whether one pass is cheap enough that the
     /// debounce is a courtesy rather than a necessity. Measured rather than
     /// assumed - the list grew by a factor of 76 in E5, and the scan that was
-    /// obviously fine over 448 entries is not obviously fine over 34,129.
+    /// obviously fine over 418 entries is not obviously fine over 34,129.
     ///
     /// A name with accents is findable by the spelling people type.
     ///
@@ -155,7 +155,7 @@ mod tests {
 
     /// Every timezone is still reachable by hand.
     ///
-    /// 62 of the 448 zones have no city over 15,000 people, so the switch from
+    /// 62 of the 418 zones have no city over 15,000 people, so the switch from
     /// the zone table to the city list silently made them unselectable - and for
     /// somebody in one of them there is no near-enough answer, because picking a
     /// city in a neighbouring zone changes their timezone too. Checked against

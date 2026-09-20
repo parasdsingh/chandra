@@ -12,7 +12,7 @@ const ISO3166_TAB: &str = include_str!("../data/iso3166.tab");
 /// The GeoNames city list and its region names, trimmed by `tools/geonames.sh`
 /// and embedded the same way.
 ///
-/// 34,129 places against `zone.tab`'s 448, and coordinates to four decimal
+/// 34,129 places against `zone.tab`'s 418, and coordinates to four decimal
 /// places - about 11 metres - against its arcminutes, which are about 1.9 km.
 /// D-007 promised this dataset from the beginning and it had never been built:
 /// what shipped was one representative city per timezone, which is a list of
@@ -109,7 +109,7 @@ pub fn zones() -> &'static [Place] {
 /// Everything a search may offer: every city, plus the zone-table places no city
 /// covers.
 ///
-/// The city list has no entry for 62 of the 448 zones - Iqaluit, the Galapagos,
+/// The city list has no entry for 62 of the 418 zones - Iqaluit, the Galapagos,
 /// Kiritimati, Lord Howe, every Antarctic station - because none of them holds
 /// 15,000 people. Searching cities alone silently made those zones unreachable
 /// by hand, and there is no near-enough substitute: picking a city in a
@@ -451,15 +451,30 @@ mod tests {
 
     use super::*;
 
+    /// The exact size of both tables, and of the gap between them.
+    ///
+    /// Exact, not `> 380`. The loose bound is why seven comments and one line
+    /// of settings comment said the zone table held 448 places for as long as they
+    /// did: 448 is `wc -l` of a file with a thirty-line header, the figure was
+    /// wrong once and copied six times, and nothing could fail over it. A
+    /// number a reader is asked to believe has to be a number something checks.
     #[test]
     fn the_table_parses_completely() {
         let parsed = zones();
-        // zone.tab carries a little over 400 zones; a large drop would mean the
-        // parser is silently skipping lines.
-        assert!(
-            parsed.len() > 380,
-            "only parsed {} places, expected the whole table",
-            parsed.len()
+        assert_eq!(parsed.len(), 418, "the zone table changed size");
+        assert_eq!(cities().len(), 34_129, "the city table changed size");
+
+        let covered: std::collections::HashSet<&str> = cities()
+            .iter()
+            .map(|city| city.place.zone.as_str())
+            .collect();
+        let uncovered = parsed
+            .iter()
+            .filter(|place| !covered.contains(place.zone.as_str()))
+            .count();
+        assert_eq!(
+            uncovered, 62,
+            "zones with no city over 15,000 people; `searchable` exists for these"
         );
 
         let data_lines = ZONE_TAB

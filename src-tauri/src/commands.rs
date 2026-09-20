@@ -102,6 +102,18 @@ pub struct GrahaInfo {
 
 #[tauri::command]
 pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Bootstrap> {
+    // Off the runtime, like every other engine call in this file.
+    //
+    // `library_version` locks `Engine::inner`, and this was the one command
+    // that reached it directly - contradicting the module header above and
+    // `Engine`'s own contract. `update_settings` ends by awaiting this on the
+    // same runtime, so opening the panel while a far-offset lunar month was
+    // being assembled stalled a tokio worker for as long as that took.
+    let library_version = blocking(app.clone(), |state| {
+        state.almanac.library_version().map_err(AppError::from)
+    })
+    .await?;
+
     Ok(Bootstrap {
         // Clamped here, so the number the page scales itself by and the one the
         // window is sized by are the same number. Serialised raw, a hand-edited
@@ -116,43 +128,67 @@ pub async fn bootstrap(app: AppHandle, state: State<'_, AppState>) -> Result<Boo
         subject: panel::subject_or_default(&app).key().to_string(),
         subjects: state.tray_subjects(),
         panel_material: panel::has_material(&app),
-        library_version: state.almanac.library_version().map_err(AppError::from)?,
+        library_version,
         app_version: app.package_info().version.to_string(),
-        ayanamsas: Ayanamsa::ALL
-            .into_iter()
-            .map(|a| Choice {
-                key: a.key(),
-                label: a.label(),
-            })
-            .collect(),
-        // The default first, which is the mean node: it is what a panchanga
-        // uses, and a list whose recommended entry is second reads as if the
-        // first one were.
-        node_types: [NodeType::Mean, NodeType::True]
-            .into_iter()
-            .map(|n| Choice {
-                key: n.key(),
-                label: n.label(),
-            })
-            .collect(),
-        month_systems: MonthSystem::ALL
-            .into_iter()
-            .map(|s| Choice {
-                key: s.key(),
-                label: s.label(),
-            })
-            .collect(),
+        ayanamsas: ayanamsa_choices(),
+        node_types: node_type_choices(),
+        month_systems: month_system_choices(),
         grahas: graha_info(),
-        vargas: chandra_almanac::varga::Varga::ALL
-            .into_iter()
-            .map(|v| VargaInfo {
-                key: v.key(),
-                label: v.label(),
-                name: v.name(),
-                division: v.division(),
-            })
-            .collect(),
+        vargas: varga_info(),
     })
+}
+
+/// Every ayanamsa the picker offers.
+///
+/// Its own function for the reason [`graha_info`] is: the visual harness needs
+/// the identical list and cannot call `bootstrap`. It held a hand-written copy
+/// of four, against the twelve `Ayanamsa::ALL` carries, so the Astrology pane
+/// was inspected at a third of the height it renders at.
+pub fn ayanamsa_choices() -> Vec<Choice> {
+    Ayanamsa::ALL
+        .into_iter()
+        .map(|a| Choice {
+            key: a.key(),
+            label: a.label(),
+        })
+        .collect()
+}
+
+/// The two node types, the default first.
+///
+/// The mean node leads because it is what a panchanga uses (D-027), and a list
+/// whose recommended entry is second reads as if the first one were.
+pub fn node_type_choices() -> Vec<Choice> {
+    [NodeType::Mean, NodeType::True]
+        .into_iter()
+        .map(|n| Choice {
+            key: n.key(),
+            label: n.label(),
+        })
+        .collect()
+}
+
+pub fn month_system_choices() -> Vec<Choice> {
+    MonthSystem::ALL
+        .into_iter()
+        .map(|s| Choice {
+            key: s.key(),
+            label: s.label(),
+        })
+        .collect()
+}
+
+/// All sixteen divisions. The harness used to list four.
+pub fn varga_info() -> Vec<VargaInfo> {
+    chandra_almanac::varga::Varga::ALL
+        .into_iter()
+        .map(|v| VargaInfo {
+            key: v.key(),
+            label: v.label(),
+            name: v.name(),
+            division: v.division(),
+        })
+        .collect()
 }
 
 /// Every graha's symbol, as the panel receives it.
@@ -415,10 +451,32 @@ pub async fn open_link(app: AppHandle, target: String) -> Result<()> {
         other => return Err(AppError::Settings(format!("no such link: {other}"))),
     };
 
-    std::process::Command::new("/usr/bin/open")
-        .arg(&url)
-        .spawn()
-        .map_err(|e| AppError::Settings(format!("cannot open a browser: {e}")))?;
+    // Waited on, not spawned and dropped.
+    //
+    // Rust's `Child` has no reaping `Drop`, so a dropped handle leaves a
+    // zombie until the process exits - and Chandra is a menu bar app that is
+    // resident all day. Three buttons in the About pane call this, so the
+    // count is however many times somebody pressed them.
+    //
+    // Waiting is cheap: `open` returns as soon as LaunchServices has been
+    // asked, not when the browser has finished starting. It is also what turns
+    // a failure into something the pane can say - a spawned-and-forgotten
+    // child reports nothing at all. On a blocking thread because it is a
+    // blocking wait.
+    let status = tauri::async_runtime::spawn_blocking(move || {
+        std::process::Command::new("/usr/bin/open")
+            .arg(&url)
+            .status()
+    })
+    .await
+    .map_err(|e| AppError::Settings(format!("cannot open a browser: {e}")))?
+    .map_err(|e| AppError::Settings(format!("cannot open a browser: {e}")))?;
+
+    if !status.success() {
+        return Err(AppError::Settings(format!(
+            "the browser could not be opened ({status})"
+        )));
+    }
     Ok(())
 }
 

@@ -89,7 +89,7 @@ moon-phases/
 │   │   └── ephe/                  sepl_18.se1, semo_18.se1   (1.7 MB)
 │   └── tauri.conf.json
 ├── crates/geo/data/                the location tables, embedded at compile time
-│   ├── zone.tab                    IANA: 448 zones -> representative lat/lon
+│   ├── zone.tab                    IANA: 418 zones -> representative lat/lon
 │   ├── iso3166.tab                 IANA: country code -> country name
 │   ├── cities.tsv                  GeoNames cities15000, trimmed (34,129 rows)
 │   ├── admin1.tsv                  GeoNames: region code -> region name

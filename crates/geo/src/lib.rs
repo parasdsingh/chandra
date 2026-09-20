@@ -3,7 +3,7 @@
 //! Two tables, because they answer two different questions.
 //!
 //! **The zone table** is the tz database's own `zone.tab`: one representative
-//! place per IANA zone, 448 of them, each guaranteed to agree with the zone that
+//! place per IANA zone, 418 of them, each guaranteed to agree with the zone that
 //! governs it. It answers "where does `Asia/Kolkata` stand for", which is
 //! D-007's last step and all the app has before a location has been chosen.
 //!

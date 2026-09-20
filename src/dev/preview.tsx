@@ -27,17 +27,23 @@ import type {
   Bootstrap,
   Chakra,
   ChartFormat,
+  Choice,
   DayDetail as Detail,
   GrahaInfo,
   GrahaMonth,
   MoonMonth,
   Snapshot,
+  VargaInfo,
 } from "../ipc/types";
 import type { FormatContext } from "../lib/format";
 
 const data = fixture as unknown as {
   timeZone: string;
   grahas: GrahaInfo[];
+  ayanamsas: Choice[];
+  nodeTypes: Choice[];
+  monthSystems: Choice[];
+  vargas: VargaInfo[];
   moonMonth: MoonMonth;
   lunarMonth: MoonMonth;
   moonDay: Detail;
@@ -79,7 +85,9 @@ export const previewBoot: Bootstrap = {
       },
       elevation: null,
     },
-    sidereal: { ayanamsa: "lahiri", node_type: "true" },
+    // Mean, like `Settings::default()` and D-027. It was `true` here, so the
+    // harness inspected a configuration the app does not ship.
+    sidereal: { ayanamsa: "lahiri", node_type: "mean" },
     calendar: { month_system: "amanta", ingress: "rashi" },
     panchanga: { yogas: true, karanas: true, muhurtas: true },
     chart: {
@@ -112,31 +120,17 @@ export const previewBoot: Bootstrap = {
   panel_material: false,
   library_version: "2.10.03",
   app_version: "0.1.0",
-  ayanamsas: [
-    { key: "lahiri", label: "Lahiri (Chitrapaksha)" },
-    { key: "raman", label: "Raman" },
-    { key: "krishnamurti", label: "Krishnamurti (KP)" },
-    { key: "true_chitra", label: "True Chitra" },
-  ],
-  node_types: [
-    { key: "true", label: "True node" },
-    { key: "mean", label: "Mean node" },
-  ],
-  month_systems: [
-    { key: "solar", label: "Solar (Gregorian)" },
-    { key: "amanta", label: "Lunar, amanta (new moon)" },
-    { key: "purnimanta", label: "Lunar, purnimanta (full moon)" },
-  ],
+  // The four pickers, from the fixture, which `preview_data` builds with the
+  // same functions `bootstrap` does. Written out by hand here they had drifted
+  // to four ayanamsas against twelve and four vargas against sixteen, so the
+  // Astrology pane rendered at a third of its real height and the chart pane at
+  // a quarter of its own - the two longest lists in the app were the two this
+  // harness never drew at full length.
+  ayanamsas: data.ayanamsas,
+  node_types: data.nodeTypes,
+  month_systems: data.monthSystems,
   grahas: data.grahas,
-  // The harness serves what the back end serves. Kept short rather than all
-  // sixteen: the settings pane is what draws them, and it draws whatever this
-  // list holds.
-  vargas: [
-    { key: "d1", label: "D1 · Rashi", name: "Rashi", division: 1 },
-    { key: "d2", label: "D2 · Hora", name: "Hora", division: 2 },
-    { key: "d9", label: "D9 · Navamsa", name: "Navamsa", division: 9 },
-    { key: "d30", label: "D30 · Trimsamsa", name: "Trimsamsa", division: 30 },
-  ] as const,
+  vargas: data.vargas,
 };
 
 /**

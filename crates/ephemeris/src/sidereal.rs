@@ -97,11 +97,20 @@ impl Ayanamsa {
 /// The mean node moves uniformly retrograde at -3'11"/day. The true node
 /// oscillates around it and periodically turns direct for a few days, which is
 /// visible in the transit calendar and is the reason both are offered.
+///
+/// `Default` is the mean node, matching `Settings::default()` and D-027: a
+/// fresh install computes Rahu and Ketu the way a panchanga does. It used to be
+/// the true node, so `SiderealConfig::default()` derived a configuration the
+/// app never ships - and `crates/almanac/tests/calendar.rs` builds its shared
+/// almanac from exactly that, which meant every golden Rahu and Ketu figure in
+/// the calendar suite was validated under the node type nobody runs. The two
+/// differ by up to ~1.7 degrees, enough to cross a nakshatra boundary. Tests
+/// that mean to exercise the true node name it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeType {
-    #[default]
     True,
+    #[default]
     Mean,
 }
 

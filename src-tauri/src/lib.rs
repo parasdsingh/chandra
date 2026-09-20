@@ -17,9 +17,12 @@ mod tray;
 /// and record its shape. Not part of the running app's surface.
 pub use settings::Settings as PublicSettings;
 
-/// Re-exported solely so the `preview_data` example can dump the same graha list
-/// the panel is served. Not part of the running app's surface.
-pub use commands::graha_info;
+/// Re-exported solely so the `preview_data` example can dump the same lists the
+/// panel is served - the grahas, and the four pickers. Not part of the running
+/// app's surface.
+pub use commands::{
+    ayanamsa_choices, graha_info, month_system_choices, node_type_choices, varga_info,
+};
 
 use std::time::Duration;
 

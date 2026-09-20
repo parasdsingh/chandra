@@ -34,9 +34,43 @@ if [ "$count" != "1" ]; then
 fi
 dmg=$(ls "$bundle"/*.dmg)
 
+# The version asked for is the version that was built.
+#
+# `VERSION` is an environment variable and `tauri.conf.json` is the source of
+# truth, and nothing compared them. `VERSION=0.2.0 make release` on a tree still
+# at 0.1.0 published a correctly-named Chandra-0.2.0-universal.dmg whose About
+# pane read 0.1.0 and whose feedback link tagged every report `?v=0.1.0`. The
+# name on the bucket would have been the only place the number 0.2.0 existed.
+built=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+  src-tauri/tauri.conf.json | head -1)
+if [ -z "$built" ]; then
+  echo "cannot read the version from src-tauri/tauri.conf.json" >&2
+  exit 1
+fi
+if [ "$built" != "$version" ]; then
+  echo "VERSION is $version but the tree is at $built." >&2
+  echo "Set the version in src-tauri/tauri.conf.json, rebuild, then release." >&2
+  exit 1
+fi
+
+# And the app inside the disk image agrees with both. The check above reads the
+# file the build was configured from; this reads what the build produced, which
+# is what a stranger installs.
+app=target/universal-apple-darwin/release/bundle/macos/Chandra.app
+if [ ! -f "$app/Contents/Info.plist" ]; then
+  echo "no built app at $app; run make dmg first" >&2
+  exit 1
+fi
+bundled=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
+  "$app/Contents/Info.plist")
+if [ "$bundled" != "$version" ]; then
+  echo "the built app reports $bundled, not $version - rebuild with 'make dmg'" >&2
+  exit 1
+fi
+
 # Both architectures, asserted again here rather than trusted from the build
 # that produced it - this is the last point before it reaches a stranger.
-archs=$(lipo -archs target/universal-apple-darwin/release/bundle/macos/Chandra.app/Contents/MacOS/chandra)
+archs=$(lipo -archs "$app/Contents/MacOS/chandra")
 case " $archs " in
   *" x86_64 "*) ;; *) echo "missing x86_64: $archs" >&2; exit 1 ;;
 esac

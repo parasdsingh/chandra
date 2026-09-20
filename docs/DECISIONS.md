@@ -125,7 +125,7 @@ a timezone centroid is not an answer to where the observer is, and the panel doe
 one.
 
 **Amended by D-031.** The bundled dataset named above did not exist for the first three
-releases: what shipped was `zone.tab`, 448 places at arcminute precision, which is a list of
+releases: what shipped was `zone.tab`, 418 places at arcminute precision, which is a list of
 *zones* rather than a list of *places*. It is now built, and it is `cities15000` as promised —
 34,129 places at about 11 metres.
 
@@ -671,11 +671,11 @@ chart off gets it back, which is the change rather than a side effect of it.
 question it is the right answer to.** Amends D-007, which promised this dataset from the first
 release and never had it.
 
-What shipped for three releases was `zone.tab` alone: 448 entries, one representative city per
+What shipped for three releases was `zone.tab` alone: 418 entries, one representative city per
 IANA zone, coordinates at arcminute precision. That is a **list of zones**, and it was being
 asked to be a list of places. The gap showed in two ways:
 
-- **Coverage.** 448 cities for the world. Most people could not find where they live, and the
+- **Coverage.** 418 cities for the world. Most people could not find where they live, and the
   nearest entry to Bengaluru was Colombo, 700 km away in another country — which is what the
   panel called it.
 - **Precision.** Arcminutes, about 1.9 km. Fine for a sunrise, which moves by under a second
@@ -687,7 +687,7 @@ Now 34,129 places at four decimal places, about 11 metres.
 
 | Table | Answers |
 |---|---|
-| `zone.tab` (448) | which place stands for `Asia/Kolkata` — D-007's third step, and all the app has before a location is chosen |
+| `zone.tab` (418) | which place stands for `Asia/Kolkata` — D-007's third step, and all the app has before a location is chosen |
 | `cities.tsv` (34,129) | where the user lives, and what to call the coordinates a location service reports |
 
 **The timezone still never comes from the city list**, and the better data does not change that.

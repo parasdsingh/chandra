@@ -94,7 +94,15 @@ pub fn resolve_offline(settings: &Settings) -> Resolved {
     // table has no elevation column and CoreLocation's vertical fix is poor,
     // which is why the setting exists at all.
     if let Some(elevation) = settings.location.elevation {
-        resolved.elevation = elevation;
+        // Clamped here, where the value is *recorded*, and not only in
+        // `to_location`, where it is used.
+        //
+        // The two were different numbers: the observer got 25,000 and the
+        // settings pane printed whatever had been typed, so a field reading
+        // "99999 m" described a height nothing was computed at. The pane now
+        // shows the height in force, which is also how somebody finds out the
+        // clamp happened.
+        resolved.elevation = usable_metres(elevation);
         resolved.elevation_known = true;
     }
     resolved

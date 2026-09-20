@@ -121,17 +121,7 @@ impl AppState {
     /// permanent slot to the chart. Its item keeps the id `MOON_ID`, because it
     /// draws a phase rather than a glyph.
     pub fn tray_subjects(&self) -> Vec<Graha> {
-        let chosen = self.settings().tray.subjects;
-
-        // Always in the canonical order, never the order they were switched on.
-        // The menu bar is a row the eye learns the shape of: a graha that jumps
-        // position because another was toggled off and on again makes the row
-        // unlearnable, and the settings list the choices are made in is in this
-        // order too.
-        Graha::ALL
-            .into_iter()
-            .filter(|graha| chosen.contains(graha))
-            .collect()
+        in_canonical_order(&self.settings().tray.subjects)
     }
 
     /// Divisions with their own menu bar item, in canonical order.
@@ -150,7 +140,26 @@ impl AppState {
             .filter(|varga| *varga == Varga::D1 || chosen.contains(varga))
             .collect()
     }
+}
 
+/// The grahas in `chosen`, always in the canonical order.
+///
+/// Always that order, never the order they were switched on. The menu bar is a
+/// row the eye learns the shape of: a graha that jumps position because another
+/// was toggled off and on again makes the row unlearnable, and the settings
+/// list the choices are made in is in this order too.
+///
+/// A free function so the test can call the thing that ships. It used to
+/// reimplement this expression and add `!= Chandra` on top - a clause the row
+/// itself dropped at D-030 - so the test passed whatever `tray_subjects` did.
+fn in_canonical_order(chosen: &[Graha]) -> Vec<Graha> {
+    Graha::ALL
+        .into_iter()
+        .filter(|graha| chosen.contains(graha))
+        .collect()
+}
+
+impl AppState {
     /// Applies new settings, propagating whatever changed into the almanac.
     ///
     /// Validate, persist, then mutate. Saving is the only step that can fail for
@@ -162,6 +171,16 @@ impl AppState {
     /// re-derive it by comparing settings itself.
     pub fn apply(&self, next: Settings) -> Result<Applied> {
         let _serialised = self.applying.lock().expect("apply lock");
+        self.apply_locked(next)
+    }
+
+    /// The body of [`AppState::apply`], with the caller holding `applying`.
+    ///
+    /// Separate so that a caller which has to *read* the settings, change one
+    /// field and write them back can hold the lock across the whole of it.
+    /// `accept_device_location` is that caller, and doing its read outside the
+    /// lock is exactly the interleaving `applying` was added to prevent.
+    fn apply_locked(&self, next: Settings) -> Result<Applied> {
         let previous = self.settings();
 
         // The almanac rejects a zone the tz database does not know, and it is
@@ -171,6 +190,24 @@ impl AppState {
         let resolved = location::resolve_offline(&next);
         jiff::tz::TimeZone::get(&resolved.zone)
             .map_err(|_| AppError::Settings(format!("unknown time zone {}", resolved.zone)))?;
+
+        // The second thing either mutation can refuse, and the one that used to
+        // be refused too late to matter.
+        //
+        // `Almanac::set_location` accepts any observer; only `rise_set` and
+        // `ascendant` test it, deep inside a request. So a settings file holding
+        // `latitude: 91` was saved, adopted, survived every restart - `load`
+        // deliberately refuses to reset a bad file - and then failed *partly*:
+        // the moon calendar drew, every graha calendar, every day view and every
+        // chart returned "observer is not a position on Earth", and the reader
+        // was pointed at the ephemeris rather than at their location.
+        let observer = resolved.to_location().observer;
+        if !observer.is_on_earth() {
+            return Err(AppError::Settings(format!(
+                "{}, {} is not a position on Earth",
+                observer.latitude, observer.longitude
+            )));
+        }
 
         next.save(&self.config_dir)?;
 
@@ -212,25 +249,27 @@ impl AppState {
         longitude: f64,
         elevation: Option<f64>,
     ) -> Result<()> {
-        let mut settings = self.settings();
         // A manual place is authoritative and is never overridden (D-007), so a
         // device fix arriving while one is set is discarded. But only where one
         // is actually set: `mode: manual` with no place is not a choice, it is
         // the state the location gate exists to end, and refusing there made
         // "Use this Mac" a silent no-op that the gate then reported as a
         // refusal.
-        if settings.location.mode == crate::settings::LocationMode::Manual
-            && settings.location.place.is_some()
-        {
+        //
+        // Asked here to avoid the work below, and asked again under the lock,
+        // where the answer is the one that counts.
+        if Self::manual_place_is_set(&self.settings()) {
             return Ok(());
         }
 
+        // Before the lock, because neither of these reads the settings and the
+        // second is slow: `nearest_place` is 3 ms warm and 75 ms on the first
+        // call of a session, while the 34,129-row table parses.
         let zone = location::from_time_zone();
         let label = chandra_geo::nearest_place(latitude, longitude)
             .map(|place| place.city.clone())
             .unwrap_or_else(|| zone.label.clone());
-
-        settings.location.place = Some(crate::settings::PlaceSetting {
+        let place = crate::settings::PlaceSetting {
             label,
             zone: zone.zone,
             latitude,
@@ -240,12 +279,34 @@ impl AppState {
             // not, and `None` is then the honest answer rather than the 0.0 the
             // framework hands back anyway.
             elevation,
-        });
+        };
 
-        self.apply(settings).map(|_| ())
+        // Read, change and write, all inside `applying`.
+        //
+        // This used to read the settings at the top of the function, spend the
+        // milliseconds above outside any lock, and only then call `apply`, which
+        // takes it. A settings change landing in that window was computed
+        // against by `apply` and then overwritten wholesale by this stale
+        // snapshot: clicking "Use this Mac" on a cold launch and changing the
+        // ayanamsa while the fix was in flight reverted the ayanamsa, on disk
+        // and in the engine, with nothing said. The same for the month system,
+        // the chart's vargas, the panel scale and every panchanga toggle.
+        let _serialised = self.applying.lock().expect("apply lock");
+        let mut settings = self.settings();
+        if Self::manual_place_is_set(&settings) {
+            return Ok(());
+        }
+        settings.location.place = Some(place);
+        self.apply_locked(settings).map(|_| ())
+    }
+
+    fn manual_place_is_set(settings: &Settings) -> bool {
+        settings.location.mode == crate::settings::LocationMode::Manual
+            && settings.location.place.is_some()
     }
 }
 
+#[derive(Debug)]
 pub struct Applied {
     /// The set of tray items changed; add or remove them.
     pub tray_changed: bool,
@@ -269,12 +330,13 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/ephe")
     }
 
-    /// A settings document the engine must not adopt unless it was written.
+    /// Everything `apply` must hold, in one test.
     ///
     /// The engine is a process-wide singleton, so this is the only test in the
-    /// crate that may build an `AppState`.
+    /// crate that may build an `AppState` - which is why three separate
+    /// guarantees are asserted here in sequence rather than in three tests.
     #[test]
-    fn a_refused_save_leaves_the_engine_on_the_settings_that_are_on_disk() {
+    fn apply_refuses_what_it_cannot_honour_and_never_loses_a_concurrent_change() {
         let config_dir = std::env::temp_dir().join("chandra-apply-test");
         let _ = fs::remove_dir_all(&config_dir);
         let _ = fs::remove_file(&config_dir);
@@ -283,6 +345,86 @@ mod tests {
         let state = AppState::new(config_dir.clone(), &ephemeris_dir()).expect("state");
         let before = state.settings();
         assert_eq!(before.sidereal.ayanamsa, Ayanamsa::Lahiri);
+
+        // 1. An observer that is not on Earth is refused before it is written.
+        //
+        // Not after: `set_location` accepts anything, and only `rise_set` and
+        // `ascendant` test the observer, so latitude 91 used to be saved,
+        // adopted and kept across restarts while the moon calendar drew
+        // normally and every chart said "observer is not a position on Earth".
+        let off_earth = Settings {
+            location: crate::settings::LocationSetting {
+                mode: crate::settings::LocationMode::Manual,
+                place: Some(crate::settings::PlaceSetting {
+                    label: "nowhere".into(),
+                    zone: "Asia/Kolkata".into(),
+                    latitude: 91.0,
+                    longitude: 0.0,
+                    elevation: None,
+                }),
+                ..before.location.clone()
+            },
+            ..before.clone()
+        };
+        let refused = state
+            .apply(off_earth)
+            .expect_err("91 degrees north is not a latitude");
+        assert!(
+            refused.to_string().contains("not a position on Earth"),
+            "the refusal must name the observer, not the ephemeris: {refused}"
+        );
+        assert_eq!(state.settings(), before, "a refused document was adopted");
+
+        // 2. A device fix arriving mid-change does not revert the change.
+        //
+        // `accept_device_location` never touches the ayanamsa, so whatever the
+        // settings pane last wrote must survive - in every interleaving. It did
+        // not: the read happened outside `applying`, the geo lookup took 3 ms
+        // warm and 75 ms cold, and the stale snapshot was then written back over
+        // the choice just saved. Repeated, because a race that reproduces
+        // sometimes is a race.
+        for round in 0..24 {
+            let raman = Settings {
+                sidereal: SiderealSetting {
+                    ayanamsa: Ayanamsa::Raman,
+                    ..state.settings().sidereal
+                },
+                ..state.settings()
+            };
+            *state.settings.write().expect("settings lock") = Settings {
+                sidereal: SiderealSetting {
+                    ayanamsa: Ayanamsa::Lahiri,
+                    ..raman.sidereal
+                },
+                ..raman.clone()
+            };
+
+            std::thread::scope(|scope| {
+                scope.spawn(|| {
+                    let _ = state.apply(raman.clone());
+                });
+                scope.spawn(|| {
+                    let _ = state.accept_device_location(12.97, 77.59, None);
+                });
+            });
+
+            assert_eq!(
+                state.settings().sidereal.ayanamsa,
+                Ayanamsa::Raman,
+                "round {round}: a device fix reverted the ayanamsa that was just chosen"
+            );
+        }
+
+        // 3. A settings document the engine must not adopt unless it was
+        //    written.
+        let before = Settings {
+            sidereal: SiderealSetting {
+                ayanamsa: Ayanamsa::Lahiri,
+                ..state.settings().sidereal
+            },
+            ..state.settings()
+        };
+        state.apply(before.clone()).expect("back to lahiri");
 
         // A file where the configuration directory should be: `create_dir_all`
         // then fails, which is the first thing `save` does.
@@ -318,27 +460,24 @@ mod tray_order_tests {
     /// Filtering the stored list would preserve whatever order the user happened
     /// to switch things on in, so toggling one graha off and back on would move
     /// it to the end and shuffle the row the eye had learned.
+    ///
+    /// Calls `in_canonical_order`, which is what `tray_subjects` calls. It used
+    /// to write the expression out again with `!= Chandra` added, so it asserted
+    /// a rule the row had not followed since D-030 and would have stayed green
+    /// through any change to the function it is named after.
     #[test]
     fn the_row_reads_in_canonical_order_whatever_order_it_was_built_in() {
-        let switched_on_backwards = [Graha::Shani, Graha::Chandra, Graha::Mangala, Graha::Surya];
-
-        let ordered: Vec<Graha> = Graha::ALL
-            .into_iter()
-            .filter(|graha| *graha != Graha::Chandra && switched_on_backwards.contains(graha))
-            .collect();
+        let backwards = [Graha::Shani, Graha::Chandra, Graha::Mangala, Graha::Surya];
+        let ordered = in_canonical_order(&backwards);
 
         assert_eq!(
             ordered,
-            vec![Graha::Surya, Graha::Mangala, Graha::Shani],
-            "canonical order, and never the moon"
+            vec![Graha::Surya, Graha::Chandra, Graha::Mangala, Graha::Shani],
+            "canonical order, and the moon is in the row like any other graha"
         );
 
         // The same set switched on in a different order gives the same row.
-        let switched_on_forwards = [Graha::Surya, Graha::Mangala, Graha::Shani];
-        let again: Vec<Graha> = Graha::ALL
-            .into_iter()
-            .filter(|graha| *graha != Graha::Chandra && switched_on_forwards.contains(graha))
-            .collect();
-        assert_eq!(ordered, again);
+        let forwards = [Graha::Surya, Graha::Chandra, Graha::Mangala, Graha::Shani];
+        assert_eq!(ordered, in_canonical_order(&forwards));
     }
 }
