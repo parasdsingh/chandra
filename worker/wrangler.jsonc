@@ -5,9 +5,13 @@
   "compatibility_date": "2026-09-17",
   "observability": { "enabled": true },
 
-  // The disk images. Shared bucket, own prefix: `chandra/`.
+  // The disk images. Its own bucket, not one shared with another project:
+  // a shared bucket is what turned a missing key check into a way to read
+  // somebody else's releases (I-054). The prefix and the allowlist in
+  // `index.ts` stay anyway - defence in depth is cheap and this is the one
+  // component deliberately exposed to the internet.
   "r2_buckets": [
-    { "binding": "DOWNLOADS", "bucket_name": "naksha-downloads" }
+    { "binding": "DOWNLOADS", "bucket_name": "chandra-downloads" }
   ],
 
   // Events. D1 rather than Analytics Engine because the questions in

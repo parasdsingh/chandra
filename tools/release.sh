@@ -9,7 +9,7 @@
 set -eu
 
 version=${VERSION:?VERSION=x.y.z is required}
-bucket=naksha-downloads
+bucket=chandra-downloads
 key="chandra/Chandra-${version}-universal.dmg"
 endpoint="https://chandra-downloads.parasdeep29.workers.dev/download"
 
