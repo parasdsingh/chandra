@@ -1,7 +1,7 @@
 /** The six-row day grid, shared by both panel kinds. */
 
 import type { JSX } from "solid-js";
-import { For, Show } from "solid-js";
+import { createEffect, For, on, Show } from "solid-js";
 
 import { sameDate } from "../lib/calendar";
 import { weekdayLabels } from "../lib/format";
@@ -83,6 +83,49 @@ export function MonthCells(props: Props): JSX.Element {
    * Only days inside the month are eligible, so a today that appears as a
    * neighbouring month's trailing cell does not claim the stop in two grids.
    */
+  let grid: HTMLElement | undefined;
+
+  /**
+   * Moves the keyboard's focus to follow the selection.
+   *
+   * The roving `tabindex` said which cell was the tab stop and nothing ever
+   * moved focus to it, so arrowing through the month moved a ring on screen and
+   * told a screen reader nothing at all: DOM focus stayed on the panel's own
+   * container, and `role="gridcell"` announces on focus. A sighted user could
+   * follow the selection and a VoiceOver user could not.
+   *
+   * `defer` because focusing on mount would take the keyboard away from the
+   * panel root, which takes it deliberately so the arrows work the moment the
+   * panel opens. Only the grid in the window moves focus - the two off-screen
+   * months are `aria-hidden` and must not pull the keyboard into a month
+   * nobody is looking at.
+   *
+   * Focus is taken from the panel's own container but never from a control.
+   * The container is where focus sits when the panel opens, so requiring the
+   * grid to already hold it would mean focus could never *enter* the grid and
+   * the first arrow press would still announce nothing. A button, a link or a
+   * field owns its own focus, which is the same rule the panel's key handler
+   * uses to decide whether an arrow is its to act on.
+   */
+  createEffect(
+    on(
+      () => props.selected,
+      () => {
+        if (!props.active || !grid) return;
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLElement &&
+          active.closest("button, a, input, select, textarea")
+        ) {
+          return;
+        }
+        const stop = grid.querySelector<HTMLElement>('[tabindex="0"]');
+        if (stop && stop !== active) stop.focus();
+      },
+      { defer: true },
+    ),
+  );
+
   const focusedDate = (): DateKey | null => {
     const inside = (props.month.days as (MoonCell | GrahaCell)[]).filter(
       (day) => day.in_month,
@@ -103,6 +146,7 @@ export function MonthCells(props: Props): JSX.Element {
       <div
         class="grid"
         role="grid"
+        ref={(element) => (grid = element)}
         aria-rowcount={6}
         aria-colcount={7}
         aria-label={props.month.label}

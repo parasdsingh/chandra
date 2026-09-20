@@ -34,6 +34,17 @@ pub struct Place {
     /// with nothing to choose between them.
     pub region: Option<String>,
     pub country: String,
+    /// Two letters, used here and nowhere else.
+    ///
+    /// `skip` because it crosses no boundary: it exists to tell two cities of
+    /// the same name in different countries apart while the table is being
+    /// built, and the front end has never read it. Serialised, it rode along on
+    /// every row of a thirty-four thousand place search result - the one field
+    /// in the whole payload that nothing on the other side looks at.
+    ///
+    /// `default` with it, so a `Place` can still be deserialised: the derive
+    /// would otherwise refuse a document that, correctly, no longer has it.
+    #[serde(skip, default)]
     pub country_code: String,
     /// Degrees north, negative south.
     pub latitude: f64,

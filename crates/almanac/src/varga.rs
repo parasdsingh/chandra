@@ -194,14 +194,6 @@ impl Varga {
         }
     }
 
-    /// Whether every part of a rashi is the same width.
-    ///
-    /// True for fifteen of the sixteen. D30 is the exception in the Parashari
-    /// scheme, and the exception is the whole of its difficulty.
-    pub const fn equal(self) -> bool {
-        !matches!(self, Varga::D30)
-    }
-
     /// How many rashis the division can ever occupy.
     ///
     /// Twelve for most, and the two that are not are a drawing problem before
@@ -216,15 +208,6 @@ impl Varga {
             Varga::D30 => 10,
             _ => 12,
         }
-    }
-
-    /// Roughly how long the chart holds still, for a body at the lagna's rate.
-    ///
-    /// The ascendant crosses a rashi in about two hours, so it crosses one part
-    /// of an `n`-part division in about `120/n` minutes. An average for D30,
-    /// whose parts run from 5° to 8° and so from 20 to 32 minutes.
-    pub const fn lagna_minutes(self) -> u32 {
-        120 / self.parts()
     }
 }
 

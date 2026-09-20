@@ -59,6 +59,8 @@ New issues append to the table and get a detail section only when they need one.
 | I-052 | chore | Commit author email rewritten to a GitHub noreply | M4 | done |
 | I-053 | feat | Download counting that excludes bots; server side only | M4 | done |
 | I-054 | bug | Download worker served any object in a shared bucket | M4 | done |
+| I-055 | risk | Front end has no automated test; geometric checks live outside the repo | M4 | open |
+| I-056 | chore | Feedback and support links; feedback form on the site | M4 | done |
 | I-051 | chore | Sign and notarise with a Developer ID | M4 | open |
 | I-026 | chore | Create public GitHub remote and push | M4 | done |
 
@@ -90,6 +92,20 @@ multi-tray usage.
 ad-hoc-signed, non-notarised bundle is untested and cannot be tested without a real build.
 Not a blocker: [D-007](DECISIONS.md#d-007) makes the app fully correct without it.
 Outcome to record here once M2 builds a real bundle.
+
+### I-055 — The front end has no automated test — open, accepted
+About ten thousand lines of TSX behind `tsc` alone. `src/dev/preview.tsx` renders
+every view but asserts nothing, and the geometric checks the chart depends on are
+browser-console scripts that are not committed.
+
+Accepted deliberately rather than overlooked: the harness has caught every layout
+regression so far, because someone looked. The risk is that the someone stops.
+
+The first thing worth building is a headless run of the geometric check — no
+label outside its compartment, none on a caption, none clipped, sampled across a
+crossing — not a component suite. That check is the one that has caught real
+regressions; component tests over a chart this visual would mostly assert that
+the code does what the code does.
 
 ### I-054 — The download worker served any object in a shared bucket — done
 The R2 key came straight from the URL path: `key = url.pathname.replace(/^\/download\/?/, "")`.

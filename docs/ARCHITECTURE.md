@@ -356,11 +356,26 @@ Zero-regression is a hard requirement, so the domain is tested before the UI exi
 | `src-tauri` | command-level tests with a fixed clock and fixed location |
 | front end | **none.** `npx tsc --noEmit` is the only automated check |
 
-**The front end has no automated test of any kind.** `src/dev/preview.tsx` renders
-every view against real almanac output and is where layout, crowding and degraded
-states are inspected — but nothing in it asserts, so it catches what a person
-looking at it catches. The geometric checks the chart's comments refer to are run
-from a browser console against that harness, and are not in the repository.
+**The front end has no automated test of any kind, and this is a known,
+accepted gap** (I-055). `npx tsc --noEmit` is the only automated check over
+about ten thousand lines of TSX, including `Chakra.tsx` at three thousand.
+
+`src/dev/preview.tsx` renders every view against real almanac output and is
+where layout, crowding and degraded states are inspected — but **nothing in it
+asserts**. It catches what a person looking at it catches, and only while they
+are looking.
+
+The geometric checks the chart's comments repeatedly appeal to — no label
+outside its compartment, none on a caption, none clipped, sampled across a whole
+crossing — are real and have been run many times. They are browser-console
+scripts, and **they are not in the repository**. The `data-layout`, `data-cover`
+and `data-scale` attributes on each compartment exist to be read back by them.
+
+What that costs, concretely: every change to the chart's layout has been
+verified by re-running those checks by hand, and a change made without doing so
+would break them silently. The first thing worth building here is not a
+component-test suite but a headless run of that geometric check, because it is
+the one that has actually caught regressions.
 
 **There is no CI.** No `.github/`, no runners, no release job. `make check` is
 what a green build means, and it means it on one machine.

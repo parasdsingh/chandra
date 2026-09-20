@@ -26,16 +26,7 @@ pub enum EventKind {
     CombustionEnd,
 }
 
-impl EventKind {
-    /// Instants are a single moment; spans continue until their partner event.
-    /// The two are drawn differently, so the distinction belongs in the model.
-    pub const fn is_span_start(self) -> bool {
-        matches!(
-            self,
-            EventKind::RetrogradeStation | EventKind::CombustionStart
-        )
-    }
-}
+impl EventKind {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {

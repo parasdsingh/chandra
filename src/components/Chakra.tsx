@@ -3034,7 +3034,16 @@ function spoken(data: ChakraData, format: ChartFormat): string {
           // `undefined`, which passed a `!== null` test and was then asserted to
           // be a string - so the chart would have said `undefined` aloud.
         ].filter((state): state is string => state != null);
-        return `${graha.name}${states.length > 0 ? ` ${states.join(" ")}` : ""}`;
+        // The degree too. It is in the hover for a sighted mouse user - and the
+        // hover is an SVG `<title>` inside `role="img"`, which collapses the
+        // subtree, so it reaches neither assistive technology nor the keyboard.
+        // Without this line the spoken chart is the only view of it that does
+        // not say where a body actually stands.
+        const [at, minutes] = graha.degrees_in_rashi;
+        return (
+          `${graha.name} at ${at} degrees ${minutes} minutes` +
+          (states.length > 0 ? ` ${states.join(" ")}` : "")
+        );
       })
       .join(", ");
     return `house ${rashi.house}, ${rashi.name}${bodies ? `, ${bodies}` : ", empty"}`;

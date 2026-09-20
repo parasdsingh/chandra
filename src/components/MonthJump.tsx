@@ -12,7 +12,14 @@
  */
 
 import type { JSX } from "solid-js";
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 
 import * as ipc from "../ipc";
 import type { MonthIndex } from "../ipc/types";
@@ -47,6 +54,52 @@ export function MonthJump(props: Props): JSX.Element {
     },
   );
 
+  let dialog: HTMLElement | undefined;
+
+  /**
+   * Focus goes in when it opens, and comes back out when it closes.
+   *
+   * It called itself a dialog and behaved like an overlay: focus stayed on
+   * whatever was behind, and the forty-two day cells under the scrim were still
+   * in the tab order - so Tab walked into a grid the reader could not see and
+   * was told nothing about. `aria-modal` states the intent; moving focus and
+   * trapping it is what makes the statement true.
+   */
+  onMount(() => {
+    const returnTo = document.activeElement;
+    // The current month, if it is on screen, so Tab starts from where the
+    // reader already is rather than from the top of a list of thirteen.
+    const start =
+      dialog?.querySelector<HTMLElement>(".jump__month.is-current") ??
+      dialog?.querySelector<HTMLElement>("button");
+    start?.focus();
+
+    onCleanup(() => {
+      if (returnTo instanceof HTMLElement && document.contains(returnTo)) {
+        returnTo.focus();
+      }
+    });
+  });
+
+  /** Tab cycles inside the dialog rather than leaving it. */
+  function trap(event: KeyboardEvent) {
+    if (event.key !== "Tab" || !dialog) return;
+    const stops = [...dialog.querySelectorAll<HTMLElement>("button")].filter(
+      (element) => !element.hasAttribute("disabled"),
+    );
+    if (stops.length === 0) return;
+    const first = stops[0]!;
+    const last = stops[stops.length - 1]!;
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
     // The backdrop closes it. The strip behind is visible through it and reads
     // as the thing being changed, so clicking it means "not that one" rather
@@ -56,8 +109,11 @@ export function MonthJump(props: Props): JSX.Element {
       <div
         class="jump"
         role="dialog"
+        aria-modal="true"
         aria-label="Jump to a month"
+        ref={(element) => (dialog = element)}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={trap}
       >
         <div class="jump__bar">
           <button

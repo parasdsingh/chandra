@@ -1069,26 +1069,6 @@
    for beginners rather than something a practitioner reads. It is on the hover
    and in the spoken form, which is where the qualifiers live. */
 
-/* Combustion, in the name itself rather than on a plate behind it.
-   A gradient rectangle under the text drew a second object into a compartment
-   that already holds two kinds of writing, and at this size it read as a
-   highlighter mark rather than as glare. The colour is the same `--glare` the
-   calendar cell uses, so the state still looks like one thing wherever it
-   appears - it has simply moved from behind the name into it.
-   Still depicting rather than encoding, which is what D-023 asks: a body lost in
-   the Sun's light is drawn the colour of that light. It is never the only
-   carrier - the hover and the spoken form both say `combust`. */
-.chakra__graha.is-combust {
-  fill: var(--glare);
-}
-
-.chakra__lagna-line {
-  font: var(--type-body);
-  color: var(--text-secondary);
-  margin: 0;
-  text-align: center;
-}
-
 /* The same treatment the day view gives its date line, and in the same place -
    small capitals under the title, left-aligned to it. It read as a centred
    subtitle before, which matched neither the calendar nor the day view, and made

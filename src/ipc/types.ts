@@ -267,7 +267,6 @@ export interface GrahaMonth {
   source: Source;
 }
 
-export type CalendarMonth = MoonMonth | GrahaMonth;
 
 export interface NakshatraSpan {
   nakshatra: string;
@@ -630,7 +629,6 @@ export interface City {
    *  regions in it. */
   region: string | null;
   country: string;
-  country_code: string;
   latitude: number;
   longitude: number;
   /** Metres, from a digital elevation model. `null` where the source has none.
