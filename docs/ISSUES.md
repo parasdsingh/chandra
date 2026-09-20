@@ -58,6 +58,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-050 | chore | Landing page, screenshots, download and donations | M4 | in-progress |
 | I-052 | chore | Commit author email rewritten to a GitHub noreply | M4 | done |
 | I-053 | feat | Download counting that excludes bots; server side only | M4 | done |
+| I-054 | bug | Download worker served any object in a shared bucket | M4 | done |
 | I-051 | chore | Sign and notarise with a Developer ID | M4 | open |
 | I-026 | chore | Create public GitHub remote and push | M4 | done |
 
@@ -89,6 +90,27 @@ multi-tray usage.
 ad-hoc-signed, non-notarised bundle is untested and cannot be tested without a real build.
 Not a blocker: [D-007](DECISIONS.md#d-007) makes the app fully correct without it.
 Outcome to record here once M2 builds a real bundle.
+
+### I-054 — The download worker served any object in a shared bucket — done
+The R2 key came straight from the URL path: `key = url.pathname.replace(/^\/download\/?/, "")`.
+The bucket is shared with another project and held twenty-three objects, so
+`/download/<any key>` served any of them through a public endpoint. Broken access
+control, introduced in the commit that added the worker and found two days later
+on re-reading it.
+
+Fixed with an allowlist rather than a sanitiser — `^Chandra-\d+\.\d+\.\d+-universal\.dmg$`,
+decoded before it is judged so a percent-encoded traversal is tested as what it
+decodes to — plus a prefix check at the point of use, so a future third source of
+keys cannot skip the guard by not knowing about it. Both refusals return the same
+body, so the endpoint cannot be used to test which keys exist.
+
+Verified against traversal, encoded traversal, a bare key, a foreign prefix and a
+NUL byte; and the legitimate paths - `/download` and the exact artefact name -
+both still serve byte-identical files.
+
+**The lesson is the scope of a review.** The security audit covered the app and
+found it clean. This worker was written after it and was never reviewed, and it
+was the one piece of the system exposed to the public internet by design.
 
 ### I-026 — GitHub remote
 Deferred by choice ([D-018](DECISIONS.md#d-018)), and no longer deferrable: the app

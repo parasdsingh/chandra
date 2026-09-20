@@ -32,6 +32,37 @@ export interface Env {
 /** Where the redirect goes when someone asks for the current release. */
 const LATEST = "latest";
 
+/** The only prefix this worker may read from.
+ *
+ * The bucket is shared with another project. Without this, the key came
+ * straight from the URL path, so `/download/<anything>` served *any* object in
+ * it - twenty-three of them, belonging to something else - through a public
+ * endpoint. Broken access control, in eleven characters of missing check. */
+const PREFIX = "chandra/";
+
+/** The only shape a release artefact may have.
+ *
+ * An allowlist, not a sanitiser. Stripping `..` and slashes is a game of
+ * thinking of every encoding first; naming the one thing that is allowed is
+ * not. Anything that is not exactly a Chandra disk image at a three part
+ * version is refused before it reaches the bucket. */
+const ARTEFACT = /^Chandra-\d+\.\d+\.\d+-universal\.dmg$/;
+
+/** The object a request is allowed to reach, or nothing. */
+function keyFor(asked: string): string | null {
+  if (asked === LATEST) return null; // resolved separately
+  // `decodeURIComponent` first, so a percent-encoded traversal is judged as
+  // what it decodes to rather than as its encoding.
+  let name: string;
+  try {
+    name = decodeURIComponent(asked);
+  } catch {
+    return null;
+  }
+  if (!ARTEFACT.test(name)) return null;
+  return PREFIX + name;
+}
+
 /** A visitor hash: salted, truncated, and never reversible to an address. */
 async function visitorHash(
   request: Request,
@@ -99,13 +130,23 @@ async function download(
   url: URL,
 ): Promise<Response> {
   const asked = url.pathname.replace(/^\/download\/?/, "") || LATEST;
-  const key = asked === LATEST ? await currentRelease(env) : asked;
+  const key = asked === LATEST ? await currentRelease(env) : keyFor(asked);
 
   if (!key) {
+    // The same answer for "no release yet" and "that is not a thing you may
+    // ask for". A distinct message would turn this endpoint into a way to
+    // test which keys exist in the bucket.
     return new Response("No release yet.", {
       status: 404,
       headers: { "cache-control": "no-store" },
     });
+  }
+
+  // Belt and braces. `keyFor` and `currentRelease` both produce prefixed keys;
+  // this is here so that a future third source of keys cannot skip the check
+  // by simply not knowing about it.
+  if (!key.startsWith(PREFIX)) {
+    return new Response("Not found", { status: 404 });
   }
 
   const object = await env.DOWNLOADS.get(key);
@@ -148,7 +189,7 @@ async function download(
  * second thing to forget.
  */
 async function currentRelease(env: Env): Promise<string | null> {
-  const listed = await env.DOWNLOADS.list({ prefix: "chandra/" });
+  const listed = await env.DOWNLOADS.list({ prefix: PREFIX });
   const images = listed.objects
     .map((object) => object.key)
     .filter((key) => key.endsWith(".dmg"))
