@@ -72,11 +72,13 @@ lint: ## Formatting and lint checks
 	cargo clippy --workspace --all-targets -- -D warnings
 	npx tsc --noEmit
 	sh tools/check-tokens.sh
+	sh tools/check-limits.sh
+	cd worker && npx tsc --noEmit
 
 fmt: ## Format everything
 	cargo fmt --all
 
-check: lint test ## Everything CI runs
+check: lint test ## Lint and the whole test suite
 
 swetest: ## Build Swiss Ephemeris' reference CLI, used to generate golden vectors
 	@test -n "$(VENDOR)" || (echo "swiss-eph sources not vendored; run 'cargo fetch' first" && exit 1)

@@ -585,6 +585,6 @@ itself already existed, in **Settings › Astrology › Rahu and Ketu**.
 
 ## 10. Not started
 
-- GitHub remote. Deferred by D-018 until a production release; still local-only.
-- CI. Described in the Makefile and the docs; no `.github/workflows` exists.
-- Release DMG on tag.
+- CI. No `.github/workflows` exists and none is planned; `make check` is the
+  green build and `tools/release.sh` is the release.
+- Release DMG on tag. Releases are cut by hand and uploaded to R2 instead.

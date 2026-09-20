@@ -35,15 +35,18 @@ export interface Env {
   MAIL_TO?: string;
 }
 
-/** Where the redirect goes when someone asks for the current release. */
+/** What a request asks for when it wants whatever the current release is.
+ *  Resolved against the bucket and served directly; there is no redirect. */
 const LATEST = "latest";
 
 /** The only prefix this worker may read from.
  *
- * The bucket is shared with another project. Without this, the key came
- * straight from the URL path, so `/download/<anything>` served *any* object in
- * it - twenty-three of them, belonging to something else - through a public
- * endpoint. Broken access control, in eleven characters of missing check. */
+ * The bucket has since been split so Chandra has its own, but this stays: it
+ * is what was missing when the key came straight from the URL path, and
+ * `/download/<anything>` served *any* object in a bucket shared with another
+ * project - twenty-three of them - through a public endpoint. Broken access
+ * control, in eleven characters of missing check. A bucket that is not shared
+ * today is not a reason to depend on it never being shared again. */
 const PREFIX = "chandra/";
 
 /** The only shape a release artefact may have.
@@ -85,6 +88,20 @@ async function visitorHash(
     .slice(0, 8)
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+/** The host the page says sent the visitor, if it is one and is not us.
+ *
+ * Host only, and validated here rather than trusted: this arrives in a query
+ * string anyone can write. A visitor moving between pages of this site is not
+ * an inbound referral and would otherwise swamp the table with its own host.
+ */
+function inboundHost(asked: string | null): string | null {
+  if (!asked) return null;
+  const host = asked.slice(0, 128).toLowerCase();
+  if (!/^[a-z0-9.-]+$/.test(host)) return null;
+  if (ALLOWED.some((origin) => new URL(origin).host === host)) return null;
+  return host;
 }
 
 function referrerHost(request: Request): string | null {
@@ -166,12 +183,11 @@ async function download(
 
   const shape = classify(request);
   ctx.waitUntil(
-    record(env, "download", {
+    recordDownload(env, {
       asset: key,
       version: versionOf(key),
       classification: shape,
       request,
-      path: url.pathname,
     }),
   );
 
@@ -206,9 +222,14 @@ async function download(
  */
 async function currentRelease(env: Env): Promise<string | null> {
   const listed = await env.DOWNLOADS.list({ prefix: PREFIX });
+  // `ARTEFACT`, not `.endsWith(".dmg")`. This is the second source of keys and
+  // it must pass the same test as the first: anything else in the prefix - a
+  // hand-uploaded file, a build from another branch - would otherwise become
+  // what `/download` serves, and `versionOf` would return null for it, so it
+  // would vanish from the release-uptake query as well.
   const images = listed.objects
     .map((object) => object.key)
-    .filter((key) => key.endsWith(".dmg"))
+    .filter((key) => ARTEFACT.test(key.slice(PREFIX.length)))
     .sort(compareVersions);
   return images.at(-1) ?? null;
 }
@@ -242,12 +263,18 @@ async function beacon(
 ): Promise<Response> {
   const shape = classify(request);
   ctx.waitUntil(
-    record(env, "visit", {
-      asset: null,
-      version: null,
+    recordVisit(env, {
       classification: shape,
       request,
       path: url.searchParams.get("p")?.slice(0, 128) ?? "/",
+      // Sent by the page, not read from `Referer`.
+      //
+      // The beacon is a `fetch` from the landing page itself, so its `Referer`
+      // is the landing page - which made `visit.referrer_host` able to hold
+      // exactly one value and the comment on the page, promising "which host
+      // linked here", describe something that was never recorded. The host is
+      // taken from `document.referrer` there and passed here.
+      referrer: inboundHost(url.searchParams.get("r")),
     }),
   );
 
@@ -275,11 +302,17 @@ async function feedback(
 ): Promise<Response> {
   const origin = request.headers.get("origin") ?? "";
   const cors: Record<string, string> = {
-    "access-control-allow-origin": ALLOWED.includes(origin) ? origin : "null",
     "access-control-allow-methods": "POST, OPTIONS",
     "access-control-allow-headers": "content-type",
     "cache-control": "no-store",
   };
+  // Omitted rather than set to "null" when the origin is not allowed. `null`
+  // is a real origin - a sandboxed iframe, a `data:` document - so sending it
+  // grants those contexts the access it was meant to deny. No header at all is
+  // the refusal.
+  if (ALLOWED.includes(origin)) {
+    cors["access-control-allow-origin"] = origin;
+  }
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
@@ -357,7 +390,13 @@ async function feedback(
  *  the browser refuses the response, which is the point. */
 const ALLOWED = [
   "https://chandra.paraxis.dev",
-  "https://chandra-dis.pages.dev",
+  // `tools/release.sh` deploys `--project-name=chandra`, so this is the host
+  // the form is served from until the custom domain is attached. It read
+  // `chandra-dis.pages.dev`, which exists nowhere else in the repository: a
+  // FormData POST is CORS-simple and needs no preflight, so the row was stored
+  // and the browser then blocked the response - leaving the sender told "that
+  // did not go through" and invited to send it again.
+  "https://chandra.pages.dev",
 ];
 
 function json(
@@ -371,52 +410,78 @@ function json(
   });
 }
 
-async function record(
+/** What every row carries, whichever table it lands in. */
+async function common(
   env: Env,
-  table: "download" | "visit",
+  request: Request,
+): Promise<{
+  at: string;
+  day: string;
+  country: string | null;
+  visitor: string | null;
+}> {
+  const at = new Date().toISOString();
+  const cf = (request as { cf?: Record<string, unknown> }).cf ?? {};
+  return {
+    at,
+    day: at.slice(0, 10),
+    country: (cf["country"] as string | undefined) ?? null,
+    visitor: await visitorHash(request, env.VISITOR_SALT),
+  };
+}
+
+async function recordDownload(
+  env: Env,
   event: {
     asset: string | null;
     version: string | null;
     classification: ReturnType<typeof classify>;
     request: Request;
-    path: string;
   },
 ): Promise<void> {
   try {
-    const now = new Date();
-    const at = now.toISOString();
-    const day = at.slice(0, 10);
-    const cf =
-      (event.request as { cf?: Record<string, unknown> }).cf ?? {};
-    const country = (cf["country"] as string | undefined) ?? null;
-    const visitor = await visitorHash(event.request, env.VISITOR_SALT);
+    const { at, day, country, visitor } = await common(env, event.request);
     const { verdict, reason, osVersion, arch, browser } = event.classification;
-
-    if (table === "download") {
-      await env.ANALYTICS.prepare(
-        `INSERT INTO download
-           (at, day, asset, version, verdict, reason,
-            os_version, arch, browser, country, referrer_host, visitor)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    await env.ANALYTICS.prepare(
+      `INSERT INTO download
+         (at, day, asset, version, verdict, reason,
+          os_version, arch, browser, country, referrer_host, visitor)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        at,
+        day,
+        event.asset,
+        event.version,
+        verdict,
+        reason,
+        osVersion,
+        arch,
+        browser,
+        country,
+        // A real inbound referrer. The download link was followed from
+        // somewhere and the browser says where.
+        referrerHost(event.request),
+        visitor,
       )
-        .bind(
-          at,
-          day,
-          event.asset,
-          event.version,
-          verdict,
-          reason,
-          osVersion,
-          arch,
-          browser,
-          country,
-          referrerHost(event.request),
-          visitor,
-        )
-        .run();
-      return;
-    }
+      .run();
+  } catch (error) {
+    swallow(error);
+  }
+}
 
+async function recordVisit(
+  env: Env,
+  event: {
+    classification: ReturnType<typeof classify>;
+    request: Request;
+    path: string;
+    referrer: string | null;
+  },
+): Promise<void> {
+  try {
+    const { at, day, country, visitor } = await common(env, event.request);
+    const { verdict, reason } = event.classification;
     await env.ANALYTICS.prepare(
       `INSERT INTO visit
          (at, day, path, verdict, reason, country, referrer_host, visitor)
@@ -429,13 +494,18 @@ async function record(
         verdict,
         reason,
         country,
-        referrerHost(event.request),
+        event.referrer,
         visitor,
       )
       .run();
   } catch (error) {
-    // Deliberately swallowed. This runs in `waitUntil`, after the response has
-    // been sent, and a failure to count must never be a failure to download.
-    console.error("chandra: could not record event", error);
+    swallow(error);
   }
+}
+
+/** One table's worth of arithmetic is not worth losing a download over. */
+function swallow(error: unknown): void {
+  // Runs in `waitUntil`, after the response has been sent. A failure to count
+  // must never be a failure to download.
+  console.error("chandra: could not record event", error);
 }

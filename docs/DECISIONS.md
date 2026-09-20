@@ -184,10 +184,24 @@ all drawn on the same translucent, blurred backdrop.
 - The panel is forced to the dark theme regardless of the system appearance. The palette is a
   single dark one, and the material's light variant would put near-white text on a near-white
   backdrop.
-- Consequence: `macOSPrivateApi` is not needed. `window-vibrancy` uses public AppKit.
+- `macos-private-api` **is** required, and not for the reason this line originally gave.
+  `window-vibrancy` is public AppKit, so the material needs nothing. The transparent window
+  under it does: `WebviewWindowBuilder::transparent` is compiled out on macOS without the
+  feature, so `panel.rs:97` would not build. Transparency is what lets the material show
+  through the scrim and what makes the window's corners the panel's own.
 
 ### D-012
 **Private GitHub repo. Unsigned local build, ad-hoc codesigned.**
+
+> **Superseded on the first half.** The repo is public, at
+> `github.com/parasdsingh/chandra`. AGPL-3.0 obligations attach on distribution,
+> and the app is distributed, so the Corresponding Source has to be reachable
+> from where the binary is offered — see the revision on D-018. The second half
+> stands: the build is still unsigned and ad-hoc codesigned (I-051).
+>
+> The CI paragraph below never happened either. There is no `.github/`, no
+> runner and no release job; `make check` runs on this machine and
+> `tools/release.sh` cuts a release by hand.
 
 - Swiss Ephemeris is AGPL-3.0. AGPL obligations attach on distribution; a private repo for
   personal use is compliant. Going public later means the app is AGPL-3.0 too.
@@ -198,6 +212,10 @@ all drawn on the same translucent, blurred backdrop.
 
 ### D-013
 **Display name is Chandra. Bundle identifier `com.parasdsingh.chandra`. Repo stays `moon-phases`.**
+
+> **Revised on the repo name.** The working directory is still `moon-phases`;
+> the GitHub remote is `chandra`, matching the app. The bundle identifier is
+> unaffected and remains frozen.
 
 - Chandra is himself one of the navagrahas, so the name does not become wrong as the app grows
   past the moon calendar.
@@ -254,8 +272,8 @@ all drawn on the same translucent, blurred backdrop.
 > published to Cloudflare R2. See I-026.
 
 - The repo is initialised and committed locally on `main`.
-- `gh repo create moon-phases --private` and the first push happen on request, not
-  automatically. CI workflows are authored in M0 but only take effect once a remote exists.
+- Done, differently: `github.com/parasdsingh/chandra`, public. No CI workflows were
+  written; releases are cut by hand with `tools/release.sh`.
 
 ### D-019
 **A state the grid draws must be readable in words in the day it opens, and both must be

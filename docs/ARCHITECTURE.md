@@ -38,7 +38,7 @@ Rationale for every choice below is in [DECISIONS.md](DECISIONS.md); measured ev
 
 Rule enforced by the crate graph: **the domain does not know Tauri exists, and the UI does not
 know Swiss Ephemeris exists.** `crates/almanac` and `crates/ephemeris` build and test on Linux
-with no macOS dependency, which is what makes CI cheap (D-012) and the test suite fast.
+with no macOS dependency, which is what keeps the test suite fast and would make CI cheap if there were any.
 
 ---
 
@@ -391,7 +391,8 @@ make universal  cargo tauri build --target universal-apple-darwin
 make dmg        universal, + dmg, then assert both architectures are in it
 make install    build, ad-hoc codesign, copy to /Applications, clear quarantine
 make test       cargo test --workspace  +  tsc --noEmit
-make lint       cargo fmt --check, cargo clippy -D warnings, tsc, check-tokens.sh
+make lint       cargo fmt --check, clippy -D warnings, tsc (app and worker),
+                check-tokens.sh, check-limits.sh
 ```
 
 - `build` and `install` are native; only the distributable is universal, because
@@ -404,8 +405,8 @@ make lint       cargo fmt --check, cargo clippy -D warnings, tsc, check-tokens.s
   download rather than before it.
 - Tray items are built in Rust only; `tauri.conf.json` declares none, to avoid the duplicate
   tray icon bug (R-05).
-- CI on push: fmt, clippy, workspace tests — Ubuntu.
-  CI on tag: macOS build, DMG uploaded to a GitHub release.
+- Releases are cut by hand: `make dmg` then `make release`, which uploads to R2
+  and deploys the site. `tools/release.sh` is the whole of it.
 
 ---
 

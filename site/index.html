@@ -453,9 +453,20 @@ footer .fine { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--
    reader notices. */
 (function count() {
   try {
+    /* The host only, and only when it is somewhere else. A browser does not
+       put `document.referrer` on a fetch the page makes about itself - the
+       Referer header there is this page - so the host is read here and sent,
+       or nothing is. The path and query of the referrer are dropped before
+       anything leaves the browser: they carry search terms and private forum
+       paths, which is not a trade worth making for a marketing number. */
+    let from = "";
+    try {
+      const sent = document.referrer && new URL(document.referrer).host;
+      if (sent && sent !== location.host) from = "&r=" + encodeURIComponent(sent);
+    } catch {}
     fetch(
       "https://chandra-downloads.parasdeep29.workers.dev/beacon?p=" +
-        encodeURIComponent(location.pathname),
+        encodeURIComponent(location.pathname) + from,
       { method: "GET", keepalive: true, mode: "no-cors" },
     ).catch(() => {});
   } catch {}

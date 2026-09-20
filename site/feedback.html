@@ -120,12 +120,18 @@ body.sent .done { display: block; }
 <script>
 const ENDPOINT = "https://chandra-downloads.parasdeep29.workers.dev/feedback";
 
+/* The same four numbers the worker enforces, so a mistake is caught here
+   without a round trip. `worker/src/feedback.ts` is the authority - anything
+   can post to it, and this page is only a convenience in front of it.
+   `tools/check-limits.sh` fails the build if the two ever disagree. */
+const LIMITS = { message: 4000, floor: 4, version: 32, os: 120 };
+
 /* The app passes its version in the link, so a report carries the build it came
    from without the person having to go and look it up - which most would not,
    and the answer is the first thing any bug report needs. */
 const asked = new URLSearchParams(location.search);
-document.getElementById("version").value = (asked.get("v") || "").slice(0, 32);
-document.getElementById("os").value = navigator.userAgent.slice(0, 120);
+document.getElementById("version").value = (asked.get("v") || "").slice(0, LIMITS.version);
+document.getElementById("os").value = navigator.userAgent.slice(0, LIMITS.os);
 
 const form = document.getElementById("form");
 const send = document.getElementById("send");
@@ -136,11 +142,22 @@ form.addEventListener("submit", async (event) => {
   said.textContent = "";
   said.classList.remove("bad");
 
-  const message = document.getElementById("message").value.trim();
-  if (message.length < 4) {
+  const box = document.getElementById("message");
+  const message = box.value.trim();
+  if (message.length < LIMITS.floor) {
     said.textContent = "Please write a little more than that.";
     said.classList.add("bad");
-    document.getElementById("message").focus();
+    box.focus();
+    return;
+  }
+  /* Said here rather than capped with `maxlength`, which stops the keyboard
+     mid-sentence and explains nothing. The text stays in the box either way. */
+  if (message.length > LIMITS.message) {
+    said.textContent =
+      "That is " + message.length + " characters and the limit is " +
+      LIMITS.message + ". Please trim it - nothing has been sent.";
+    said.classList.add("bad");
+    box.focus();
     return;
   }
 

@@ -43,11 +43,17 @@ SELECT
     1)                                                AS percent;
 
 -- ---------------------------------------------------------------------------
--- 3. Whether the minimum macOS version is costing anything.
+-- 3. Which macOS versions ask, as far as the browsers admit.
 --
--- `LSMinimumSystemVersion` is 11.0, and that was asserted rather than measured.
--- If nobody on 11 or 12 ever downloads, raising it is free and removes a claim
--- nothing tests. If they do, it is load-bearing and must stay supported.
+-- The same freeze as block 4, on the other field: Safari, Chrome and Firefox
+-- all pin the macOS token in the user agent at 10_15_7, so nearly every real
+-- Mac lands in that row whatever it is running. Read it as "the browser did
+-- not say", not as "nobody is on 11".
+--
+-- Which means this cannot decide whether to raise `LSMinimumSystemVersion`
+-- from 11.0 - a decision that needs a number from inside the app, which the
+-- app does not send and is not going to. It is kept for the rows that do
+-- carry a real version: older browsers and non-browser clients.
 -- ---------------------------------------------------------------------------
 SELECT
   'macos version'                          AS insight,
@@ -63,9 +69,10 @@ ORDER BY CAST(os AS REAL) DESC;
 --
 -- Read this one carefully. Safari and Chrome both still report `Intel Mac OS X`
 -- on Apple Silicon, so `unknown` is genuinely unknown and is *not* Intel - the
--- honest reading is "at least this many are Apple Silicon". If apple-silicon is
--- already most of what can be identified, an Intel slice is not worth keeping;
--- it can never prove the opposite.
+-- honest reading is "at least this many are Apple Silicon". There is no intel
+-- row and there never will be; the browsers do not say. So this can show that
+-- dropping the Intel half would cost something, and can never show that it
+-- would cost nothing.
 -- ---------------------------------------------------------------------------
 SELECT
   'architecture'          AS insight,

@@ -33,7 +33,7 @@ export interface Classification {
   verdict: Verdict;
   reason: string;
   osVersion: string | null;
-  arch: "apple-silicon" | "intel" | "unknown";
+  arch: "apple-silicon" | "unknown";
   browser: string;
 }
 
@@ -179,17 +179,20 @@ function macOsVersion(agent: string): string | null {
 }
 
 /**
- * Apple Silicon or Intel, where the request says.
+ * Apple Silicon, or not known.
  *
- * Safari and Chrome both still report `Intel Mac OS X` on Apple Silicon, for
- * compatibility - so this is a *floor*, not a census. Anything reporting arm64
- * is certainly Apple Silicon; the rest is unknown rather than Intel, and the
- * insight query says so rather than letting it read as a split.
+ * There is no `intel` here and there cannot be. Safari and Chrome both still
+ * report `Intel Mac OS X` on Apple Silicon, for compatibility, so the string
+ * that names Intel is the one string that proves nothing. Anything reporting
+ * arm64 is certainly Apple Silicon; everything else is unknown. This is a
+ * *floor*, not a census, and the type says so - it previously offered `intel`
+ * as a value, with a branch that tested for it and returned `unknown` anyway,
+ * so every reader of the schema was told about a case that could not occur.
  */
 function architecture(agent: string): Classification["arch"] {
-  if (/arm64|aarch64|apple silicon/i.test(agent)) return "apple-silicon";
-  if (/intel mac os x/i.test(agent)) return "unknown";
-  return "unknown";
+  return /arm64|aarch64|apple silicon/i.test(agent)
+    ? "apple-silicon"
+    : "unknown";
 }
 
 function browserName(agent: string): string {

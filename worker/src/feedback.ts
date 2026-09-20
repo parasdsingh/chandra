@@ -15,13 +15,24 @@
 
 import type { Env } from "./index";
 
-/** Long enough for a real bug report, short enough that the endpoint is not
- *  storage. Measured against the longest useful report: a paragraph of
- *  symptoms, a paragraph of steps and a version string. */
-const LIMIT = 4000;
-
-/** Below this, a message is a test or a slip of the keyboard. */
-const FLOOR = 4;
+/**
+ * The bounds, and the only place they are written.
+ *
+ * `site/feedback.html` enforces the same four numbers in the browser so a
+ * mistake is caught without a round trip, and `tools/check-limits.sh` fails
+ * the build if the two ever disagree. The form is a convenience; this is the
+ * authority, because anything can post here.
+ */
+export const LIMITS = {
+  /** Long enough for a real bug report, short enough that the endpoint is not
+   *  storage. Measured against the longest useful report: a paragraph of
+   *  symptoms, a paragraph of steps and a version string. */
+  message: 4000,
+  /** Below this, a message is a test or a slip of the keyboard. */
+  floor: 4,
+  version: 32,
+  os: 120,
+} as const;
 
 export interface Feedback {
   message: string;
@@ -45,10 +56,21 @@ export function parse(form: FormData): Feedback | { error: string } {
     return { error: "honeypot" };
   }
 
-  const message = text("message", LIMIT);
-  if (message.length < FLOOR) {
+  // Refused, not truncated. `slice` would have taken the first 4000 characters
+  // of a longer report, stored them, and answered "Thank you. It has arrived."
+  // - so somebody who wrote five thousand would have lost the last thousand
+  // with no way of ever knowing. The whole point of storing before emailing is
+  // that a message nobody can tell went missing is the worst outcome here.
+  const whole = String(form.get("message") ?? "").trim();
+  if (whole.length < LIMITS.floor) {
     return { error: "Please write a little more than that." };
   }
+  if (whole.length > LIMITS.message) {
+    return {
+      error: `That is ${whole.length} characters and the limit is ${LIMITS.message}. Please trim it - nothing has been sent, so your text is still in the box.`,
+    };
+  }
+  const message = whole;
 
   const contact = text("contact", 200);
   // Not validated beyond this. A strict address pattern rejects real addresses
@@ -61,8 +83,8 @@ export function parse(form: FormData): Feedback | { error: string } {
   return {
     message,
     contact,
-    version: text("version", 32),
-    os: text("os", 120),
+    version: text("version", LIMITS.version),
+    os: text("os", LIMITS.os),
   };
 }
 

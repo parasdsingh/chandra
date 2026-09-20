@@ -25,9 +25,16 @@ chandra-glyph = { workspace = true }
 tauri = { version = "2", features = [
     "tray-icon",
     "image-png",
-    # Transparent windows are a private API on macOS. Needed for the panel's
-    # rounded corners and its own drop shadow, NOT for vibrancy - the panel is
-    # fully opaque (D-011).
+    # `WebviewWindowBuilder::transparent` is `#[cfg(any(not(target_os =
+    # "macos"), feature = "macos-private-api"))]` in tauri 2.11 - so on macOS
+    # the method does not exist without this feature, and `panel.rs` calls it.
+    # Removing the feature is a compile error, not a change in appearance.
+    #
+    # It is the transparency that needs it, not the vibrancy: `window-vibrancy`
+    # is public AppKit. The panel is transparent so the material shows through
+    # the scrim the panel paints over it (D-011), and so the window's corners
+    # are the panel's own rounded corners rather than a square frame behind
+    # them. There is no drop shadow - the window is built `.shadow(false)`.
     "macos-private-api",
 ] }
 

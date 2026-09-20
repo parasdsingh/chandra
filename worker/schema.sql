@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS download (
   reason        TEXT    NOT NULL,          -- why, so the rule can be audited
   -- What the request said about itself.
   os_version    TEXT,                      -- 10.15, 11, 14, ... from the UA
-  arch          TEXT,                      -- apple-silicon | intel | unknown
+  arch          TEXT,                      -- apple-silicon | unknown (never intel; see classify.ts)
   browser       TEXT,                      -- safari | chrome | firefox | other
   country       TEXT,                      -- two letters, from Cloudflare
   referrer_host TEXT,                      -- host only, never the full URL
