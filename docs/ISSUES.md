@@ -21,7 +21,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-012 | feat | `DayDetail` assembly, v1 fields only | M2 | done |
 | I-013 | feat | `MonthView` assembly + LRU cache + prefetch | M2 | done |
 | I-014 | feat | Location chain incl. tz centroid fallback | M2 | done |
-| I-015 | risk | CoreLocation reliability when ad-hoc signed | M2 | open |
+| I-015 | risk | CoreLocation reliability when ad-hoc signed — **blocked on I-051** | M2 | blocked |
 | I-016 | feat | City search over bundled GeoNames index | M2 | done |
 | I-017 | feat | Month grid UI + switcher + keyboard nav | M2 | done |
 | I-018 | feat | Day detail panel + height animation | M2 | done |
@@ -62,7 +62,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-055 | risk | Front end has no automated test; geometric checks live outside the repo | M4 | open |
 | I-056 | chore | Feedback and support links; feedback form on the site | M4 | done |
 | I-057 | chore | Rewrite the copy that reads as machine-written | M4 | open |
-| I-051 | chore | Sign and notarise with a Developer ID | M4 | open |
+| I-051 | chore | Sign and notarise with a Developer ID — **blocked on funding** | M4 | blocked |
 | I-026 | chore | Create public GitHub remote and push | M4 | done |
 
 ---
@@ -93,6 +93,23 @@ multi-tray usage.
 ad-hoc-signed, non-notarised bundle is untested and cannot be tested without a real build.
 Not a blocker: [D-007](DECISIONS.md#d-007) makes the app fully correct without it.
 Outcome to record here once M2 builds a real bundle.
+
+### I-015 — CoreLocation across updates — blocked on I-051
+macOS keys a location grant to an app's code signature. Unsigned, there is no
+stable identity to hang it on, so the grant may not survive an update: the
+prompt returns, or the app silently falls back to the stored city.
+
+Not testable by reasoning — it needs two real releases installed one after the
+other. Signing removes the question rather than answering it, so this waits on
+I-051 rather than being worked around.
+
+### I-051 — Developer ID signing — blocked on funding
+USD 99/year. Deferred until the project has income to pay for it; the landing
+page's first-run instructions exist because of this, and are shown only after
+someone has clicked download.
+
+Fixes I-015 as a side effect, and removes the System Settings walkthrough that
+macOS 15 and later otherwise force on every first launch.
 
 ### I-057 — Copy that reads as machine-written — open
 `docs/copy-notes.md` lists seventeen passages and, more usefully, four habits
