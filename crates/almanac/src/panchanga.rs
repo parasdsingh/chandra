@@ -104,9 +104,10 @@ fn karana_name(index: u8) -> Result<(&'static str, bool)> {
         58 => Ok(("Shakuni", true)),
         59 => Ok(("Chatushpada", true)),
         60 => Ok(("Naga", true)),
-        other => Err(Error::TimeZone(format!(
-            "karana index {other} out of range"
-        ))),
+        other => Err(Error::OutOfRange {
+            what: "karana",
+            index: other,
+        }),
     }
 }
 
@@ -120,7 +121,10 @@ fn yoga_name(index: u8) -> Result<&'static str> {
         .checked_sub(1)
         .and_then(|at| YOGAS.get(at as usize))
         .copied()
-        .ok_or_else(|| Error::TimeZone(format!("yoga index {index} out of range")))
+        .ok_or(Error::OutOfRange {
+            what: "yoga",
+            index,
+        })
 }
 
 /// Every yoga touching `day`, in order.

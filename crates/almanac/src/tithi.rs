@@ -101,7 +101,10 @@ impl Tithi {
 
     pub fn from_index(index: u8) -> Result<Self> {
         if index == 0 || index > TITHI_COUNT {
-            return Err(Error::TimeZone(format!("tithi index {index} out of range")));
+            return Err(Error::OutOfRange {
+                what: "tithi",
+                index,
+            });
         }
         Ok(Self(index))
     }

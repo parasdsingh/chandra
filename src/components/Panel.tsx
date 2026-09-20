@@ -69,9 +69,7 @@ export function Panel(props: Props): JSX.Element {
   const [subject, setSubject] = createSignal<GrahaKey>(
     // A chart key is not a graha. The chart borrows the moon's calendar for the
     // views behind it, which is the one subject always present.
-    vargaFromKey(props.boot.subject)
-      ? "chandra"
-      : (props.boot.subject as GrahaKey),
+    isChartSubject(props.boot.subject) ? "chandra" : props.boot.subject,
   );
 
   // Which division the chart shows. It comes from the item that was clicked and
@@ -94,7 +92,7 @@ export function Panel(props: Props): JSX.Element {
     // Each division has its own status item, so the panel can be opened straight
     // onto one. `subject` is a graha key or a `chart:` key; only the second is a
     // view.
-    vargaFromKey(props.boot.subject) ? "chart" : "calendar",
+    isChartSubject(props.boot.subject) ? "chart" : "calendar",
   );
 
   /**
@@ -1009,6 +1007,19 @@ const SETTINGS_PARENT: Partial<Record<SettingsSection, SettingsSection>> = {
 function vargaFromKey(key: string): VargaKey | undefined {
   const division = key.startsWith("chart:") ? key.slice("chart:".length) : null;
   return division ? (division as VargaKey) : undefined;
+}
+
+/** Whether a subject key names a chart rather than a graha.
+ *
+ *  A predicate rather than a boolean, so the compiler narrows the other branch
+ *  to `GrahaKey` and the `as GrahaKey` casts beside each call go away. Those
+ *  casts were load-bearing: `Bootstrap.subject` was declared `GrahaKey |
+ *  "chart"` while the back end has only ever sent `chart:{varga}`, and a cast
+ *  is exactly what hides a union that does not describe the values. */
+function isChartSubject(
+  key: Bootstrap["subject"],
+): key is `chart:${VargaKey}` {
+  return key.startsWith("chart:");
 }
 
 function toError(thrown: unknown): { code: string; message: string } {

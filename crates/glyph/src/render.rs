@@ -255,11 +255,15 @@ pub fn chart_icon(scale: u32, tint: Tint) -> Result<Icon, RenderError> {
         None,
     );
 
-    Ok(Icon {
-        rgba: pixmap.take(),
-        width: size,
-        height: size,
-    })
+    // `to_icon`, like `moon_icon` and `graha_icon`. This returned
+    // `pixmap.take()`, which is the premultiplied buffer, under a type
+    // documented as straight RGBA - so every anti-aliased pixel of the chart
+    // mark composited darker than it should while the graha glyphs beside it
+    // in the same menu bar rendered correctly. Invisible under
+    // `Tint::Template`, because multiplying by black hides the error, which is
+    // why it shipped: it shows only with `tray.colour_mode` on, worst at the
+    // mark's diagonals where partial coverage dominates.
+    Ok(to_icon(pixmap))
 }
 
 /// Clearance between the chart mark and the edge of its slot.
@@ -438,6 +442,67 @@ mod tests {
             .map(|pixel| pixel[3] as f64 / 255.0)
             .sum();
         ink / (icon.width * icon.height) as f64
+    }
+
+    /// Every icon leaves here in straight RGBA, as `Icon` says it does.
+    ///
+    /// A tinted icon is drawn in one flat colour, so under straight alpha every
+    /// pixel that carries any ink at all carries that exact colour and varies
+    /// only in its alpha. Premultiplied, a half-covered pixel carries half the
+    /// colour - which is what `chart_icon` returned, under a type documented as
+    /// straight, for as long as it did. It was invisible because the shipped
+    /// default is `Tint::Template`, and multiplying by black hides it; it shows
+    /// with `tray.colour_mode` on, worst at the chart mark's diagonals.
+    fn every_inked_pixel_carries_the_whole_tint(icon: &Icon, colour: (u8, u8, u8)) {
+        let mut partial = 0;
+        for pixel in icon.rgba.chunks_exact(4) {
+            let alpha = u32::from(pixel[3]);
+            if alpha == 0 {
+                continue;
+            }
+            if alpha < 250 {
+                partial += 1;
+            }
+            // Demultiplying is lossy: the premultiplied channel was rounded to
+            // a byte, so recovering the straight value can only land within
+            // half a step of `255 / alpha`. At alpha 48 that is about 3, which
+            // is why this is not an exact comparison. Premultiplied ink is
+            // nowhere near it - at alpha 48 the channel would read 45 rather
+            // than 237 - so the slack costs nothing.
+            let slack = (255 / (2 * alpha) + 1) as u8;
+            assert!(
+                pixel[0].abs_diff(colour.0) <= slack
+                    && pixel[1].abs_diff(colour.1) <= slack
+                    && pixel[2].abs_diff(colour.2) <= slack,
+                "a pixel at alpha {} carries ({}, {}, {}), not {colour:?} - premultiplied",
+                pixel[3],
+                pixel[0],
+                pixel[1],
+                pixel[2]
+            );
+        }
+        assert!(
+            partial > 0,
+            "no anti-aliased pixel in the icon, so this asserted nothing"
+        );
+    }
+
+    #[test]
+    fn every_icon_is_straight_rgba() {
+        // The tray's own colour, from `tray.rs`, so the test tints with what
+        // the app tints with.
+        let colour = (237u8, 237u8, 239u8);
+        let tint = Tint::Colour {
+            r: colour.0,
+            g: colour.1,
+            b: colour.2,
+        };
+
+        every_inked_pixel_carries_the_whole_tint(&chart_icon(2, tint).expect("chart"), colour);
+        every_inked_pixel_carries_the_whole_tint(
+            &graha_icon(Graha::Shani, 2, tint, true).expect("graha"),
+            colour,
+        );
     }
 
     /// Fill ink either side of the vertical centre line.

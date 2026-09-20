@@ -402,31 +402,49 @@ impl Almanac {
         let mut months: Vec<IndexedMonth> = Vec::with_capacity(13);
         let mut first_offset = cursor.offset;
 
+        // Each neighbour is one step from the last, not `offset` steps from the
+        // anchor.
+        //
+        // Both loops used to ask for an absolute offset, and every such answer
+        // re-walked `lunar::shift` all the way from `containing` - so the cost
+        // of the index was about twenty-nine times the cost of the month it
+        // indexes, not one more than it. `MONTH_OFFSET_LIMIT` is 2,400 and was
+        // sized against the linear path, which made the clamped extreme
+        // reachable and ruinous: `moon_month` at offset 2,400 takes 2.9 s and
+        // `month_index` took 34 s forwards and 79 s backwards, with the engine
+        // mutex held throughout, so the hourly tray redraw and every tooltip
+        // queued behind it.
+        let mut walk = here.clone();
+        let mut offset = cursor.offset;
         for step in 0..GUARD {
-            let offset = cursor.offset - step;
-            let month = self.lunar_at(&containing, offset, cursor, &settings)?;
-            if month.vikram_year != year {
+            if step > 0 {
+                walk = self.step_month(&walk, -1, cursor, &settings)?;
+                offset -= 1;
+            }
+            if walk.vikram_year != year {
                 break;
             }
             first_offset = offset;
             months.push(IndexedMonth {
-                name: month.display_name(),
+                name: walk.display_name(),
                 offset,
-                adhika: month.adhika,
+                adhika: walk.adhika,
             });
         }
         months.reverse();
 
-        for step in 1..GUARD {
-            let offset = cursor.offset + step;
-            let month = self.lunar_at(&containing, offset, cursor, &settings)?;
-            if month.vikram_year != year {
+        let mut walk = here.clone();
+        let mut offset = cursor.offset;
+        for _ in 1..GUARD {
+            walk = self.step_month(&walk, 1, cursor, &settings)?;
+            offset += 1;
+            if walk.vikram_year != year {
                 break;
             }
             months.push(IndexedMonth {
-                name: month.display_name(),
+                name: walk.display_name(),
                 offset,
-                adhika: month.adhika,
+                adhika: walk.adhika,
             });
         }
 
@@ -443,21 +461,18 @@ impl Almanac {
         })
     }
 
-    /// The lunar month `offset` steps from the cursor's anchor.
-    fn lunar_at(
+    /// The lunar month `by` steps from `from`, where `by` is small.
+    fn step_month(
         &self,
-        containing: &lunar::LunarMonth,
-        offset: i32,
+        from: &lunar::LunarMonth,
+        by: i32,
         cursor: MonthCursor,
         settings: &Settings,
     ) -> Result<lunar::LunarMonth> {
-        if offset == 0 {
-            return Ok(containing.clone());
-        }
         lunar::shift(
             &self.engine,
-            containing,
-            offset,
+            from,
+            by,
             cursor.system,
             settings.location.observer,
             &settings.zone,
@@ -498,9 +513,10 @@ impl Almanac {
         if graha == Graha::Chandra {
             // The Moon has its own view; routing it here would compute transit
             // events nothing displays.
-            return Err(Error::TimeZone(
-                "the Moon is served by moon_month, not graha_month".into(),
-            ));
+            return Err(Error::WrongView {
+                what: "the Moon",
+                use_instead: "moon_month",
+            });
         }
 
         // The generation first, then the settings, and the order is the whole
@@ -665,9 +681,7 @@ impl Almanac {
                 return Ok(built);
             }
         }
-        Err(Error::TimeZone(
-            "the configuration kept changing while the chart was being read".into(),
-        ))
+        Err(Error::Reconfiguring("chart"))
     }
 
     /// What the menu bar needs: the Moon's current phase, and where each enabled
@@ -686,9 +700,7 @@ impl Almanac {
                 return Ok(built);
             }
         }
-        Err(Error::TimeZone(
-            "the configuration kept changing while the menu bar was being read".into(),
-        ))
+        Err(Error::Reconfiguring("menu bar"))
     }
 
     fn snapshot_once(&self, unix_ms: i64, subjects: &[Graha]) -> Result<Snapshot> {

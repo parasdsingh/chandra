@@ -781,6 +781,15 @@ const ERROR_TEXT: Record<string, { headline: string; cause: string }> = {
     headline: "This could not be computed.",
     cause: "",
   },
+  // Not a fault, and the only code here with a remedy the reader can apply.
+  // `chakra` and `now` re-read whenever the settings change under them, so
+  // nothing half-computed is ever returned; after three attempts they give up
+  // rather than spin. It used to arrive as ENGINE with the message "ephemeris:
+  // time zone: the configuration kept changing while the chart was being read".
+  BUSY: {
+    headline: "Interrupted by a settings change.",
+    cause: "Nothing is wrong. Open it again.",
+  },
 };
 
 /**

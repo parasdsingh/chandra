@@ -1480,6 +1480,62 @@ fn a_polar_night_reports_no_sunrise_count_rather_than_none_at_all() {
 /// depends on whether a lunation fitted inside one solar rashi. The index walks
 /// out from the month in hand until the year changes rather than counting to
 /// twelve, and these are the two facts that walk has to get right.
+/// The index far from its anchor lists the same months the calendar draws.
+///
+/// The two walks are different: `month_index` steps one month at a time from
+/// the month in hand, and `moon_month` walks the whole offset from the anchor.
+/// They have to agree, and it is the first of them that is new - each entry
+/// used to be its own full walk from the anchor, which made the index cost
+/// about twenty-nine times the month it indexes rather than one more than it.
+/// At the clamped extreme that was 79 seconds with the engine mutex held.
+///
+/// Six hundred months out rather than the clamp's 2,400, so the test stays
+/// under five seconds. The walk is the same walk at any distance.
+#[test]
+fn an_index_far_from_its_anchor_agrees_with_the_calendar() {
+    let almanac = almanac();
+    let cursor = MonthCursor {
+        offset: 600,
+        system: System::Amanta,
+        ..solar(2026, 8)
+    };
+
+    let index = almanac.month_index(cursor).expect("index");
+    assert!(
+        (12..=13).contains(&index.months.len()),
+        "a Vikram Samvat year holds twelve months or thirteen, not {}",
+        index.months.len()
+    );
+
+    for month in &index.months {
+        let resolved = almanac
+            .moon_month(MonthCursor {
+                offset: month.offset,
+                ..cursor
+            })
+            .expect("month at the listed offset");
+        assert_eq!(
+            resolved.label,
+            format!("{} {}", month.name, index.year),
+            "offset {} did not land on {}",
+            month.offset,
+            month.name
+        );
+    }
+
+    // The listed offsets are contiguous and in order; a step that skipped or
+    // repeated a month would still pass the check above.
+    for pair in index.months.windows(2) {
+        assert_eq!(
+            pair[1].offset,
+            pair[0].offset + 1,
+            "the index jumped from {} to {}",
+            pair[0].offset,
+            pair[1].offset
+        );
+    }
+}
+
 #[test]
 fn a_lunar_year_holds_the_months_it_actually_holds() {
     let almanac = almanac();

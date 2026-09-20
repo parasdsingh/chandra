@@ -6,6 +6,16 @@
 //! fixture. A field added, removed or renamed in Rust fails here, and the diff
 //! names exactly what to change in TypeScript.
 //!
+//! **Every payload type means every type that crosses the IPC boundary**, which
+//! for a long time it did not: the fixture held eight keys and `Bootstrap`,
+//! `Choice`, `VargaInfo`, `GrahaInfo`, `Resolved`, `MonthIndex` and `WireError`
+//! were all reachable from the front end with nothing guarding their shape.
+//! `Bootstrap` alone carries five of the others. It is also where the drift had
+//! already happened - `types.ts` declared `subject: GrahaKey | "chart"` while
+//! Rust sends `"chart:d1"` - and where it had happened once before, when
+//! `view_box` was added to `GrahaInfo` and the harness fixture kept the old six
+//! keys.
+//!
 //! Regenerate deliberately, never to make a red test green:
 //!     UPDATE_CONTRACT=1 cargo test -p chandra --test contract
 
@@ -31,11 +41,34 @@ fn shape(value: &Value) -> Value {
             }
             Value::Object(shaped)
         }
-        Value::Array(items) => match items.first() {
-            // The element type is what matters; length varies with the month.
-            Some(first) => json!([shape(first)]),
-            None => json!([]),
-        },
+        Value::Array(items) => {
+            // A list and a tuple are both JSON arrays and need opposite
+            // treatment. A list of days varies in length, so only its element
+            // type matters; a tuple has a fixed length and a type per position,
+            // and `degrees_in_rashi: (u32, u32, f64)` and `view_box: [f32; 4]`
+            // are both tuples declared on the TypeScript side as
+            // `[number, number, number]` and `[number, number, number, number]`.
+            //
+            // Told apart by whether the elements are numbers. Every numeric
+            // array that crosses this boundary is a fixed-length tuple - there
+            // is no `Vec<f64>` or `Vec<u32>` on any payload - and every genuine
+            // list holds objects or strings. A `Vec` of numbers appearing later
+            // would need this rule revisited, and would show up immediately as
+            // a fixture that changes length with the sample.
+            //
+            // Recording `items.first()` alone treated every array as a list, so
+            // both tuples recorded as a single element: their length could
+            // change, and so could the type of any position after the first,
+            // without failing anything.
+            let numeric = !items.is_empty() && items.iter().all(Value::is_number);
+            if numeric {
+                return Value::Array(items.iter().map(shape).collect());
+            }
+            match items.first() {
+                Some(first) => json!([shape(first)]),
+                None => json!([]),
+            }
+        }
         Value::String(_) => json!("string"),
         Value::Number(number) => {
             if number.is_f64() {
@@ -75,6 +108,22 @@ fn merge(a: Value, b: Value) -> Value {
             Value::Object(left)
         }
         (Value::Array(left), Value::Array(right)) => {
+            // `shape` reduces a list to one element and leaves a tuple at its
+            // full length, so anything longer than one here is a tuple and is
+            // merged position by position. Taking the first element of each -
+            // which is what this did - collapsed a merged tuple straight back
+            // to `["integer"]`, which is why two of the three
+            // `degrees_in_rashi` fields recorded that way while the third,
+            // reached through an array that happened to be empty on one side,
+            // recorded all three positions.
+            if left.len() > 1 && left.len() == right.len() {
+                return Value::Array(
+                    left.into_iter()
+                        .zip(right)
+                        .map(|(l, r)| merge(l, r))
+                        .collect(),
+                );
+            }
             match (left.into_iter().next(), right.into_iter().next()) {
                 (Some(l), Some(r)) => json!([merge(l, r)]),
                 (Some(l), None) => json!([l]),
@@ -217,6 +266,55 @@ fn ipc_payload_shapes_match_the_committed_contract() {
         "City",
         shape(&serde_json::to_value(chandra_geo::search("kolkata", 1).first().unwrap()).unwrap()),
     );
+    // Everything `bootstrap` returns, including the five nested types that
+    // reach the front end only through it.
+    shapes.insert(
+        "Bootstrap",
+        shape(&serde_json::to_value(sample_bootstrap()).unwrap()),
+    );
+    shapes.insert(
+        "MonthIndex",
+        [MonthSystem::Solar, MonthSystem::Amanta]
+            .into_iter()
+            .map(|system| {
+                shape(
+                    &serde_json::to_value(
+                        almanac
+                            .month_index(cursor_in(2026, 8, system))
+                            .expect("index"),
+                    )
+                    .unwrap(),
+                )
+            })
+            .reduce(merge)
+            .expect("both systems yield an index"),
+    );
+    // Every command's failure path. Merged across all five codes, which is the
+    // whole of `AppError` - a new variant with no code here is a payload the
+    // front end has no rendering for (DESIGN 9.3).
+    shapes.insert(
+        "WireError",
+        [
+            chandra_lib::AppError::InvalidDate("2026-02-30".into()),
+            chandra_lib::AppError::NoConvergence("tithi for Chandra".into()),
+            chandra_lib::AppError::Engine("swe_calc_ut failed".into()),
+            chandra_lib::AppError::Settings("unknown time zone Mars/Olympus".into()),
+            chandra_lib::AppError::Busy("the configuration kept changing".into()),
+        ]
+        .into_iter()
+        .map(|error| {
+            shape(
+                &serde_json::to_value(chandra_lib::WireError {
+                    code: error.code(),
+                    message: error.to_string(),
+                })
+                .unwrap(),
+            )
+        })
+        .reduce(merge)
+        .expect("five codes"),
+    );
+
     // The chart, in two divisions merged. It was the newest payload in the app
     // and the one payload with no guard here, which is the wrong way round: a
     // shape is most likely to drift while it is still being changed.
@@ -273,4 +371,31 @@ fn ipc_payload_shapes_match_the_committed_contract() {
 /// the shape of `place` rather than a bare null.
 fn sample_settings() -> chandra_lib::PublicSettings {
     chandra_lib::PublicSettings::sample()
+}
+
+/// What `bootstrap` returns, built from the same functions it builds it with.
+///
+/// A literal rather than a call, because the command wants an `AppHandle` and a
+/// `State`. Every field that a real `Bootstrap` fills from the running app is
+/// filled here with a value of the same shape - `settings_error` present rather
+/// than null, so its `| null` is recorded, and `subject` in the form Rust
+/// actually sends.
+fn sample_bootstrap() -> chandra_lib::Bootstrap {
+    let settings = sample_settings();
+    chandra_lib::Bootstrap {
+        location: chandra_lib::resolve_offline(&settings),
+        settings,
+        settings_error: Some("settings.json could not be read".into()),
+        // `chart:{varga}`, not the bare `chart` that `types.ts` declared.
+        subject: "chart:d9".into(),
+        subjects: vec![Graha::Chandra, Graha::Shani],
+        panel_material: true,
+        library_version: "2.10.03".into(),
+        app_version: "0.1.0".into(),
+        ayanamsas: chandra_lib::ayanamsa_choices(),
+        node_types: chandra_lib::node_type_choices(),
+        month_systems: chandra_lib::month_system_choices(),
+        grahas: chandra_lib::graha_info(),
+        vargas: chandra_lib::varga_info(),
+    }
 }

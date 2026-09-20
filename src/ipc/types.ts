@@ -581,10 +581,19 @@ export interface GrahaInfo {
 export interface Bootstrap {
   settings: Settings;
   location: Resolved;
-  /** Which subject the panel is showing; the tray sets it before opening. */
-  /** Which subject the panel is showing: a graha's key, or `chart` for the
-   *  Lagna Kundali, which has its own status item and is not a graha. */
-  subject: GrahaKey | "chart";
+  /**
+   * Which subject the panel is showing; the tray sets it before opening.
+   *
+   * A graha's key, or `chart:{varga}` — `chart:d1`, `chart:d9` — because each
+   * division has its own status item and the panel can be opened straight onto
+   * any of them. The bare literal `chart` is not one of the values: `Subject`
+   * has always sent the prefixed form (`panel.rs`, `Subject::key`), and this
+   * declared the bare one, which `vargaFromKey` then had to work around with a
+   * cast. A `switch` over the union, or a `=== "chart"` test, type-checks and
+   * is dead at runtime. Declared as a template literal so the compiler holds
+   * the shape.
+   */
+  subject: GrahaKey | `chart:${VargaKey}`;
   subjects: GrahaKey[];
   /**
    * Whether the system's popover material is behind the panel. The panel paints
@@ -639,7 +648,7 @@ export interface City {
 
 /** Every failure carries a stable code; there is no generic fallback. */
 export interface AppError {
-  code: "INVALID_DATE" | "NO_CONVERGENCE" | "ENGINE" | "SETTINGS";
+  code: "INVALID_DATE" | "NO_CONVERGENCE" | "ENGINE" | "SETTINGS" | "BUSY";
   message: string;
 }
 

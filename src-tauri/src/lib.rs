@@ -21,8 +21,16 @@ pub use settings::Settings as PublicSettings;
 /// panel is served - the grahas, and the four pickers. Not part of the running
 /// app's surface.
 pub use commands::{
-    ayanamsa_choices, graha_info, month_system_choices, node_type_choices, varga_info,
+    ayanamsa_choices, graha_info, month_system_choices, node_type_choices, varga_info, Bootstrap,
+    Choice, GrahaInfo, VargaInfo,
 };
+
+/// Re-exported so `tests/contract.rs` can record their shapes. `Resolved`
+/// reaches the front end from `request_device_location` and nested in
+/// `Bootstrap`; `WireError` is every command's failure path; `resolve_offline`
+/// is how a real `Resolved` is built without an `AppHandle`.
+pub use error::{AppError, WireError};
+pub use location::{resolve_offline, Resolved};
 
 use std::time::Duration;
 

@@ -31,6 +31,12 @@ pub enum AppError {
 
     #[error("settings: {0}")]
     Settings(String),
+
+    /// The reading was abandoned because the settings moved under it. Nothing
+    /// is wrong and nothing needs fixing; asking again is the whole remedy,
+    /// which is why it is not `Engine`.
+    #[error("{0}")]
+    Busy(String),
 }
 
 impl AppError {
@@ -41,6 +47,7 @@ impl AppError {
             AppError::NoConvergence(_) => "NO_CONVERGENCE",
             AppError::Engine(_) => "ENGINE",
             AppError::Settings(_) => "SETTINGS",
+            AppError::Busy(_) => "BUSY",
         }
     }
 }
@@ -56,6 +63,13 @@ impl From<chandra_almanac::Error> for AppError {
                 AppError::NoConvergence(format!("{what} for {graha}"))
             }
             E::UnknownTimeZone(zone) => AppError::Settings(format!("unknown time zone {zone}")),
+            // Its own code, because it is the one failure here that is not a
+            // fault and has a remedy the reader can apply. Routed through the
+            // catch-all it reached the panel as "ephemeris: time zone: the
+            // configuration kept changing while the chart was being read",
+            // under the code ENGINE - two subsystems named that had nothing to
+            // do with it, and no hint that asking again would work.
+            E::Reconfiguring(_) => AppError::Busy(error.to_string()),
             other => AppError::Engine(other.to_string()),
         }
     }

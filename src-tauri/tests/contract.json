@@ -1,8 +1,117 @@
 {
+  "Bootstrap": {
+    "app_version": "string",
+    "ayanamsas": [
+      {
+        "key": "string",
+        "label": "string"
+      }
+    ],
+    "grahas": [
+      {
+        "english": "string",
+        "filled": "boolean",
+        "key": "string",
+        "name": "string",
+        "path": "string",
+        "stroke_width": "number",
+        "view_box": [
+          "number",
+          "number",
+          "number",
+          "number"
+        ]
+      }
+    ],
+    "library_version": "string",
+    "location": {
+      "elevation": "number",
+      "elevation_known": "boolean",
+      "label": "string",
+      "latitude": "number",
+      "longitude": "number",
+      "provenance": "string",
+      "zone": "string"
+    },
+    "month_systems": [
+      {
+        "key": "string",
+        "label": "string"
+      }
+    ],
+    "node_types": [
+      {
+        "key": "string",
+        "label": "string"
+      }
+    ],
+    "panel_material": "boolean",
+    "settings": {
+      "appearance": {
+        "scale": "number"
+      },
+      "calendar": {
+        "ingress": "string",
+        "month_system": "string"
+      },
+      "chart": {
+        "animate": "boolean",
+        "format": "string",
+        "grid": "boolean",
+        "numbered": "boolean",
+        "sky": "boolean",
+        "vargas": [
+          "string"
+        ]
+      },
+      "location": {
+        "elevation": "number",
+        "mode": "string",
+        "place": {
+          "elevation": "number",
+          "label": "string",
+          "latitude": "number",
+          "longitude": "number",
+          "zone": "string"
+        }
+      },
+      "panchanga": {
+        "karanas": "boolean",
+        "muhurtas": "boolean",
+        "yogas": "boolean"
+      },
+      "schema_version": "integer",
+      "sidereal": {
+        "ayanamsa": "string",
+        "node_type": "string"
+      },
+      "tray": {
+        "colour_mode": "boolean",
+        "subjects": [
+          "string"
+        ]
+      }
+    },
+    "settings_error": "string",
+    "subject": "string",
+    "subjects": [
+      "string"
+    ],
+    "vargas": [
+      {
+        "division": "integer",
+        "key": "string",
+        "label": "string",
+        "name": "string"
+      }
+    ]
+  },
   "Chakra": {
     "lagna": {
       "degrees_in_rashi": [
-        "integer"
+        "integer",
+        "integer",
+        "number"
       ],
       "longitude": "number",
       "name": "string",
@@ -16,7 +125,9 @@
           {
             "combust": "boolean",
             "degrees_in_rashi": [
-              "integer"
+              "integer",
+              "integer",
+              "number"
             ],
             "dignity": "null",
             "graha": "string",
@@ -59,7 +170,9 @@
       "year": "integer"
     },
     "degrees_in_rashi": [
-      "integer"
+      "integer",
+      "integer",
+      "number"
     ],
     "graha": "string",
     "kind": "string",
@@ -253,6 +366,18 @@
     "label": "string",
     "name": "string",
     "source": "string"
+  },
+  "MonthIndex": {
+    "months": [
+      {
+        "adhika": "boolean",
+        "name": "string",
+        "offset": "integer"
+      }
+    ],
+    "next_year": "integer",
+    "previous_year": "integer",
+    "year": "string"
   },
   "MoonDay": {
     "combustion": {
@@ -506,5 +631,9 @@
     "source": "string",
     "tithi": "string",
     "unix_ms": "integer"
+  },
+  "WireError": {
+    "code": "string",
+    "message": "string"
   }
 }
