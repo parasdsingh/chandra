@@ -97,3 +97,11 @@ export const requestDeviceLocation = () =>
   invoke<Resolved>("request_device_location");
 
 export const closePanel = () => invoke<void>("close_panel");
+
+/** Opens one of a fixed set of pages in the default browser.
+ *
+ * A name, never a URL: the back end decides what each name means. A command
+ * that opened whatever it was handed would turn any scripting flaw in this page
+ * into "launch anything". */
+export const openLink = (target: "feedback" | "support" | "source" | "licence") =>
+  invoke<void>("open_link", { target });

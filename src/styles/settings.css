@@ -302,3 +302,39 @@
   transform: translateX(11px);
   background: var(--ground);
 }
+
+/* The About pane's outward links.
+   Buttons, not anchors: they open a browser through the back end rather than
+   navigating this webview, which has nowhere to navigate to. Styled as text
+   so they read as the footnotes they are - the pane's subject is what the app
+   is, not what to do next. */
+.settings__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+.settings__link {
+  font: var(--type-body);
+  color: var(--text-primary);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: default;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border);
+}
+
+.settings__link:hover {
+  text-decoration-color: currentColor;
+}
+
+.settings__link:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-button);
+}

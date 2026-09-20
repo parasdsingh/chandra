@@ -21,12 +21,18 @@
  */
 
 import { classify } from "./classify";
+import { notify, parse } from "./feedback";
 
 export interface Env {
   DOWNLOADS: R2Bucket;
   ANALYTICS: D1Database;
   /** Salt for the visitor hash. `wrangler secret put VISITOR_SALT`. */
   VISITOR_SALT: string;
+  /** Outbound mail. Absent means feedback is stored and not emailed, which is
+   *  a working state rather than a broken one - `make feedback` reads it. */
+  MAIL_API_KEY?: string;
+  MAIL_FROM?: string;
+  MAIL_TO?: string;
 }
 
 /** Where the redirect goes when someone asks for the current release. */
@@ -106,6 +112,10 @@ export default {
 
     if (url.pathname.startsWith("/download")) {
       return download(request, env, ctx, url);
+    }
+
+    if (url.pathname === "/feedback") {
+      return feedback(request, env, ctx);
     }
 
     if (url.pathname === "/beacon") {
@@ -241,6 +251,117 @@ async function beacon(
       "cache-control": "no-store",
       "access-control-allow-origin": "*",
     },
+  });
+}
+
+/**
+ * Takes a message from the form on the site.
+ *
+ * Stored before it is sent, and answered before the sending finishes: the
+ * person is told their message arrived the moment it is safely in the database,
+ * because that is the moment it is true. Waiting on an email provider would
+ * make them watch a spinner for something that has already succeeded.
+ */
+async function feedback(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> {
+  const origin = request.headers.get("origin") ?? "";
+  const cors: Record<string, string> = {
+    "access-control-allow-origin": ALLOWED.includes(origin) ? origin : "null",
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "content-type",
+    "cache-control": "no-store",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: cors });
+  }
+  if (request.method !== "POST") {
+    return new Response("Method not allowed", { status: 405, headers: cors });
+  }
+
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return json({ error: "Could not read the form." }, 400, cors);
+  }
+
+  const parsed = parse(form);
+  if ("error" in parsed) {
+    // The honeypot is answered as though it worked. A bot told it failed comes
+    // back having changed something; one told it succeeded does not.
+    if (parsed.error === "honeypot") {
+      return json({ ok: true }, 200, cors);
+    }
+    return json({ error: parsed.error }, 400, cors);
+  }
+
+  const cf = (request as { cf?: Record<string, unknown> }).cf ?? {};
+  const country = (cf["country"] as string | undefined) ?? null;
+  const at = new Date().toISOString();
+
+  let id: number | null = null;
+  try {
+    const written = await env.ANALYTICS.prepare(
+      `INSERT INTO feedback (at, message, contact, version, os, country)
+       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+    )
+      .bind(
+        at,
+        parsed.message,
+        parsed.contact || null,
+        parsed.version || null,
+        parsed.os || null,
+        country,
+      )
+      .first<{ id: number }>();
+    id = written?.id ?? null;
+  } catch (error) {
+    // The one failure worth telling the sender about. If it is not stored, it
+    // is lost, and they should write it down somewhere else.
+    console.error("chandra: could not store feedback", error);
+    return json({ error: "Could not save that. Please try again." }, 500, cors);
+  }
+
+  // The email happens after the answer. It is a notification about a row that
+  // already exists, not the delivery itself.
+  ctx.waitUntil(
+    (async () => {
+      const outcome = await notify(env, parsed, country);
+      if (id === null) return;
+      try {
+        await env.ANALYTICS.prepare(
+          `UPDATE feedback SET delivered = ?, error = ? WHERE id = ?`,
+        )
+          .bind(outcome.delivered, outcome.error, id)
+          .run();
+      } catch (error) {
+        console.error("chandra: could not record delivery", error);
+      }
+    })(),
+  );
+
+  return json({ ok: true }, 200, cors);
+}
+
+/** Where the form may be served from. Anywhere else gets no CORS header and
+ *  the browser refuses the response, which is the point. */
+const ALLOWED = [
+  "https://chandra.paraxis.dev",
+  "https://chandra-dis.pages.dev",
+];
+
+function json(
+  body: unknown,
+  status: number,
+  headers: Record<string, string>,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "content-type": "application/json" },
   });
 }
 

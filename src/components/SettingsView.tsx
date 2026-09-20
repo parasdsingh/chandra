@@ -1239,6 +1239,33 @@ function About(props: { boot: Bootstrap }): JSX.Element {
       <p class="settings__hint settings__hint--foot">
         Positions are computed on this Mac. Nothing is sent anywhere.
       </p>
+
+      {/* Both open a browser rather than doing the thing here.
+          Feedback in particular: an in-app form would need network code, and
+          the line directly above would stop being true. The claim is worth more
+          than the few people who will not follow a link - this app holds
+          somebody's home coordinates, and "nothing is sent anywhere" is the
+          whole of why that is safe to give it. */}
+      <div class="settings__links">
+        <button
+          class="settings__link"
+          onClick={() => void ipc.openLink("feedback")}
+        >
+          Send feedback
+        </button>
+        <button
+          class="settings__link"
+          onClick={() => void ipc.openLink("support")}
+        >
+          Support the work
+        </button>
+        <button
+          class="settings__link"
+          onClick={() => void ipc.openLink("source")}
+        >
+          Source code
+        </button>
+      </div>
     </div>
   );
 }

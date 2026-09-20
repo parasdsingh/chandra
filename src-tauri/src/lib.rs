@@ -75,6 +75,7 @@ pub fn run() {
             commands::nearest_city,
             commands::request_device_location,
             commands::close_panel,
+            commands::open_link,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

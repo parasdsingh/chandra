@@ -387,6 +387,41 @@ pub async fn close_panel(app: AppHandle) -> Result<()> {
     Ok(())
 }
 
+/// Opens one of a fixed set of pages in the default browser.
+///
+/// **Takes a name, not a URL.** Every other command here was written so that
+/// nothing from the webview reaches a path or a shell argument, and a command
+/// that opened whatever address it was handed would be the exception that
+/// undoes the rule - a scripting flaw in the page would become "launch
+/// anything" rather than "draw the wrong chart". The webview asks for
+/// `feedback`; this file decides what that means.
+///
+/// Feedback goes out through a browser rather than being posted by the app,
+/// which is what lets the About pane keep saying nothing is sent anywhere. The
+/// version travels in the link so a report carries the build it came from
+/// without the sender having to find it.
+///
+/// `/usr/bin/open` directly, with no shell: there is nothing to quote and so
+/// nothing to quote wrongly.
+#[tauri::command]
+pub async fn open_link(app: AppHandle, target: String) -> Result<()> {
+    const SITE: &str = "https://chandra.paraxis.dev";
+
+    let url = match target.as_str() {
+        "feedback" => format!("{SITE}/feedback.html?v={}", app.package_info().version),
+        "support" => format!("{SITE}/#support"),
+        "source" => "https://github.com/parasdsingh/chandra".to_string(),
+        "licence" => "https://github.com/parasdsingh/chandra/blob/main/LICENSE".to_string(),
+        other => return Err(AppError::Settings(format!("no such link: {other}"))),
+    };
+
+    std::process::Command::new("/usr/bin/open")
+        .arg(&url)
+        .spawn()
+        .map_err(|e| AppError::Settings(format!("cannot open a browser: {e}")))?;
+    Ok(())
+}
+
 /// Runs `work` on a blocking thread with access to application state.
 async fn blocking<T, F>(app: AppHandle, work: F) -> Result<T>
 where

@@ -16,7 +16,7 @@ UNIVERSAL := target/universal-apple-darwin/release/bundle/macos/Chandra.app
 INSTALLED := /Applications/Chandra.app
 VENDOR := $(shell ls -d $$HOME/.cargo/registry/src/*/swiss-eph-0.2.1/vendor/swisseph 2>/dev/null | head -1)
 
-.PHONY: help dev build universal install uninstall run test lint fmt check golden swetest clean archs release insights
+.PHONY: help dev build universal install uninstall run test lint fmt check golden swetest clean archs release insights feedback
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -100,6 +100,10 @@ preview: ## Regenerate the fixture behind the front-end visual harness
 
 release: dmg ## Publish a release. VERSION=x.y.z make release
 	@VERSION="$(VERSION)" sh tools/release.sh
+
+feedback: ## Read the feedback nobody has emailed you yet
+	@cd worker && npx wrangler d1 execute chandra-analytics --remote --command \
+	  "SELECT at, delivered, version, contact, message FROM feedback ORDER BY id DESC LIMIT 30"
 
 insights: ## What the downloads say. See worker/insights.sql
 	@cd worker && npx wrangler d1 execute chandra-analytics --remote --file=insights.sql

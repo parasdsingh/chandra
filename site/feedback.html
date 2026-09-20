@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Send feedback — Chandra</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0c0e11; --surface: #14171b; --line: rgba(255,255,255,0.07);
+  --line-2: rgba(255,255,255,0.15); --text: #e8ebef; --text-dim: #8a939f;
+  --accent: #4d9cff; --accent-fill: rgba(77,156,255,0.16);
+  --annotate: #d6a45c; --warn-text: #ff8a7e;
+  --display: "Barlow Condensed","Inter",sans-serif;
+  --body: "Inter",-apple-system,"Segoe UI",sans-serif;
+  --mono: "IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 16px/1.6 var(--body); -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 620px; margin: 0 auto; padding: 0 24px 80px; }
+.top { padding: 22px 0; border-bottom: 1px solid var(--line); }
+.brand { font: 500 15px/1 var(--mono); color: var(--text-dim); }
+.brand b { color: var(--text); font-weight: 500; }
+h1 { font: 600 clamp(40px,7vw,60px)/1 var(--display); margin: 52px 0 14px; }
+.lede { color: var(--text-dim); margin: 0 0 36px; }
+label { display: block; font: 500 13px/1 var(--mono); letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-dim); margin: 0 0 9px; }
+.hint { font: 400 13px/1.5 var(--body); text-transform: none; letter-spacing: 0;
+  color: var(--text-dim); margin: 6px 0 0; }
+textarea, input[type=email] {
+  width: 100%; background: var(--surface); color: var(--text);
+  border: 1px solid var(--line-2); border-radius: 10px; padding: 14px 16px;
+  font: 400 15px/1.6 var(--body); resize: vertical;
+}
+textarea { min-height: 190px; }
+.field { margin-bottom: 26px; }
+/* The honeypot. Off-screen rather than display:none - some bots skip hidden
+   fields but fill positioned ones - and hidden from assistive technology so
+   nobody is ever asked to fill it. */
+.trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+button {
+  font: 500 15px/1 var(--body); color: var(--text);
+  background: var(--accent-fill); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 14px 24px; cursor: pointer;
+}
+button[disabled] { opacity: 0.5; cursor: default; }
+.note { border-left: 2px solid var(--annotate); padding: 2px 0 2px 16px;
+  color: var(--text-dim); font-size: 14px; margin: 34px 0 0; }
+.said { margin-top: 20px; font-size: 15px; }
+.said.bad { color: var(--warn-text); }
+.done { display: none; }
+.done h2 { font: 600 32px/1.1 var(--display); margin: 0 0 12px; }
+body.sent form { display: none; }
+body.sent .done { display: block; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="brand"><b>Chandra</b> — paraxis.dev</span></div>
+
+  <h1>Send feedback</h1>
+  <p class="lede">
+    A bug, a rule that is drawn wrongly, a calendar convention that does not
+    match the one you use — all of it is useful. Especially the last: the
+    tradition is not uniform and this app had to pick.
+  </p>
+
+  <form id="form" novalidate>
+    <div class="field">
+      <label for="message">What happened, or what is wrong</label>
+      <textarea id="message" name="message" required
+        placeholder="If it is a bug: what you did, what you expected, and what you saw instead."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="contact">Your email — optional</label>
+      <input id="contact" name="contact" type="email" autocomplete="email"
+        placeholder="only if you would like a reply" />
+      <p class="hint">Leave it blank and the message is still read. It is used to reply and nothing else.</p>
+    </div>
+
+    <div class="trap" aria-hidden="true">
+      <label for="website">Leave this empty</label>
+      <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+    </div>
+
+    <input type="hidden" name="version" id="version" />
+    <input type="hidden" name="os" id="os" />
+
+    <button type="submit" id="send">Send</button>
+    <p class="said" id="said" role="status" aria-live="polite"></p>
+
+    <p class="note">
+      Sent from this page, not from the app. Chandra has no network code — it is
+      why its About pane can say nothing is sent anywhere, and this form is how
+      that stays true. What reaches us is your message, the version you filled
+      in, and your browser's description of your system. Not your location.
+    </p>
+  </form>
+
+  <div class="done" id="done">
+    <h2>Thank you.</h2>
+    <p class="lede">
+      It has arrived. If you left an address you will get a reply; if not, it is
+      still read.
+    </p>
+    <p><a href="/">Back to Chandra</a></p>
+  </div>
+</div>
+
+<script>
+const ENDPOINT = "https://chandra-downloads.parasdeep29.workers.dev/feedback";
+
+/* The app passes its version in the link, so a report carries the build it came
+   from without the person having to go and look it up - which most would not,
+   and the answer is the first thing any bug report needs. */
+const asked = new URLSearchParams(location.search);
+document.getElementById("version").value = (asked.get("v") || "").slice(0, 32);
+document.getElementById("os").value = navigator.userAgent.slice(0, 120);
+
+const form = document.getElementById("form");
+const send = document.getElementById("send");
+const said = document.getElementById("said");
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  said.textContent = "";
+  said.classList.remove("bad");
+
+  const message = document.getElementById("message").value.trim();
+  if (message.length < 4) {
+    said.textContent = "Please write a little more than that.";
+    said.classList.add("bad");
+    document.getElementById("message").focus();
+    return;
+  }
+
+  send.disabled = true;
+  send.textContent = "Sending…";
+
+  try {
+    const response = await fetch(ENDPOINT, {
+      method: "POST",
+      body: new FormData(form),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.error) {
+      throw new Error(body.error || "That did not go through.");
+    }
+    document.body.classList.add("sent");
+    document.getElementById("done").focus?.();
+  } catch (error) {
+    /* Said plainly, with the text still in the box. The one thing that must not
+       happen is somebody losing a paragraph they wrote. */
+    said.textContent =
+      (error && error.message) ||
+      "That did not go through. Your message is still here — please try again.";
+    said.classList.add("bad");
+    send.disabled = false;
+    send.textContent = "Send";
+  }
+});
+</script>
+</body>
+</html>
