@@ -13,8 +13,26 @@ bucket=chandra-downloads
 key="chandra/Chandra-${version}-universal.dmg"
 endpoint="https://chandra-downloads.parasdeep29.workers.dev/download"
 
-dmg=$(ls target/universal-apple-darwin/release/bundle/dmg/*.dmg 2>/dev/null | head -1)
-[ -n "$dmg" ] || { echo "no .dmg built; run make dmg first" >&2; exit 1; }
+# Exactly one, and it must be the one just built.
+#
+# `ls ... | head -1` takes the alphabetically first, which is not the newest:
+# a .dmg left behind by an earlier build would be picked and then uploaded
+# under *this* version's name - a 0.1.0 binary published as 0.2.0, with nothing
+# anywhere to say so. The bundle directory is expected to hold one file; if it
+# holds more, that is a stale artefact and the fix is to say so rather than to
+# guess which was meant.
+bundle=target/universal-apple-darwin/release/bundle/dmg
+count=$(ls "$bundle"/*.dmg 2>/dev/null | wc -l | tr -d ' ')
+if [ "$count" = "0" ]; then
+  echo "no .dmg built; run make dmg first" >&2
+  exit 1
+fi
+if [ "$count" != "1" ]; then
+  echo "$count disk images in $bundle - remove the stale ones:" >&2
+  ls -l "$bundle"/*.dmg >&2
+  exit 1
+fi
+dmg=$(ls "$bundle"/*.dmg)
 
 # Both architectures, asserted again here rather than trusted from the build
 # that produced it - this is the last point before it reaches a stranger.

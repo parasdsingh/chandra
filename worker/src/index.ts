@@ -184,9 +184,15 @@ async function download(
     `attachment; filename="${key.split("/").pop()}"`,
   );
   // A release artefact never changes under its own name, so it may be cached
-  // hard. `/download` itself must not be, or a new release would be invisible
-  // to anyone who had followed the link before.
-  headers.set("cache-control", "public, max-age=31536000, immutable");
+  // hard. `/download` is a pointer and must not be. Held for a year, a new
+  // release would be invisible to every browser and every CDN edge that had
+  // followed the link before - which is everyone who took the previous version.
+  headers.set(
+    "cache-control",
+    asked === LATEST
+      ? "public, max-age=300, must-revalidate"
+      : "public, max-age=31536000, immutable",
+  );
   return new Response(object.body, { headers });
 }
 
