@@ -188,8 +188,9 @@ fn next_syzygy(engine: &Engine, from: f64, target: f64) -> Result<f64> {
 
 /// The last syzygy of the given kind at or before `from`.
 fn previous_syzygy(engine: &Engine, from: f64, target: f64) -> Result<f64> {
-    // Step back a whole synodic month and search forward: searching backwards
-    // would need a mirrored bracket routine for no benefit.
+    // Step back `SYZYGY_WINDOW` - 40 days, which is a synodic month with room
+    // to spare - and search forward: searching backwards would need a mirrored
+    // bracket routine for no benefit.
     let mut start = from - SYZYGY_WINDOW;
     let mut latest = None;
 

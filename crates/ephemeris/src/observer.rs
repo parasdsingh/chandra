@@ -16,6 +16,18 @@ pub struct Observer {
 }
 
 impl Observer {
+    /// The heights `swe_rise_trans` accepts, and therefore the only heights this
+    /// app can answer at.
+    ///
+    /// Public because three other places need the same bound and each had
+    /// written it out: the city table filters GeoNames' `-9999` sentinel against
+    /// it at parse, and the settings layer clamps the user's own correction to
+    /// it. Outside it there is no sunrise, no moonrise and no graha rise until
+    /// the location changes, which is too total a failure to let a typed number
+    /// cause.
+    pub const ELEVATION_MIN: f64 = -500.0;
+    pub const ELEVATION_MAX: f64 = 25_000.0;
+
     pub const fn new(latitude: f64, longitude: f64, elevation: f64) -> Self {
         Self {
             latitude,
@@ -38,7 +50,7 @@ impl Observer {
             && self.elevation.is_finite()
             && (-90.0..=90.0).contains(&self.latitude)
             && (-180.0..=360.0).contains(&self.longitude)
-            && (-500.0..=25_000.0).contains(&self.elevation)
+            && (Self::ELEVATION_MIN..=Self::ELEVATION_MAX).contains(&self.elevation)
     }
 
     /// Swiss Ephemeris expects `[longitude, latitude, elevation]` in that order,

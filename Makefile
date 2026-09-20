@@ -73,6 +73,7 @@ lint: ## Formatting and lint checks
 	npx tsc --noEmit
 	sh tools/check-tokens.sh
 	sh tools/check-limits.sh
+	sh tools/check-wire.sh
 	cd worker && npx tsc --noEmit
 
 fmt: ## Format everything

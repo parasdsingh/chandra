@@ -79,7 +79,7 @@ fn usable_metres(metres: f64) -> f64 {
     if metres.is_nan() {
         return 0.0;
     }
-    metres.clamp(-500.0, 25_000.0)
+    metres.clamp(Observer::ELEVATION_MIN, Observer::ELEVATION_MAX)
 }
 
 /// Resolves without consulting CoreLocation.

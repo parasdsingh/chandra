@@ -25,6 +25,21 @@
   /* Surfaces */
   --ground: #0a0a0b;
 
+  /* The scrim the panel paints over the system material (D-011). --ground at
+     0.55 alpha: raised from 0.28 by measurement, because at 0.28
+     --text-secondary held only 3.15:1 over the lightest composited ground the
+     shipped panel produces. It is a *scrim*, not a fill - the material shows
+     through it, which is the whole point of the window being transparent.
+
+     A token because it was a literal `rgba(10, 10, 11, ...)` in two rules of
+     panel.css, whose own header says no literal colour appears in it. The clear
+     end is the same colour at zero alpha, for the gradient that fades the
+     bottom of a scrolling region: `transparent` is not interchangeable with it,
+     since some engines interpolate through transparent black and leave a grey
+     band in the middle of the fade. */
+  --scrim: rgba(10, 10, 11, 0.55);
+  --scrim-clear: rgba(10, 10, 11, 0);
+
   /* The chart's own ground, behind the sky. Pitch, not the panel's --ground:
      a star is a point of light, and a point of light needs dark to be light
      against. Over the panel's translucent material the same dot read as a

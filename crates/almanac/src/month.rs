@@ -116,7 +116,7 @@ pub fn month_days(year: i16, month: i8, zone: &jiff::tz::TimeZone) -> Result<Vec
 
 /// What a month is called, and how it is qualified.
 ///
-/// Passed as one value because these six travel together from the resolver to
+/// Passed as one value because the three travel together from the resolver to
 /// both builders, and a builder that took them apart could put a lunar name on a
 /// solar month or a Gregorian year on a lunar one.
 #[derive(Debug, Clone)]

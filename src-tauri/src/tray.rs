@@ -49,7 +49,8 @@ fn tray_id(graha: Graha) -> String {
     format!("chandra.{}", graha.key())
 }
 
-/// Builds the moon item and one item per enabled graha.
+/// Builds one item per enabled chart division, then the moon and one per
+/// enabled graha.
 pub fn build(app: &AppHandle) -> Result<()> {
     let subjects = app.state::<AppState>().tray_subjects();
 
@@ -65,17 +66,18 @@ pub fn build(app: &AppHandle) -> Result<()> {
     // the end that survives and the nodes at the end that goes first, which is
     // the right way round to lose items.
     //
-    // The chart is created first of all, so it sits furthest right. It is the
-    // one item with no switch, so it is the one that has to be there - and it
-    // used to be created last, which put it leftmost and made the feature that
-    // had just been built the first thing macOS threw away (D-030).
-    // D1 created first, so it sits furthest right - the end that survives when
-    // macOS squeezes the row. The finer divisions run left from it in order, and
-    // are the ones that can afford to go: D1 is the chart the others divide.
+    // The charts are created first of all, so they occupy the right-hand end
+    // that survives - and D1 first among them, so it is furthest right of all.
+    // It is the one item with no switch, so it is the one that has to be there;
+    // it used to be created last, which put it leftmost and made the feature
+    // that had just been built the first thing macOS threw away (D-030). The
+    // finer divisions run left from D1 in order, and are the ones that can
+    // afford to go: D1 is the chart the others divide.
     //
-    // Not reversed. macOS puts each new item to the *left* of the ones already
-    // there, so creating in order lays them out right to left, which is what is
-    // wanted here and the opposite of what the grahas need.
+    // Created in order, not reversed, and for the same reason the grahas are
+    // reversed - the left-of-the-last rule turns creation order into right-to-
+    // left placement, which is what this list wants and the opposite of what
+    // the navagraha sequence wants.
     for varga in app.state::<AppState>().chart_vargas() {
         build_item(app, chart_id(varga), panel::Subject::Chart(varga))?;
     }

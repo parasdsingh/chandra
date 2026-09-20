@@ -67,8 +67,10 @@ where
 /// reaches the tolerance in roughly a third of the evaluations. Convergence is
 /// guaranteed for any continuous function that changes sign across the bracket.
 ///
-/// Returns `None` only if the bracket does not actually contain a sign change,
-/// or an evaluation fails. It never returns a guessed time.
+/// Returns `None` if the bracket does not actually contain a sign change, if an
+/// evaluation fails, or if `MAX_ITERATIONS` runs out before the tolerance is
+/// met - which for these functions does not happen, but is a return rather than
+/// a loop. It never returns a guessed time.
 pub fn refine<F>(bracket: Bracket, mut f: F) -> Option<f64>
 where
     F: FnMut(f64) -> Option<f64>,
@@ -227,7 +229,13 @@ mod tests {
         let f = |x: f64| Some((x - 0.3).powi(3));
         let bracket = brackets(0.0, 1.0, 0.25, f).pop().expect("root exists");
         let root = refine(bracket, f).expect("must converge");
-        assert!((root - 0.3).abs() < 1e-4, "got {root}");
+        // Against `TOLERANCE_DAYS`, which is what the function promises. This
+        // asserted 1e-4, two orders looser than the stated tolerance, so the
+        // test named a guarantee it did not check.
+        assert!(
+            (root - 0.3).abs() < TOLERANCE_DAYS,
+            "got {root}, which is outside the stated tolerance of {TOLERANCE_DAYS}"
+        );
     }
 
     #[test]

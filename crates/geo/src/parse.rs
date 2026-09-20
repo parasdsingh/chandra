@@ -208,6 +208,12 @@ fn without_diacritics(name: &str) -> Option<String> {
 /// same call and only one of them is documented by GeoNames. Nothing in the file
 /// is legitimately outside it: the 138 genuinely negative rows - the Dead Sea,
 /// the Caspian, the Netherlands - are all above -500.
+///
+/// The number belongs to `chandra_ephemeris::Observer::ELEVATION_MIN` and
+/// `ELEVATION_MAX`, and is written out here rather than imported: this crate
+/// knows about places and not about ephemerides, and the crate graph is a rule
+/// (`docs/ARCHITECTURE.md`) rather than an accident. Repeated deliberately, and
+/// only here - `src-tauri` clamps against the constants themselves.
 fn usable_elevation(metres: &f64) -> bool {
     (-500.0..=25_000.0).contains(metres)
 }

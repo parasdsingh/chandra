@@ -30,6 +30,15 @@ pub const OPEN_EVENT: &str = "chandra://open";
 /// does not fire for an AppKit window being ordered out.
 pub const HIDE_EVENT: &str = "chandra://hide";
 
+/// Told to the front end when a CoreLocation answer has changed the place.
+///
+/// Named here like the other two rather than written as a literal at the one
+/// site that emits it. `tools/check-wire.sh` reads these three declarations and
+/// the `listen` calls on the TypeScript side and fails if they disagree - a
+/// renamed event is otherwise a silent no-op, because nothing on either side
+/// errors when a listener is registered for a name nobody emits.
+pub const LOCATION_EVENT: &str = "chandra://location";
+
 /// Panel width, fixed forever (`docs/DESIGN.md` 2.2).
 const PANEL_WIDTH: f64 = 320.0;
 
@@ -370,7 +379,7 @@ pub async fn request_device_location(app: &AppHandle) {
             .accept_device_location(latitude, longitude, elevation)
             .is_ok()
         {
-            let _ = handle.emit("chandra://location", state.location());
+            let _ = handle.emit(LOCATION_EVENT, state.location());
             // The reading here, the drawing on the main thread. This runs on a
             // CoreLocation callback, not a UI thread, so taking it is safe -
             // and doing it inside the dispatch would put eleven engine calls on

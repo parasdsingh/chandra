@@ -40,7 +40,7 @@
      it clears it at 4.76:1 and the material still reads as a material. No alpha
      rescues --text-tertiary - 0.70 reaches 4.09:1 and would make the panel
      opaque - which is why that colour carries no text any more. */
-  background: rgba(10, 10, 11, 0.55);
+  background: var(--scrim);
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
   padding: var(--s-4) 0;
@@ -203,7 +203,7 @@
   inset: auto 0 0 0;
   height: 20px;
   pointer-events: none;
-  background: linear-gradient(to bottom, rgba(10, 10, 11, 0), rgba(10, 10, 11, 0.55));
+  background: linear-gradient(to bottom, var(--scrim-clear), var(--scrim));
 }
 
 /* ---------- weekday row (20px) + grid (6 x 40) ---------- */

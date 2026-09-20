@@ -81,8 +81,6 @@ impl Rashi {
         }
     }
 
-    /// Western equivalent, shown as a secondary label for readers who know the
-    /// signs but not the Sanskrit.
     /// Three letters, for a 40px calendar cell.
     ///
     /// Western forms, because the Sanskrit names cannot be abbreviated to three

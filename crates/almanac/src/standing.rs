@@ -26,7 +26,8 @@ use crate::zodiac::{Nakshatra, Rashi};
 pub enum Dignity {
     Exalted,
     Debilitated,
-    /// In one of the two rashis it rules.
+    /// In a rashi it rules. Two for every graha except the luminaries: Surya
+    /// rules Simha alone and Chandra rules Karka alone.
     OwnSign,
 }
 

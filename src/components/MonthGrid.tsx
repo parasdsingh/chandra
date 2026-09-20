@@ -292,9 +292,16 @@ function retroPhase(
   return "ends";
 }
 
-/** Splits the flat 42-cell grid into six rows of seven. */
+/** Splits the flat grid into rows of seven.
+ *
+ *  The row count comes from the payload, not from a literal 6. `GRID_CELLS` is
+ *  42 in `crates/almanac/src/time.rs` and this hardcoded `length: 6`, so a
+ *  payload of any other size was silently truncated or padded with empty rows
+ *  and nothing anywhere said so. A remainder is impossible - the back end emits
+ *  whole weeks - but rounding up rather than down means a short last row draws
+ *  its cells instead of dropping them. */
 function weeks<T>(cells: T[]): T[][] {
-  return Array.from({ length: 6 }, (_, row) =>
+  return Array.from({ length: Math.ceil(cells.length / 7) }, (_, row) =>
     cells.slice(row * 7, row * 7 + 7),
   );
 }

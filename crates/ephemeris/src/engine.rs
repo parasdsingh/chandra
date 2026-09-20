@@ -592,7 +592,6 @@ fn se_body_id(graha: Graha, node_type: NodeType) -> i32 {
     }
 }
 
-/// One `swe_calc_ut` call. Caller must hold the engine lock.
 /// What a house calculation is asked for.
 ///
 /// Named fields, not a positional pair of degrees. `swe_houses_ex` takes
