@@ -61,6 +61,7 @@ New issues append to the table and get a detail section only when they need one.
 | I-054 | bug | Download worker served any object in a shared bucket | M4 | done |
 | I-055 | risk | Front end has no automated test; geometric checks live outside the repo | M4 | open |
 | I-056 | chore | Feedback and support links; feedback form on the site | M4 | done |
+| I-057 | chore | Rewrite the copy that reads as machine-written | M4 | open |
 | I-051 | chore | Sign and notarise with a Developer ID | M4 | open |
 | I-026 | chore | Create public GitHub remote and push | M4 | done |
 
@@ -92,6 +93,21 @@ multi-tray usage.
 ad-hoc-signed, non-notarised bundle is untested and cannot be tested without a real build.
 Not a blocker: [D-007](DECISIONS.md#d-007) makes the app fully correct without it.
 Outcome to record here once M2 builds a real bundle.
+
+### I-057 — Copy that reads as machine-written — open
+`docs/copy-notes.md` lists seventeen passages and, more usefully, four habits
+that produce them: "X, not Y" twenty-two times across three files, colon
+signposting inside a sentence, hint paragraphs all shaped fact-fact-epigram, and
+the em dash as the only subordinate clause. Fixing the passages without breaking
+the habits leaves the copy sounding the same.
+
+Two verified inconsistencies worth fixing whatever else happens: one sentence
+appears verbatim in both an app hint and a marketing caption, and the serial
+comma is used in `README.md`, not used in most of `site/index.html`, and used
+once inside it — which reads as two different hands.
+
+Deliberately not rewritten yet. Rewriting is a pass with a person's ear on it,
+not a search and replace, and the notes are worth more than a hurried fix.
 
 ### I-055 — The front end has no automated test — open, accepted
 About ten thousand lines of TSX behind `tsc` alone. `src/dev/preview.tsx` renders
