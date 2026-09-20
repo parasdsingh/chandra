@@ -511,13 +511,22 @@ const RELEASE = {
     download.removeAttribute("aria-disabled");
     const bits = [RELEASE.version, RELEASE.sizeMb && RELEASE.sizeMb + " MB"].filter(Boolean);
     meta.textContent = bits.join(" · ");
-  }
 
-  /* Revealed by the act of downloading, and left closed. Someone who has the
-     file is the only person the first-launch wall is about to happen to. */
-  download.addEventListener("click", () => {
-    document.getElementById("firstrun").hidden = false;
-  });
+    /* Revealed by the act of downloading, and left closed. Someone who has the
+       file is the only person the first-launch wall is about to happen to.
+
+       Bound inside this branch, not outside it. Attached unconditionally, a
+       press of the disabled button - which is still an <a>, and still takes a
+       click - opened the first-launch instructions for a file that does not
+       exist yet. */
+    download.addEventListener("click", () => {
+      document.getElementById("firstrun").hidden = false;
+    });
+  } else {
+    /* Nothing to download, so nothing to press. `aria-disabled` tells a screen
+       reader; this is what stops the href jumping to the top of the page. */
+    download.addEventListener("click", (event) => event.preventDefault());
+  }
 
   for (const [id, url] of [["source-link", RELEASE.sourceUrl], ["licence-link", RELEASE.licenceUrl]]) {
     const el = document.getElementById(id);

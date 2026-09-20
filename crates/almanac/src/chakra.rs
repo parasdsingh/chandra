@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 use crate::events::combustion_from;
-use crate::standing::{dignity_of, Dignity};
+use crate::standing::{dignity_of, houses_between, Dignity};
 pub use crate::varga::Varga;
 use crate::varga::{part_progress, varga_rashi};
 use crate::zodiac::{degrees_in_rashi, Rashi};
@@ -186,7 +186,7 @@ pub fn at(
             name: rashi.name().to_string(),
             short: rashi.short().to_string(),
             // Inclusive from the lagna, so the lagna's own rashi is house 1.
-            house: ((rashi.index() + 12 - lagna_rashi.index()) % 12) as u8 + 1,
+            house: houses_between(lagna_rashi, rashi),
             grahas: Vec::new(),
         })
         .collect();
@@ -272,9 +272,10 @@ mod tests {
     #[test]
     fn the_lagna_rashi_is_the_first_house() {
         for lagna in Rashi::ALL {
+            // The shipped function, not a third copy of the expression.
             let houses: Vec<u8> = Rashi::ALL
                 .into_iter()
-                .map(|rashi| ((rashi.index() + 12 - lagna.index()) % 12) as u8 + 1)
+                .map(|rashi| houses_between(lagna, rashi))
                 .collect();
 
             assert_eq!(

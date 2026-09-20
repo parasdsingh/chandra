@@ -29,8 +29,8 @@ use crate::{panel, tray};
 pub struct Bootstrap {
     pub settings: Settings,
     pub location: Resolved,
-    /// Which subject the panel is currently showing.
-    /// Which subject the panel is showing: a graha's key, or `chart`.
+    /// Which subject the panel is showing: a graha's key, or `chart:{varga}` -
+    /// `chart:d1`, `chart:d9`. Never the bare `chart`; see `Subject::key`.
     pub subject: String,
     pub subjects: Vec<Graha>,
     /// Whether the system's popover material is behind the panel. The panel is

@@ -6,3 +6,6 @@ dist/
 tools/swetest
 worker/node_modules/
 worker/.wrangler/
+# Belt and braces: `tools/release.sh` passes `--cwd worker` so wrangler keeps
+# its state there, but a hand-run command from the root would put it here.
+.wrangler/

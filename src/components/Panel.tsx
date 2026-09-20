@@ -134,10 +134,13 @@ export function Panel(props: Props): JSX.Element {
     // takes two hours to cross a compartment, which is 7,200 steps at this rate.
     // Nothing is gained by asking the ephemeris faster than the eye resolves.
     //
-    // `Chakra`'s SETTLE is held equal to the animating interval, so each body's
-    // slide between two computed charts ends exactly as the next one begins.
-    // The round trip is what makes this necessary: the interval fires on time,
-    // the IPC does not, so the arrivals are a second apart but not evenly so.
+    // `Chakra` does not need telling. Its slide is measured from the gap
+    // between the last two charts it was handed and clamped to SETTLE_LEAST and
+    // SETTLE_MOST, so it follows whatever this interval turns out to be rather
+    // than being held equal to it. That is what the round trip requires: the
+    // interval fires on time, the IPC does not, so the arrivals are about a
+    // second apart but not evenly so. This comment used to ask a maintainer to
+    // keep two numbers in step, and the other number had already been deleted.
     const every = animating() ? 1_000 : 60_000;
     const timer = window.setInterval(() => setChartAt(Date.now()), every);
     onCleanup(() => window.clearInterval(timer));

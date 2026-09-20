@@ -11,10 +11,15 @@
  * enough that a browser driving it for a screenshot times out; and a screenshot
  * wants one panel, isolated, on a plain ground, at a size worth publishing.
  *
- * Each panel is drawn at `--panel-scale: 1.6`, which is the largest that fits
- * the 598 point capture viewport - 512x532 points, captured on a 2x display, so
- * the image is about 830 pixels wide with no upscaling anywhere in it. The
- * panel is vector throughout, so a fractional scale costs nothing.
+ * Each panel is drawn at `--panel-scale: 1.6`. The stage that reserves its room
+ * is 512x532 points; captured on a 2x display that is 1024x1062 pixels, which
+ * is what every committed asset measures and what `site/index.html` declares as
+ * the intrinsic width.
+ *
+ * `id` is the asset's filename: shot `chart` is `site/assets/chart.png`. The
+ * two were mapped by hand and did not correspond - `grid` was published as
+ * `degree-grid.png` - so a shot and the picture on the page could drift apart
+ * with nothing to notice.
  */
 
 import type { JSX } from "solid-js";
@@ -48,8 +53,15 @@ const data = fixture as unknown as {
   chakraNavamsa: Chakra;
 };
 
-/** The scale every shot is drawn at. Two, so the image is retina without a
- *  single pixel of upscaling. */
+/** The scale every shot is drawn at.
+ *
+ *  1.6, not 2: at 2 the stage is 640x664 points and the panel no longer fits
+ *  the capture viewport beside its caption. The committed assets are 1024x1062
+ *  pixels, which is 320x332 at 1.6 on a 2x display - no upscaling anywhere. The
+ *  panel is vector throughout, so a fractional scale costs nothing.
+ *
+ *  This said "Two" over the 1.6, and the header said the image was about 830
+ *  pixels wide. Both were left from the earlier value. */
 const SHOT_SCALE = 1.6;
 
 export function Shots(props: { boot: Bootstrap }): JSX.Element {
@@ -76,7 +88,7 @@ export function Shots(props: { boot: Bootstrap }): JSX.Element {
       ),
     },
     {
-      id: "grid",
+      id: "degree-grid",
       caption: "The degree grid",
       view: () => (
         <>

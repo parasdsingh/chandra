@@ -27,9 +27,17 @@ use crate::zodiac::{Nakshatra, Rashi};
 ///
 /// Twelve months covers a year of back-and-forth navigation plus the neighbours
 /// prefetched around it, which is well past the point where a user is browsing
-/// rather than scrubbing. Ten subjects, plus two entries a month that every
-/// subject shares: the resolved grid and, in a lunar month, its tithis.
-const CACHE_CAPACITY: usize = 12 * (1 + 9 + 2);
+/// rather than scrubbing.
+///
+/// Per month: the Moon's view, the eight grahas that have one, and the three
+/// entries every subject on that grid shares - `Frames`, `Sunrises` and the
+/// cursor's `Resolution`. The arithmetic used to read `1 + 9 + 2`, naming two
+/// shared kinds when there are three and nine grahas when there are eight, and
+/// `Resolution` is keyed on the cursor rather than on the month so it can
+/// contribute more than one entry per month anyway. The cache was bounded
+/// either way; the number simply did not mean what it said, and evicted sooner
+/// than the sentence predicted.
+const CACHE_CAPACITY: usize = 12 * (1 + 8 + 3);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Location {
@@ -611,9 +619,6 @@ impl Almanac {
 
     /// Detail for one day.
     ///
-    /// The month system is a parameter because it decides whether the day has a
-    /// panchanga at all: a Gregorian calendar names no tithi, so computing one
-    /// would be work for a field the view would not show.
     /// A day, with whichever optional limbs the caller asked for.
     ///
     /// The month system is not a parameter any more. It used to decide whether

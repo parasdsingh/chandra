@@ -238,9 +238,14 @@ export interface GrahaCell {
   date: DateKey;
   in_month: boolean;
   tithi: CellTithi | null;
-  /** Sidereal longitude at local noon, the instant combustion is judged at. */
+  /** Sidereal longitude at the day's reference instant: sunrise, where the Sun
+   *  rises, and local noon where it does not. This said "local noon", which is
+   *  the instant the Rust side explicitly moved away from because it disagreed
+   *  with the longitude the day view prints for the same date. */
   longitude: number;
+  /** Retrograde at that same instant. */
   retrograde: boolean;
+  /** Combustion is the one field still judged at local noon, not at sunrise. */
   combust: boolean;
 }
 

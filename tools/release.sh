@@ -81,7 +81,10 @@ esac
 size=$(( ($(wc -c < "$dmg") + 524288) / 1048576 ))
 
 echo "==> uploading $dmg"
-npx wrangler r2 object put "$bucket/$key" --file="$dmg" --remote
+# `--cwd worker`, so wrangler's state directory lands in `worker/.wrangler`,
+# which `.gitignore` names. Run from the repository root it created an
+# untracked `.wrangler/` beside the source tree on every release.
+npx wrangler --cwd worker r2 object put "$bucket/$key" --file="../$dmg" --remote
 
 echo "==> pointing the page at it"
 python3 - "$version" "$size" "$endpoint" <<'PY'
@@ -98,7 +101,7 @@ print(f"   downloadUrl, version {version}, {size} MB")
 PY
 
 echo "==> deploying the page"
-npx wrangler pages deploy site --project-name=chandra --branch=main --commit-dirty=true
+npx wrangler --cwd worker pages deploy ../site --project-name=chandra --branch=main --commit-dirty=true
 
 echo
 echo "Released $version. Commit site/index.html to keep the repo in step."

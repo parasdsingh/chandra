@@ -71,18 +71,7 @@ export function WeekdayRow(props: { firstWeekday: number }): JSX.Element {
  * together while the headings stay put.
  */
 export function MonthCells(props: Props): JSX.Element {
-  /**
-   * The one cell that carries the tab stop.
-   *
-   * Three cases, not two: the selection, else today, else the first day of the
-   * displayed month (DESIGN 11.3). Without the third, scrolling two months away
-   * left every cell in all three grids at `tabindex="-1"` - tab went straight
-   * out of the document and the calendar was unreachable by keyboard or
-   * VoiceOver until an arrow key made a selection.
-   *
-   * Only days inside the month are eligible, so a today that appears as a
-   * neighbouring month's trailing cell does not claim the stop in two grids.
-   */
+  /** The grid element, for moving focus into it. */
   let grid: HTMLElement | undefined;
 
   /**
@@ -109,8 +98,16 @@ export function MonthCells(props: Props): JSX.Element {
    */
   createEffect(
     on(
-      () => props.selected,
-      () => {
+      // The month as well as the selection.
+      //
+      // `step()` in Panel.tsx changes `offset` and leaves `selected` alone, so
+      // PageDown after an arrow press destroyed the element that held focus and
+      // this never re-ran: focus fell to <body> and stayed there. The window's
+      // key handler kept the keyboard working, so the cost was one lost
+      // VoiceOver announcement until the next arrow press - which is the kind
+      // of thing only a screen reader user ever finds.
+      () => [props.selected, props.month.label] as const,
+      (now, before) => {
         if (!props.active || !grid) return;
         const active = document.activeElement;
         if (
@@ -119,6 +116,10 @@ export function MonthCells(props: Props): JSX.Element {
         ) {
           return;
         }
+        // On a month change, restore focus only if it was lost. Paging while
+        // focus sits somewhere else must not drag it into the grid; a cell that
+        // was destroyed leaves it on <body>, which is the signal.
+        if (before && now[1] !== before[1] && active !== document.body) return;
         const stop = grid.querySelector<HTMLElement>('[tabindex="0"]');
         if (stop && stop !== active) stop.focus();
       },
@@ -126,6 +127,18 @@ export function MonthCells(props: Props): JSX.Element {
     ),
   );
 
+  /**
+   * The one cell that carries the tab stop.
+   *
+   * Three cases, not two: the selection, else today, else the first day of the
+   * displayed month (DESIGN 11.3). Without the third, scrolling two months away
+   * left every cell in all three grids at `tabindex="-1"` - tab went straight
+   * out of the document and the calendar was unreachable by keyboard or
+   * VoiceOver until an arrow key made a selection.
+   *
+   * Only days inside the month are eligible, so a today that appears as a
+   * neighbouring month's trailing cell does not claim the stop in two grids.
+   */
   const focusedDate = (): DateKey | null => {
     const inside = (props.month.days as (MoonCell | GrahaCell)[]).filter(
       (day) => day.in_month,
@@ -143,12 +156,15 @@ export function MonthCells(props: Props): JSX.Element {
           calendar simply does not exist for VoiceOver. Verified by reading the
           live accessibility tree, which reported 12 elements and no cells before
           this wrapper was added. */}
+      {/* No `aria-rowcount` or `aria-colcount`. Every one of the six rows and
+          forty-two cells is in the DOM, so a screen reader counts them itself;
+          the pair was declared without the `aria-rowindex` and `aria-colindex`
+          that give them meaning, which is both unnecessary and, as specified,
+          incomplete. */}
       <div
         class="grid"
         role="grid"
         ref={(element) => (grid = element)}
-        aria-rowcount={6}
-        aria-colcount={7}
         aria-label={props.month.label}
         aria-hidden={props.active ? undefined : "true"}
       >

@@ -1224,9 +1224,19 @@ function About(props: { boot: Bootstrap }): JSX.Element {
         <span class="settings__label">Full precision</span>
         <span class="settings__value">1800–2399</span>
       </div>
+      {/* The name opens the licence.
+          `openLink("licence")` was declared on both sides of the IPC and called
+          by neither, which for an AGPL app is the wrong branch to leave dead:
+          the full text ships in the bundle's Resources, where somebody would
+          have to go looking for it, and this is a row that already names it. */}
       <div class="settings__row">
         <span class="settings__label">Licence</span>
-        <span class="settings__value">AGPL-3.0</span>
+        <button
+          class="settings__link settings__value"
+          onClick={() => void ipc.openLink("licence")}
+        >
+          AGPL-3.0
+        </button>
       </div>
       {/* Required, not courtesy. The city list is GeoNames under CC BY 4.0,
           whose one condition is that the credit appears where the work is used -

@@ -29,10 +29,11 @@ pub struct DayOptions {
     pub muhurtas: bool,
 }
 
-/// The panchanga limbs a lunar calendar needs to explain the day it drew.
+/// The panchanga limbs a day carries, in either calendar.
 ///
-/// Present only in a lunar month. The grid states a tithi number there, and a
-/// number nobody can check is worse than no number: `tithis` names it in words
+/// Present in both, and non-optional. It began as lunar-only - the grid states
+/// a tithi number there, and a number nobody can check is worse than no
+/// number: `tithis` names it in words
 /// with its true boundaries, and `sunrise` is the instant it was taken at, so
 /// the reading can be audited rather than trusted.
 ///
@@ -64,8 +65,11 @@ pub struct DayPanchanga {
 /// Combustion is here because the month grid marks it and a mark the day it
 /// opens cannot explain is worse than no mark at all.
 ///
-/// Tithi, yoga, karana and muhurta are deliberately absent rather than computed
-/// and hidden: see `docs/DECISIONS.md` D-010.
+/// `panchanga` carries the tithi, yogas, karanas and muhurtas. They were
+/// deliberately absent under D-010, on the grounds that a solar grid states no
+/// tithi and so has no number to explain; that reasoning was about 42 cells
+/// each costing a sunrise and does not carry to one opened day, which costs
+/// one. See the note on `DayPanchanga`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoonDay {
     pub date: DateKey,

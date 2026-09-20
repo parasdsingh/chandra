@@ -624,9 +624,13 @@ struct Houses {
 ///
 /// The sidereal branch depends on `swe_set_sid_mode` having been called, which
 /// `Engine::construct` and `reconfigure` both do. If it had not been,
-/// `swehouse.c` substitutes Fagan-Bradley silently rather than failing - which
-/// is why the guard asserts the ayanamsa the answer actually carries rather than
-/// trusting the flag to have been honoured.
+/// `swehouse.c` substitutes Fagan-Bradley silently rather than failing, so the
+/// answer would be wrong by about 0.88 degrees and nothing here would return an
+/// error. `crates/ephemeris/tests/ascendant.rs` is what holds that line: it
+/// subtracts the sidereal lagna from the tropical one and asserts the remainder
+/// is the ayanamsa the rest of the app applies, to the arcsecond. Asserted from
+/// the answer rather than from the flag, because the flag is what would have
+/// been ignored.
 fn houses_raw(request: HouseRequest) -> Result<Houses> {
     let HouseRequest {
         jd_ut,

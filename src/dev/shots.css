@@ -20,8 +20,9 @@
 
 /* A transform does not change how much room an element claims, so the scaled
    panel would paint straight over the next figure. The stage reserves the drawn
-   size - 320x332 at scale 2 - and the frame paints inside it from its top left,
-   which is where `transform-origin` already puts it. */
+   size - 320x332 at SHOT_SCALE 1.6, which is 512x532 - and the frame paints
+   inside it from its top left, which is where `transform-origin` already puts
+   it. This said "at scale 2", which these numbers have never been. */
 .shots__stage {
   width: 512px;
   height: 532px;

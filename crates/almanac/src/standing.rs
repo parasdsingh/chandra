@@ -143,7 +143,13 @@ pub fn dignity_of(graha: Graha, rashi: Rashi) -> Option<Dignity> {
 }
 
 /// Houses from `from` to `to`, counted inclusively - 1 for the same rashi.
-fn houses_between(from: Rashi, to: Rashi) -> u8 {
+/// Whole-sign house count, inclusive: `from` to `from` is house 1.
+///
+/// `pub(crate)` because `chakra.rs` needs the same answer. It said so - "two
+/// implementations of 'which house is this' would be two chances to be off by
+/// one" - and then wrote the expression out again, and the test wrote it a
+/// third time.
+pub(crate) fn houses_between(from: Rashi, to: Rashi) -> u8 {
     ((to.index() + 12 - from.index()) % 12) as u8 + 1
 }
 
