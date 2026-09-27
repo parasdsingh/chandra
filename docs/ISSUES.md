@@ -150,11 +150,24 @@ now exist where a number is written twice and nothing compared them
 (`check-limits.sh`, `check-wire.sh`, and exact table sizes in `chandra-geo`),
 and the contract test covers every payload type rather than eight of fifteen.
 
-Three findings were wrong, and are recorded because a review that is never
+Four findings were wrong, and are recorded because a review that is never
 disputed is not being read: the ayanamsa guard for `houses_raw` does exist, in
 `crates/ephemeris/tests/ascendant.rs` rather than in `engine.rs`; and
 `appicon.rs` and `examples/icon_candidates.rs`, named as sites of duplicated
 constants, are not files in this repository.
+
+The fourth was acted on before it was checked, and caused the fault it
+described. The CORS allowlist named `chandra-dis.pages.dev`, and the finding
+called that a host appearing nowhere else in the repository — so it was replaced
+with `chandra.pages.dev`, reasoned from `--project-name=chandra`. The project
+was created under an earlier name: `wrangler pages project list` reports
+`chandra-dis.pages.dev` as its domain, and that is where a deploy lands. A
+`FormData` POST is CORS-simple and needs no preflight, so for the time the wrong
+list was deployed the endpoint would have stored every report and the browser
+would have blocked the response, telling the sender it had failed. Both hosts
+are allowed now. The lesson is narrow and worth keeping: a claim about where
+something is deployed is checked against the deployment, not against the
+repository.
 
 Left open deliberately: `src/dev/shots.tsx` renders a navamsa shot that
 `site/index.html` does not use, while the page's hero claims "all sixteen

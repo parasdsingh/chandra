@@ -389,13 +389,21 @@ async function feedback(
 /** Where the form may be served from. Anywhere else gets no CORS header and
  *  the browser refuses the response, which is the point. */
 const ALLOWED = [
+  // The custom domain, once it is attached.
   "https://chandra.paraxis.dev",
-  // `tools/release.sh` deploys `--project-name=chandra`, so this is the host
-  // the form is served from until the custom domain is attached. It read
-  // `chandra-dis.pages.dev`, which exists nowhere else in the repository: a
-  // FormData POST is CORS-simple and needs no preflight, so the row was stored
-  // and the browser then blocked the response - leaving the sender told "that
-  // did not go through" and invited to send it again.
+  // The live Pages host. `--project-name=chandra` deploys to *this*, not to
+  // `chandra.pages.dev`: the project was created under an earlier name and
+  // `wrangler pages project list` still reports `chandra-dis.pages.dev` as its
+  // domain. Verified by deploying and following the request.
+  //
+  // This entry was briefly removed, on a review finding that called it a host
+  // appearing nowhere else in the repository. It appears in the one place that
+  // decides: the deployment. Removing it caused exactly the fault the finding
+  // described - a FormData POST is CORS-simple and needs no preflight, so the
+  // row is stored and the browser then blocks the response, leaving the sender
+  // told "that did not go through" and invited to send it again.
+  "https://chandra-dis.pages.dev",
+  // Also answers, and costs nothing to allow.
   "https://chandra.pages.dev",
 ];
 
