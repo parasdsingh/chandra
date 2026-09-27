@@ -231,8 +231,7 @@ function Size(props: SectionProps): JSX.Element {
   return (
     <div class="settings__section">
       <p class="settings__hint">
-        Changes the whole panel — the window, the calendar, the type and the
-        marks together.
+        Scales the window, the calendar, the type, and the marks together.
       </p>
       <div role="radiogroup" aria-label="Panel size">
         <For each={SIZES}>
@@ -282,8 +281,8 @@ function Calendar(props: SectionProps): JSX.Element {
         Used by every calendar — the Moon and each graha alike.
       </p>
       <p class="settings__hint">
-        A lunar month runs between syzygies, not between calendar dates, and is
-        named from where the Sun stands at that moment.
+        A lunar month runs between syzygies. It is named from where the Sun
+        stands at that moment.
       </p>
       <ChoiceGroup label="Month system">
         <For each={props.boot.month_systems}>
@@ -782,12 +781,12 @@ function Panchanga(props: SectionProps): JSX.Element {
 
       <p class="settings__hint settings__hint--foot">
         Shown in the day view, under Day. Rahu Kaal, Yamaganda, Gulika, Abhijit,
-        Brahma Muhurta and Durmuhurtam are the muhurtas.
+        Brahma Muhurta, and Durmuhurtam are the muhurtas.
       </p>
 
       <p class="settings__hint settings__hint--foot">
         {/* So the absence of a switch for these does not read as an omission. */}
-        Dignity, drishti, planetary war and the nakshatra lord are always shown.
+        Dignity, drishti, planetary war, and the nakshatra lord are always shown.
       </p>
     </div>
   );
@@ -963,13 +962,11 @@ function Grid(props: SectionProps): JSX.Element {
 
       <p class="settings__hint settings__hint--foot">
         Every North Indian chart is laid out this way whether the lines are
-        drawn or not: each compartment runs from the edge a sign arrives through
-        to the edge it leaves by, divided into the thirty degrees of that sign,
-        with parallel lines either side for bodies that share a degree. This
-        shows the scale the bodies are already standing on — why two grahas in
-        one sign sit where they do, and how much room a crowded house has left.
-        The other two formats have no route through a compartment, so there is
-        nothing to draw.
+        drawn or not. Each compartment runs from the edge its sign arrives
+        through to the edge it leaves by, split into that sign's thirty
+        degrees. Turning the lines on shows that scale, so you can see how two
+        grahas in one sign sit apart. The other two formats have no route
+        through a compartment, so there is nothing to draw.
       </p>
     </div>
   );
@@ -992,12 +989,9 @@ function Sky(props: SectionProps): JSX.Element {
       />
 
       <p class="settings__hint settings__hint--foot">
-        A field of stars behind the compartments, thinned toward the middle
-        where the bodies stand. It is the only decoration in the chart
-        and it carries no reading: no star marks anything, and turning it off
-        changes nothing but the look. The field is the same every time — it is
-        drawn from a fixed pattern, not scattered afresh. It drifts very slowly;
-        a system asking for reduced motion stills it.
+        Stars behind the compartments, thinner in the middle where the bodies
+        stand. No star means anything. It drifts slowly, and a system asking
+        for reduced motion stops that.
       </p>
     </div>
   );
@@ -1098,9 +1092,9 @@ function Ingress(props: SectionProps): JSX.Element {
       </ChoiceGroup>
       <p class="settings__hint settings__hint--foot">
         On the day a graha enters a sign or a nakshatra, its cell names what it
-        entered instead of drawing the glyph. Not on the Moon's calendar: it
-        enters a nakshatra every day, so every cell would be a label and none of
-        them would be a phase.
+        entered instead of drawing the glyph. The Moon's calendar is left
+        alone. It enters a nakshatra every day, so every cell would be a label
+        and none would show a phase.
       </p>
     </div>
   );
@@ -1135,10 +1129,8 @@ function Compartments(props: SectionProps): JSX.Element {
         />
       </ChoiceGroup>
       <p class="settings__hint settings__hint--foot">
-        Drik Panchang and Jagannatha Hora both write a number here. A number is
-        a lookup, so this app writes the name and offers the number. The South
-        and East Indian formats are unaffected: their compartments are the
-        signs, and both references name them.
+        Drik Panchang and Jagannatha Hora both write a number here. Chandra
+        writes the name and offers the number.
       </p>
     </div>
   );
@@ -1198,8 +1190,8 @@ function MenuBar(props: SectionProps): JSX.Element {
         }
       />
       <p class="settings__hint">
-        Off by default: template icons follow the menu bar and stay visible in
-        both appearances.
+        Off by default. Template icons stay readable in light and dark menu
+        bars.
       </p>
     </div>
   );

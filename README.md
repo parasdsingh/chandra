@@ -13,9 +13,9 @@ account, no telemetry, and no network code in the app at all.
   itself, and a month grid beneath it giving every day its phase.
 - **Nine calendars.** A month of transits for any graha — rashi and nakshatra
   ingresses, stations, combustion — each switchable into the menu bar on its own.
-- **A full panchanga.** Tithi, vara, nakshatra with pada, yoga, karana and the
+- **A full panchanga.** Tithi, vara, nakshatra with pada, yoga, karana, and the
   muhurtas, for the day you pick. Amanta, purnimanta, or a plain solar month.
-- **The Lagna Kundali.** North, South or East Indian, in any of the sixteen
+- **The Lagna Kundali.** North, South, or East Indian, in any of the sixteen
   divisions of the Shodasavarga. Each graha stands at its own degree along a
   route through its house, and the ring advances as the lagna crosses its sign.
 
@@ -44,8 +44,6 @@ A visual harness renders every view against real almanac output at
 screenshots.
 
 ## Documentation
-
-Design and decisions live in the repository, not in chat.
 
 - [Architecture](docs/ARCHITECTURE.md) — crates, IPC, data flow, threading
 - [Decisions](docs/DECISIONS.md) — one record per decision, with what it cost
