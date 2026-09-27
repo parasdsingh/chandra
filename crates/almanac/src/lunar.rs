@@ -162,6 +162,25 @@ const SYZYGY_STEP: f64 = 1.0;
 /// to spare.
 const SYZYGY_WINDOW: f64 = 40.0;
 
+/// Mean synodic month, in days.
+///
+/// The long-run average interval between syzygies of the same kind. Used only to
+/// *estimate* where a distant month lies, never to report a time: every boundary
+/// this crate hands out is a refined root of the true elongation.
+///
+/// What makes the estimate safe is that the true syzygy does not drift away from
+/// the mean one. Writing the kth syzygy after a base as `base + k * MEAN + d(k)`,
+/// the deviation `d` is periodic rather than cumulative - the mean is the average
+/// by construction - and stays inside about a day and a half. Half a synodic
+/// month is 14.8 days, so `round((found - base) / MEAN)` recovers `k` exactly
+/// with an order of magnitude to spare. `the_mean_month_never_drifts_far_enough_to_miscount`
+/// asserts that margin over two centuries rather than trusting this paragraph.
+const MEAN_SYNODIC: f64 = 29.530_588_853;
+
+/// How far the seek in [`shift`] may be wrong before it is a bug rather than a
+/// correction. Two steps is already past the measured worst case of one.
+const SEEK_SLACK: i32 = 3;
+
 /// The first syzygy of the given kind at or after `from`.
 fn next_syzygy(engine: &Engine, from: f64, target: f64) -> Result<f64> {
     let f = |jd: f64| elongation(engine, jd).map(|e| roots::signed_delta(e, target));
@@ -280,6 +299,17 @@ pub fn month_containing(
 }
 
 /// The lunar month `offset` months away from the one containing `jd`.
+///
+/// Sought, not walked. Stepping one syzygy at a time costs a 40-day bracket
+/// search per month, so reaching a distant month cost time proportional to the
+/// distance: the month-jump overlay grows its offset by about twelve per click
+/// on the year arrow and never moves its anchor, which made the twelfth click
+/// 212 ms and the fiftieth about 800 ms. Scrolling far out by wheel or keyboard
+/// paid the same price.
+///
+/// So: land near the answer arithmetically, find the real syzygy there, work out
+/// which month that actually is, and walk the remainder - which is zero or one
+/// step. The cost no longer depends on `offset`.
 pub fn shift(
     engine: &Engine,
     month: &LunarMonth,
@@ -289,17 +319,64 @@ pub fn shift(
     zone: &jiff::tz::TimeZone,
 ) -> Result<LunarMonth> {
     let target = system.boundary_elongation();
-    let mut start = month.start_jd;
+    let base = month.start_jd;
 
-    for _ in 0..offset.abs() {
-        start = if offset > 0 {
-            next_syzygy(engine, start + 1.0, target)?
-        } else {
-            previous_syzygy(engine, start - 1.0, target)?
+    // A neighbour is already one search away, and seeking costs one search plus
+    // a possible correction. Walking is never slower here and is simpler to
+    // read, so the hot path - `month_index` stepping month by month - keeps it.
+    if offset.abs() <= 1 {
+        let start = match offset {
+            0 => base,
+            1 => next_syzygy(engine, base + 1.0, target)?,
+            _ => previous_syzygy(engine, base - 1.0, target)?,
         };
+        return build(engine, start, system, observer, zone);
+    }
+
+    let mut start = seek(engine, base, offset, target)?;
+    let mut at = index_of(start, base);
+
+    // Zero or one iteration in practice. Bounded so that a seek which lands
+    // somewhere unexpected fails loudly instead of walking the whole distance
+    // and hiding the fact that the estimate was wrong.
+    let mut corrections = 0;
+    while at != offset {
+        corrections += 1;
+        if corrections > SEEK_SLACK {
+            return Err(Error::NoCrossing {
+                what: "lunar month by seek",
+                graha: "Chandra",
+                near: start,
+                window_days: MEAN_SYNODIC,
+            });
+        }
+        if at < offset {
+            start = next_syzygy(engine, start + 1.0, target)?;
+            at += 1;
+        } else {
+            start = previous_syzygy(engine, start - 1.0, target)?;
+            at -= 1;
+        }
     }
 
     build(engine, start, system, observer, zone)
+}
+
+/// The true syzygy nearest to where the `offset`th one is expected.
+///
+/// `previous_syzygy` rather than `next_syzygy`, so the answer is the start of the
+/// month the estimate falls inside. Which month that is may be `offset` or its
+/// neighbour - the estimate can land either side of the true boundary - and
+/// [`index_of`] is what settles it.
+fn seek(engine: &Engine, base: f64, offset: i32, target: f64) -> Result<f64> {
+    previous_syzygy(engine, base + f64::from(offset) * MEAN_SYNODIC, target)
+}
+
+/// Which month `start` is, counted from the syzygy `base`.
+///
+/// Rounding is exact here, not approximate: see [`MEAN_SYNODIC`].
+fn index_of(start: f64, base: f64) -> i32 {
+    ((start - base) / MEAN_SYNODIC).round() as i32
 }
 
 fn build(
@@ -405,4 +482,178 @@ pub fn sankrantis(engine: &Engine, from: f64, to: f64) -> Result<Vec<(f64, Rashi
         jd = next;
     }
     Ok(found)
+}
+
+#[cfg(test)]
+mod seek_tests {
+    use std::path::PathBuf;
+    use std::sync::{Mutex, MutexGuard, OnceLock};
+
+    use chandra_ephemeris::{Ayanamsa, NodeType, SiderealConfig};
+
+    use super::*;
+
+    /// The engine, built once.
+    ///
+    /// `Engine::new` is a process singleton, so this is the only test in this
+    /// crate's lib target that may build one. The integration suite has its own
+    /// in its own binary.
+    fn engine() -> MutexGuard<'static, Engine> {
+        static ENGINE: OnceLock<Mutex<Engine>> = OnceLock::new();
+        ENGINE
+            .get_or_init(|| {
+                let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../src-tauri/resources/ephe");
+                Mutex::new(
+                    Engine::new(
+                        &path,
+                        SiderealConfig {
+                            ayanamsa: Ayanamsa::Lahiri,
+                            node_type: NodeType::Mean,
+                        },
+                    )
+                    .expect("engine must build"),
+                )
+            })
+            .lock()
+            .expect("engine lock poisoned by an earlier failure")
+    }
+
+    fn bengaluru() -> Observer {
+        Observer::new(12.97, 77.59, 920.0)
+    }
+
+    fn kolkata() -> jiff::tz::TimeZone {
+        jiff::tz::TimeZone::get("Asia/Kolkata").expect("tz database")
+    }
+
+    /// A month reached by seeking is the month the walk would have reached.
+    ///
+    /// The whole of `shift`'s speed rests on one claim: that the true syzygy
+    /// never wanders far enough from the mean one for `index_of` to miscount. So
+    /// this walks month by month - the old behaviour, still the path taken for a
+    /// single step - and asserts the seek agrees at every offset along the way,
+    /// in both directions and for both boundary conventions.
+    ///
+    /// It also asserts the margin the claim depends on, rather than leaving it in
+    /// a comment: how far the true syzygy strays from `base + k * MEAN_SYNODIC`,
+    /// against the 14.77 days that would be needed to round to the wrong month.
+    #[test]
+    fn a_sought_month_is_the_month_the_walk_would_reach() {
+        let engine = engine();
+        let (observer, zone) = (bengaluru(), kolkata());
+
+        // Twelve years either way covers the reported case - the year arrow,
+        // twelve clicks out, was at offset -142 - with room over it.
+        const REACH: i32 = 150;
+
+        for system in [MonthSystem::Amanta, MonthSystem::Purnimanta] {
+            let target = system.boundary_elongation();
+            let base = month_containing(&engine, 2_460_000.5, system, observer, &zone)
+                .expect("a month to start from");
+
+            let mut worst_drift = 0.0f64;
+            let mut worst_correction = 0i32;
+
+            for direction in [1i32, -1] {
+                let mut walked = base.start_jd;
+
+                for step in 1..=REACH {
+                    let offset = direction * step;
+                    walked = if direction > 0 {
+                        next_syzygy(&engine, walked + 1.0, target).expect("next")
+                    } else {
+                        previous_syzygy(&engine, walked - 1.0, target).expect("previous")
+                    };
+                    let walked_month =
+                        build(&engine, walked, system, observer, &zone).expect("walked month");
+
+                    let sought = shift(&engine, &base, offset, system, observer, &zone)
+                        .expect("seek must reach it");
+
+                    // The month, which is what a reader sees.
+                    assert_eq!(
+                        (sought.name, sought.adhika, sought.vikram_year),
+                        (
+                            walked_month.name,
+                            walked_month.adhika,
+                            walked_month.vikram_year
+                        ),
+                        "{system:?} offset {offset}: the seek found a different month"
+                    );
+
+                    // And its boundary, to the refiner's tolerance rather than to
+                    // the bit. Two independent refinements of one root converge
+                    // from different brackets and so differ in the last places -
+                    // 3e-10 days, which is 0.03 milliseconds against a printed
+                    // resolution of one minute. Asserting exact equality here is
+                    // asserting that the arithmetic took the same route, not that
+                    // it found the same answer.
+                    assert!(
+                        (sought.start_jd - walked).abs() < roots::TOLERANCE_DAYS * 10.0,
+                        "{system:?} offset {offset}: boundary differs by {} days",
+                        (sought.start_jd - walked).abs()
+                    );
+
+                    // The margin the design rests on.
+                    let drift = (walked - (base.start_jd + f64::from(offset) * MEAN_SYNODIC)).abs();
+                    worst_drift = worst_drift.max(drift);
+
+                    // And how far the estimate actually was, in months.
+                    let estimated = index_of(
+                        seek(&engine, base.start_jd, offset, target).expect("seek"),
+                        base.start_jd,
+                    );
+                    worst_correction = worst_correction.max((estimated - offset).abs());
+                }
+            }
+
+            assert!(
+                worst_drift < MEAN_SYNODIC / 4.0,
+                "{system:?}: the true syzygy strayed {worst_drift:.2} days from the mean, \
+                 and {:.2} would be needed to round to the wrong month - the margin this \
+                 depends on is gone",
+                MEAN_SYNODIC / 2.0
+            );
+            assert!(
+                worst_correction <= 1,
+                "{system:?}: the seek was {worst_correction} months out, so the walk after \
+                 it is no longer a correction"
+            );
+        }
+    }
+
+    /// At the far end of the clamp, consecutive offsets are consecutive months.
+    ///
+    /// Walking out to 2,400 to check it directly is the cost this change exists
+    /// to remove. Contiguity catches the same failure for a constant price: if a
+    /// seek at any distance landed a month out, the two neighbours would not be
+    /// one syzygy apart.
+    #[test]
+    fn a_sought_month_at_the_clamp_is_contiguous_with_its_neighbour() {
+        let engine = engine();
+        let (observer, zone) = (bengaluru(), kolkata());
+        let system = MonthSystem::Amanta;
+        let target = system.boundary_elongation();
+        let base = month_containing(&engine, 2_460_000.5, system, observer, &zone)
+            .expect("a month to start from");
+
+        // `MONTH_OFFSET_LIMIT` in the app is 2,400 either way.
+        for offset in [-2400, -1200, -600, -13, 13, 600, 1200, 2400] {
+            let here = shift(&engine, &base, offset, system, observer, &zone).expect("here");
+            let next = shift(&engine, &base, offset + 1, system, observer, &zone).expect("next");
+
+            assert_eq!(
+                next.start_jd,
+                next_syzygy(&engine, here.start_jd + 1.0, target).expect("the syzygy after"),
+                "offset {offset} and {} are not consecutive months",
+                offset + 1
+            );
+            assert_eq!(
+                index_of(here.start_jd, base.start_jd),
+                offset,
+                "offset {offset} did not round back to itself"
+            );
+        }
+    }
 }
